@@ -742,16 +742,16 @@ pub fn item_description(item: &Inventory, add_prefix: bool) -> String {
 
     // ampersand is always the first character
     let mut description: String;
-    if tmp_val.starts_with('&') {
-        // use &tmp_val[1..], so that & does not appear in output
+    if let Some(stripped) = tmp_val.strip_prefix('&') {
+        // use `stripped`, so that & does not appear in output
         if item.items_count > 1 {
-            description = format!("{}{}", item.items_count, &tmp_val[1..]);
+            description = format!("{}{}", item.items_count, stripped);
         } else if item.items_count < 1 {
-            description = format!("no more{}", &tmp_val[1..]);
+            description = format!("no more{}", stripped);
         } else if is_vowel(tmp_val.chars().nth(2).unwrap_or(' ')) {
-            description = format!("an{}", &tmp_val[1..]);
+            description = format!("an{}", stripped);
         } else {
-            description = format!("a{}", &tmp_val[1..]);
+            description = format!("a{}", stripped);
         }
     } else if item.items_count < 1 {
         // handle 'no more' case specially

@@ -313,11 +313,5 @@ pub fn spell_chance_of_success(spell_id: i32) -> i32 {
         chance += 5 * (spell.mana_required as i32 - py().misc.current_mana as i32);
     }
 
-    if chance > 95 {
-        chance = 95;
-    } else if chance < 5 {
-        chance = 5;
-    }
-
-    chance
+    chance.clamp(5, 95)
 }

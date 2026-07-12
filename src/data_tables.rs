@@ -9,7 +9,7 @@ use crate::game::NORMAL_TABLE_SIZE;
 use crate::identification::{MAX_AMULETS, MAX_COLORS, MAX_METALS, MAX_MUSHROOMS, MAX_ROCKS, MAX_SYLLABLES, MAX_WOODS};
 
 // Following are arrays for descriptive pieces
-static BASE_COLORS: [&'static str; MAX_COLORS] = [
+static BASE_COLORS: [&str; MAX_COLORS] = [
     // Do not move the first three
     "Icky Green", "Light Brown", "Clear",
     "Azure", "Blue", "Blue Speckled", "Black", "Brown", "Brown Speckled", "Bubbling",
@@ -22,27 +22,27 @@ static BASE_COLORS: [&'static str; MAX_COLORS] = [
     "Tangerine", "Violet", "Vermilion", "White", "Yellow",
 ];
 
-static BASE_MUSHROOMS: [&'static str; MAX_MUSHROOMS] = [
+static BASE_MUSHROOMS: [&str; MAX_MUSHROOMS] = [
     "Blue", "Black", "Black Spotted", "Brown", "Dark Blue", "Dark Green", "Dark Red",
     "Ecru", "Furry", "Green", "Grey", "Light Blue", "Light Green", "Plaid", "Red",
     "Slimy", "Tan", "White", "White Spotted", "Wooden", "Wrinkled", "Yellow",
 ];
 
-static BASE_WOODS: [&'static str; MAX_WOODS] = [
+static BASE_WOODS: [&str; MAX_WOODS] = [
     "Aspen", "Balsa", "Banyan", "Birch", "Cedar", "Cottonwood", "Cypress", "Dogwood",
     "Elm", "Eucalyptus", "Hemlock", "Hickory", "Ironwood", "Locust", "Mahogany",
     "Maple", "Mulberry", "Oak", "Pine", "Redwood", "Rosewood", "Spruce", "Sycamore",
     "Teak", "Walnut",
 ];
 
-static BASE_METALS: [&'static str; MAX_METALS] = [
+static BASE_METALS: [&str; MAX_METALS] = [
     "Aluminum", "Cast Iron", "Chromium", "Copper", "Gold", "Iron", "Magnesium",
     "Molybdenum", "Nickel", "Rusty", "Silver", "Steel", "Tin", "Titanium", "Tungsten",
     "Zirconium", "Zinc", "Aluminum-Plated", "Copper-Plated", "Gold-Plated",
     "Nickel-Plated", "Silver-Plated", "Steel-Plated", "Tin-Plated", "Zinc-Plated",
 ];
 
-static BASE_ROCKS: [&'static str; MAX_ROCKS] = [
+static BASE_ROCKS: [&str; MAX_ROCKS] = [
     "Alexandrite", "Amethyst", "Aquamarine", "Azurite", "Beryl", "Bloodstone",
     "Calcite", "Carnelian", "Corundum", "Diamond", "Emerald", "Fluorite", "Garnet",
     "Granite", "Jade", "Jasper", "Lapis Lazuli", "Malachite", "Marble", "Moonstone",
@@ -50,7 +50,7 @@ static BASE_ROCKS: [&'static str; MAX_ROCKS] = [
     "Tiger Eye", "Topaz", "Turquoise", "Zircon",
 ];
 
-static BASE_AMULETS: [&'static str; MAX_AMULETS] = [
+static BASE_AMULETS: [&str; MAX_AMULETS] = [
     "Amber", "Driftwood", "Coral", "Agate", "Ivory", "Obsidian",
     "Bone", "Brass", "Bronze", "Pewter", "Tortoise Shell",
 ];
@@ -80,7 +80,7 @@ use crate::globals::RacyCell;
 
 // These name arrays are shuffled by magic_initialize_item_names(),
 // so they are mutable copies of the base data.
-static COLORS: RacyCell<[&'static str; MAX_COLORS]> = RacyCell::new(BASE_COLORS);
+static COLORS: RacyCell<[&str; MAX_COLORS]> = RacyCell::new(BASE_COLORS);
 
 pub fn colors() -> &'static mut [&'static str; MAX_COLORS] {
     COLORS.get()
@@ -88,7 +88,7 @@ pub fn colors() -> &'static mut [&'static str; MAX_COLORS] {
 
 // These name arrays are shuffled by magic_initialize_item_names(),
 // so they are mutable copies of the base data.
-static MUSHROOMS: RacyCell<[&'static str; MAX_MUSHROOMS]> = RacyCell::new(BASE_MUSHROOMS);
+static MUSHROOMS: RacyCell<[&str; MAX_MUSHROOMS]> = RacyCell::new(BASE_MUSHROOMS);
 
 pub fn mushrooms() -> &'static mut [&'static str; MAX_MUSHROOMS] {
     MUSHROOMS.get()
@@ -96,7 +96,7 @@ pub fn mushrooms() -> &'static mut [&'static str; MAX_MUSHROOMS] {
 
 // These name arrays are shuffled by magic_initialize_item_names(),
 // so they are mutable copies of the base data.
-static WOODS: RacyCell<[&'static str; MAX_WOODS]> = RacyCell::new(BASE_WOODS);
+static WOODS: RacyCell<[&str; MAX_WOODS]> = RacyCell::new(BASE_WOODS);
 
 pub fn woods() -> &'static mut [&'static str; MAX_WOODS] {
     WOODS.get()
@@ -104,7 +104,7 @@ pub fn woods() -> &'static mut [&'static str; MAX_WOODS] {
 
 // These name arrays are shuffled by magic_initialize_item_names(),
 // so they are mutable copies of the base data.
-static METALS: RacyCell<[&'static str; MAX_METALS]> = RacyCell::new(BASE_METALS);
+static METALS: RacyCell<[&str; MAX_METALS]> = RacyCell::new(BASE_METALS);
 
 pub fn metals() -> &'static mut [&'static str; MAX_METALS] {
     METALS.get()
@@ -112,7 +112,7 @@ pub fn metals() -> &'static mut [&'static str; MAX_METALS] {
 
 // These name arrays are shuffled by magic_initialize_item_names(),
 // so they are mutable copies of the base data.
-static ROCKS: RacyCell<[&'static str; MAX_ROCKS]> = RacyCell::new(BASE_ROCKS);
+static ROCKS: RacyCell<[&str; MAX_ROCKS]> = RacyCell::new(BASE_ROCKS);
 
 pub fn rocks() -> &'static mut [&'static str; MAX_ROCKS] {
     ROCKS.get()
@@ -120,7 +120,7 @@ pub fn rocks() -> &'static mut [&'static str; MAX_ROCKS] {
 
 // These name arrays are shuffled by magic_initialize_item_names(),
 // so they are mutable copies of the base data.
-static AMULETS: RacyCell<[&'static str; MAX_AMULETS]> = RacyCell::new(BASE_AMULETS);
+static AMULETS: RacyCell<[&str; MAX_AMULETS]> = RacyCell::new(BASE_AMULETS);
 
 pub fn amulets() -> &'static mut [&'static str; MAX_AMULETS] {
     AMULETS.get()

@@ -226,7 +226,6 @@ fn monster_make_visible(coord: Coord) -> bool {
 fn monster_get_move_direction(monster_id: i32, directions: &mut [i32; 9]) {
     let mut movement;
     let ay;
-    let ax;
 
     let y = monsters()[monster_id as usize].pos.y - py().pos.y;
     let x = monsters()[monster_id as usize].pos.x - py().pos.x;
@@ -238,12 +237,12 @@ fn monster_get_move_direction(monster_id: i32, directions: &mut [i32; 9]) {
         movement = 0;
         ay = y;
     }
-    if x > 0 {
+    let ax = if x > 0 {
         movement += 4;
-        ax = x;
+        x
     } else {
-        ax = -x;
-    }
+        -x
+    };
 
     // this has the advantage of preventing the diamond maneuver, also faster
     if ay > (ax << 1) {
@@ -1303,9 +1302,7 @@ fn monster_move(monster_id: i32, rcmove: &mut u32) {
     if (movement & config::monsters::move_flags::CM_ONLY_MAGIC) != 0 && monsters()[monster_id as usize].distance_from_player < 2 {
         // A little hack for Quylthulgs, so that one will eventually
         // notice that they have no physical attacks.
-        if creature_recall()[creature_id].attacks[0] < u8::MAX {
-            creature_recall()[creature_id].attacks[0] += 1;
-        }
+        creature_recall()[creature_id].attacks[0] = creature_recall()[creature_id].attacks[0].saturating_add(1);
 
         // Another little hack for Quylthulgs, so that one can
         // eventually learn their speed.
@@ -1325,9 +1322,7 @@ fn memory_update_recall(monster_id: i32, wake: bool, ignore: bool, rcmove: u32) 
     let memory = &mut creature_recall()[monster.creature_id as usize];
 
     if wake {
-        if memory.wake < u8::MAX {
-            memory.wake += 1;
-        }
+        memory.wake = memory.wake.saturating_add(1);
     } else if ignore && memory.ignore < u8::MAX {
         memory.ignore += 1;
     }
@@ -1471,9 +1466,7 @@ pub fn monster_take_hit(monster_id: i32, damage: i32) -> i32 {
 
         memory.movement = (memory.movement & !config::monsters::move_flags::CM_TREASURE) | treasure_flags;
 
-        if memory.kills < u16::MAX {
-            memory.kills += 1;
-        }
+        memory.kills = memory.kills.saturating_add(1);
     }
 
     crate::player::player_gain_kill_experience(creature_id);

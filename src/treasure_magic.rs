@@ -71,7 +71,7 @@ fn magical_armor(item: &mut Inventory, special: i32, level: i32) {
             item.special_name_id = SpecialNameIds::SnRc as u8;
             item.cost += 600;
         }
-        7 | 8 | 9 => {
+        7..=9 => {
             // Resist Lightning
             item.flags |= config::treasure::flags::TR_RES_LIGHT;
             item.special_name_id = SpecialNameIds::SnRl as u8;
@@ -173,7 +173,7 @@ fn magical_sword(item: &mut Inventory, special: i32, level: i32) {
                 item.special_name_id = SpecialNameIds::SnSu as u8;
                 item.cost += 5000;
             }
-            11 | 12 | 13 => {
+            11..=13 => {
                 // Flame Tongue
                 item.flags |= config::treasure::flags::TR_FLAME_TONGUE;
                 item.to_hit += 1;
@@ -181,7 +181,7 @@ fn magical_sword(item: &mut Inventory, special: i32, level: i32) {
                 item.special_name_id = SpecialNameIds::SnFt as u8;
                 item.cost += 2000;
             }
-            14 | 15 | 16 => {
+            14..=16 => {
                 // Frost Brand
                 item.flags |= config::treasure::flags::TR_FROST_BRAND;
                 item.to_hit += 1;
@@ -607,7 +607,7 @@ fn staff_magic(id: u8) -> i32 {
         7 | 8 => random_number(3) + 1,
         9 => random_number(5) + 6,
         10 => random_number(10) + 12,
-        11 | 12 | 13 => random_number(5) + 6,
+        11..=13 => random_number(5) + 6,
         14 => random_number(10) + 12,
         15 => random_number(3) + 4,
         16 | 17 => random_number(5) + 6,
@@ -691,7 +691,7 @@ fn magical_chests(item: &mut Inventory, level: i32) {
             item.flags |= config::treasure::chests::CH_POISON | config::treasure::chests::CH_LOCKED;
             item.special_name_id = SpecialNameIds::SnPoisonNeedle as u8;
         }
-        7 | 8 | 9 => {
+        7..=9 => {
             item.flags |= config::treasure::chests::CH_PARALYSED | config::treasure::chests::CH_LOCKED;
             item.special_name_id = SpecialNameIds::SnGasTrap as u8;
         }
@@ -699,11 +699,11 @@ fn magical_chests(item: &mut Inventory, level: i32) {
             item.flags |= config::treasure::chests::CH_EXPLODE | config::treasure::chests::CH_LOCKED;
             item.special_name_id = SpecialNameIds::SnExplosionDevice as u8;
         }
-        12 | 13 | 14 => {
+        12..=14 => {
             item.flags |= config::treasure::chests::CH_SUMMON | config::treasure::chests::CH_LOCKED;
             item.special_name_id = SpecialNameIds::SnSummoningRunes as u8;
         }
-        15 | 16 | 17 => {
+        15..=17 => {
             item.flags |= config::treasure::chests::CH_PARALYSED
                 | config::treasure::chests::CH_POISON
                 | config::treasure::chests::CH_LOSE_STR
@@ -724,7 +724,7 @@ fn magical_projectile_adjustment(item: &mut Inventory, special: i32, level: i32)
     // see comment for weapons
     if magic_should_be_enchanted(3 * special / 2) {
         match random_number(10) {
-            1 | 2 | 3 => {
+            1..=3 => {
                 item.special_name_id = SpecialNameIds::SnSlaying as u8;
                 item.to_hit += 5;
                 item.to_damage += 5;

@@ -662,7 +662,7 @@ fn player_update_poisoned_state() {
         -3 | -2 => 3,
         -1 => 2,
         0 => 1,
-        1 | 2 | 3 => {
+        1..=3 => {
             if (dg().game_turn % 2) == 0 {
                 1
             } else {
@@ -2205,7 +2205,7 @@ fn play_dungeon() {
             update_monsters(true);
         }
 
-        if !(!dg().generate_new_level && *eof_flag() == 0) {
+        if dg().generate_new_level || *eof_flag() != 0 {
             break;
         }
     }

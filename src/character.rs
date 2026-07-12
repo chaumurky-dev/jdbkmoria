@@ -347,11 +347,7 @@ fn character_get_history() {
     }
 
     // Compute social class for player
-    if social_class > 100 {
-        social_class = 100;
-    } else if social_class < 1 {
-        social_class = 1;
-    }
+    social_class = social_class.clamp(1, 100);
 
     py().misc.social_class = social_class as i16;
 }

@@ -1856,7 +1856,7 @@ pub fn spell_mass_genocide() -> bool {
         let monster = monsters()[id as usize];
         let creature = &CREATURES_LIST[monster.creature_id as usize];
 
-        if monster.distance_from_player as u8 <= config::monsters::MON_MAX_SIGHT && (creature.movement & config::monsters::move_flags::CM_WIN) == 0 {
+        if monster.distance_from_player <= config::monsters::MON_MAX_SIGHT && (creature.movement & config::monsters::move_flags::CM_WIN) == 0 {
             killed = true;
             dungeon_delete_monster(id);
         }
@@ -2368,7 +2368,7 @@ fn replace_spot(coord: Coord, typ: i32) {
         let tile = dg().tile_mut(coord);
 
         match typ {
-            1 | 2 | 3 => tile.feature_id = TILE_CORR_FLOOR,
+            1..=3 => tile.feature_id = TILE_CORR_FLOOR,
             4 | 7 | 10 => tile.feature_id = TILE_GRANITE_WALL,
             5 | 8 | 11 => tile.feature_id = TILE_MAGMA_WALL,
             6 | 9 | 12 => tile.feature_id = TILE_QUARTZ_WALL,

@@ -12,6 +12,19 @@ Source: `../umoria/src` at version 5.7.15. Goal: gameplay-identical port, GPL-3.
   history / scratchpad) and verified value-for-value against the originals.
 - `Coord_t` → `types::Coord`, `Dice_t` → `dice::Dice`, `vtype_t`/`obj_desc_t` → `String`.
 - Original copyright headers and SPDX `GPL-3.0-or-later` identifiers preserved per file.
+- The crate is split into a library (`src/lib.rs`, `pub mod` for every module) and a thin
+  binary (`src/main.rs`, just `main()`/`parse_game_seed()`), so integration tests and any
+  future consumers can exercise game logic directly. `tests/save_roundtrip.rs` seeds the
+  RNG, pokes known values into the global state (player misc/stats, a couple of inventory
+  items, monster recall memory, `game().character_died_from`), then round-trips them
+  through `game_save::save_game_state_to_file()` / `load_game_state_from_file()` - small
+  `pub` non-interactive cores factored out of `save_char()`/`restore_from_file()` that
+  contain no curses calls, so the test runs without a terminal. Everything lives in one
+  `#[test] fn` since the game state is process-wide (see `globals.rs`).
+- `cargo clippy` is kept at zero warnings; a handful of pervasive, intentionally
+  C-mirroring lints (`needless_range_loop`, `manual_range_contains`, `collapsible_if`,
+  `collapsible_match`) are allowed crate-wide in `lib.rs` rather than hand-fixed, to avoid
+  any risk of reordering RNG/game-logic calls.
 
 ## Status
 

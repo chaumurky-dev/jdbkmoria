@@ -443,7 +443,7 @@ fn ui_command_inventory_unwield_item() {
 
 // look for item whose inscription matches `which`
 fn inventory_get_item_matching_inscription(which: char, command: char, from: i32, to: i32) -> i32 {
-    if ('0'..='9').contains(&which) && command != 'r' && command != 't' {
+    if which.is_ascii_digit() && command != 'r' && command != 't' {
         // Note: simple loop to get id
         let mut m = from;
         while m <= to
@@ -891,24 +891,23 @@ fn inventory_display_appropriate_header() {
         let weight_quotient = py().pack.weight / 10;
         let weight_remainder = py().pack.weight % 10;
 
-        let msg;
-        if !config::options::options().show_inventory_weights || py().pack.unique_items == 0 {
-            msg = format!(
+        let msg = if !config::options::options().show_inventory_weights || py().pack.unique_items == 0 {
+            format!(
                 "You are carrying {}.{} pounds. In your pack there is {}",
                 weight_quotient,
                 weight_remainder,
                 if py().pack.unique_items == 0 { "nothing." } else { "-" }
-            );
+            )
         } else {
             let capacity = crate::player::player_carrying_load_limit();
             let capacity_quotient = capacity / 10;
             let capacity_remainder = capacity % 10;
 
-            msg = format!(
+            format!(
                 "You are carrying {}.{} pounds. Your capacity is {}.{} pounds. In your pack is -",
                 weight_quotient, weight_remainder, capacity_quotient, capacity_remainder
-            );
-        }
+            )
+        };
 
         put_string_clear_to_eol(&msg, Coord::new(0, 0));
     } else if game().screen.current_screen_id == Screen::Wear {
@@ -1175,7 +1174,7 @@ pub fn inventory_get_input_for_item_id(
                 }
                 _ => {
                     // look for item whose inscription matches "which"
-                    if ('0'..='9').contains(&which) && menu != PackMenu::Equipment {
+                    if which.is_ascii_digit() && menu != PackMenu::Equipment {
                         // Note: loop to find the inventory item
                         let mut m = item_id_start;
                         while (m as usize) < WIELD

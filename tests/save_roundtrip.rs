@@ -1,0 +1,127 @@
+// Copyright (c) 1981-86 Robert A. Koeneke
+// Copyright (c) 1987-94 James E. Wilson
+//
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+// Integration test for the save/load machinery, exercised without a
+// terminal via the non-interactive `save_game_state_to_file()` /
+// `load_game_state_from_file()` helpers exposed in `game_save.rs`.
+//
+// The game's global state is process-wide (see `globals.rs`), so everything
+// here runs in a single #[test] fn to avoid interference from parallel test
+// execution. The `rng.rs` unit test runs in its own `cargo test` process and
+// so cannot interfere with this one either.
+
+use rmoria::dungeon::dg;
+use rmoria::game::game;
+use rmoria::game_save::{load_game_state_from_file, save_game_state_to_file};
+use rmoria::inventory::inventory_item_copy_to;
+use rmoria::player::py;
+use rmoria::recall_data::creature_recall;
+use rmoria::rng::set_random_seed;
+
+#[test]
+fn save_and_load_roundtrip() {
+    // (a) seed the RNG - save_game_state_to_file() draws one random byte
+    // (the xor seed) from it, exactly like the real save_char() does.
+    set_random_seed(123_456_789);
+
+    // (b) poke known values into the global state.
+    py().misc.name = "TestHero".to_string();
+    py().misc.gender = true;
+    py().misc.level = 7;
+    py().misc.au = 4242;
+    py().misc.max_hp = 55;
+    // Keep current_hp negative so the restore path's "(alive and well)"
+    // overwrite of character_died_from does not fire (see game_save.rs,
+    // restore_from_file's final `if py().misc.current_hp >= 0` check),
+    // letting us verify our own character_died_from string round-trips.
+    py().misc.current_hp = -3;
+    py().misc.history[0] = "Once, an ordinary test fixture...".to_string();
+
+    // A couple of pack inventory items. Nothing is put into the equipment
+    // slots (WIELD..) - player_strength(), which restore_from_file() calls
+    // unconditionally on a full restoration, would otherwise print a
+    // curses message about wielding a weapon too heavy for a 0-strength
+    // test character.
+    py().pack.unique_items = 2;
+    inventory_item_copy_to(1, &mut py().inventory[0]);
+    py().inventory[0].items_count = 3;
+    inventory_item_copy_to(2, &mut py().inventory[1]);
+    py().inventory[1].items_count = 1;
+
+    game().character_died_from = "a test scenario".to_string();
+    game().character_is_dead = false;
+    game().total_winner = false;
+    game().magic_seed = 111;
+    game().town_seed = 222;
+
+    dg().game_turn = 500;
+
+    creature_recall()[5].kills = 9;
+    creature_recall()[5].movement = 0x1234;
+    creature_recall()[5].wake = 7;
+
+    // Write the save file into a tempdir with a unique name.
+    let mut path = std::env::temp_dir();
+    path.push(format!("rmoria_save_roundtrip_{}.sav", std::process::id()));
+    let path_str = path.to_str().expect("temp path should be valid UTF-8");
+
+    // (c) save.
+    assert!(save_game_state_to_file(path_str), "save_game_state_to_file() failed");
+
+    // (d) clobber the state so the load below can't trivially "pass" by
+    // reading back values that were never overwritten.
+    py().misc.name.clear();
+    py().misc.gender = false;
+    py().misc.level = 0;
+    py().misc.au = 0;
+    py().misc.max_hp = 0;
+    py().misc.current_hp = 0;
+    py().misc.history[0].clear();
+    py().pack.unique_items = 0;
+    py().inventory[0] = Default::default();
+    py().inventory[1] = Default::default();
+    game().character_died_from.clear();
+    game().magic_seed = 0;
+    game().town_seed = 0;
+    dg().game_turn = -1;
+    creature_recall()[5].kills = 0;
+    creature_recall()[5].movement = 0;
+    creature_recall()[5].wake = 0;
+
+    // (e) load.
+    let mut generate = true;
+    let result = load_game_state_from_file(path_str, &mut generate);
+
+    // Clean up the temp file regardless of assertion outcome below.
+    let _ = std::fs::remove_file(&path);
+
+    // (f) assert the values round-tripped.
+    assert_eq!(result, Some(true), "expected a full restoration");
+    assert!(!generate, "a full cave was restored, so generate should be false");
+
+    assert_eq!(py().misc.name, "TestHero");
+    assert!(py().misc.gender);
+    assert_eq!(py().misc.level, 7);
+    assert_eq!(py().misc.au, 4242);
+    assert_eq!(py().misc.max_hp, 55);
+    assert_eq!(py().misc.current_hp, -3);
+    assert_eq!(py().misc.history[0], "Once, an ordinary test fixture...");
+
+    assert_eq!(py().pack.unique_items, 2);
+    assert_eq!(py().inventory[0].id, 1);
+    assert_eq!(py().inventory[0].items_count, 3);
+    assert_eq!(py().inventory[1].id, 2);
+    assert_eq!(py().inventory[1].items_count, 1);
+
+    assert_eq!(game().character_died_from, "a test scenario");
+    assert_eq!(game().magic_seed, 111);
+    assert_eq!(game().town_seed, 222);
+
+    assert_eq!(dg().game_turn, 500);
+
+    assert_eq!(creature_recall()[5].kills, 9);
+    assert_eq!(creature_recall()[5].movement, 0x1234);
+    assert_eq!(creature_recall()[5].wake, 7);
+}

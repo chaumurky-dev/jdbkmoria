@@ -124,6 +124,12 @@ impl Game {
     }
 }
 
+impl Default for Game {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 static GAME: RacyCell<Game> = RacyCell::new(Game::new());
 
 // Access the global game object (the C code's `game` global).

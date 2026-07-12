@@ -485,7 +485,7 @@ pub fn player_test_attack_hits(attack_id: i32, level: u8) -> bool {
     match attack_id {
         1 => player_test_being_hit(60, level, 0, ac, CLASS_MISC_HIT),  // Normal attack
         2 => player_test_being_hit(-3, level, 0, ac, CLASS_MISC_HIT),  // Lose Strength
-        3 | 4 | 5 => player_test_being_hit(10, level, 0, ac, CLASS_MISC_HIT), // Confusion/Fear/Fire attack
+        3..=5 => player_test_being_hit(10, level, 0, ac, CLASS_MISC_HIT), // Confusion/Fear/Fire attack
         6 => player_test_being_hit(0, level, 0, ac, CLASS_MISC_HIT),   // Acid attack
         7 | 8 => player_test_being_hit(10, level, 0, ac, CLASS_MISC_HIT), // Cold/Lightning attack
         9 => player_test_being_hit(0, level, 0, ac, CLASS_MISC_HIT),   // Corrosion attack
@@ -1615,7 +1615,7 @@ fn number_of_spells_allowed(stat: usize) -> i32 {
     let levels = py().misc.level as i32 - CLASSES[py().misc.class_id as usize].min_level_for_spell_casting as i32 + 1;
 
     match crate::player_stats::player_stat_adjustment_wisdom_intelligence(stat) {
-        1 | 2 | 3 => levels,
+        1..=3 => levels,
         4 | 5 => 3 * levels / 2,
         6 => 2 * levels,
         7 => 5 * levels / 2,

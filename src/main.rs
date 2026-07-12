@@ -5,72 +5,14 @@
 
 // Initialization, main() function and main loop
 
-mod character;
-mod config;
-mod data_creatures;
-mod data_player;
-mod data_recall;
-mod data_store_owners;
-mod data_stores;
-mod data_tables;
-mod data_treasure;
-mod dice;
-mod dungeon;
-mod dungeon_generate;
-mod dungeon_los;
-mod dungeon_tile;
-mod game;
-mod game_death;
-mod game_files;
-mod game_objects;
-mod game_run;
-mod game_save;
-mod globals;
-mod helpers;
-mod identification;
-mod inventory;
-mod mage_spells;
-mod monster;
-mod monster_manager;
-mod player;
-mod player_bash;
-mod player_eat;
-mod player_magic;
-mod player_move;
-mod player_pray;
-mod player_quaff;
-mod player_run;
-mod player_stats;
-mod player_throw;
-mod player_traps;
-mod player_tunnel;
-mod recall;
-mod recall_data;
-mod rng;
-mod scores;
-mod scrolls;
-mod spells;
-mod spells_data;
-mod staves;
-mod store;
-mod store_data;
-mod store_inventory;
-mod treasure;
-mod treasure_magic;
-mod types;
-mod ui;
-mod ui_inventory;
-mod ui_io;
-mod version;
-mod wizard;
-
-use game::{exit_program, game};
-use game_files::initialize_score_file;
-use game_run::start_moria;
-use helpers::string_to_number;
-use scores::show_scores_screen;
-use ui_io::{check_file_permissions, terminal_initialize, terminal_restore};
-use version::{CURRENT_VERSION_MAJOR, CURRENT_VERSION_MINOR, CURRENT_VERSION_PATCH};
+use rmoria::config;
+use rmoria::game::{exit_program, game};
+use rmoria::game_files::initialize_score_file;
+use rmoria::game_run::start_moria;
+use rmoria::helpers::string_to_number;
+use rmoria::scores::show_scores_screen;
+use rmoria::ui_io::{check_file_permissions, terminal_initialize, terminal_restore};
+use rmoria::version::{CURRENT_VERSION_MAJOR, CURRENT_VERSION_MINOR, CURRENT_VERSION_PATCH};
 
 const USAGE_INSTRUCTIONS: &str = r#"
 Usage:

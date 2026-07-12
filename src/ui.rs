@@ -145,6 +145,10 @@ pub fn coord_inside_panel(coord: Coord) -> bool {
 }
 
 // Prints the map of the dungeon -RAK-
+// `line` mirrors the C code's separate screen-row counter that increments
+// alongside the dungeon-row loop; kept as a manual counter for a direct
+// match with the original control flow rather than a zip/enumerate rewrite.
+#[allow(clippy::explicit_counter_loop)]
 pub fn draw_dungeon_panel() {
     let mut line = 1;
 
@@ -550,7 +554,7 @@ pub fn print_character_stats() {
 // Returns a rating of x depending on y -JWT-
 pub fn stat_rating(coord: Coord) -> &'static str {
     match coord.x / coord.y {
-        -3 | -2 | -1 => "Very Bad",
+        -3..=-1 => "Very Bad",
         0 | 1 => "Bad",
         2 => "Poor",
         3 | 4 => "Fair",

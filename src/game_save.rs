@@ -89,10 +89,7 @@ pub fn eof_hit() -> bool {
 // Mirrors `(uint8_t) (getc(fileptr) & 0xFF)`; returns 0xFF at EOF, matching
 // the cast of EOF (-1) to uint8_t.
 fn get_byte() -> u8 {
-    match read_raw_byte() {
-        Some(b) => b,
-        None => 0xFF,
-    }
+    read_raw_byte().unwrap_or(0xFF)
 }
 
 fn read_raw_byte() -> Option<u8> {
@@ -348,6 +345,13 @@ pub fn read_high_score(score: &mut HighScore) {
 }
 
 // Set up prior to actual save, do the save, then clean up
+//
+// clippy::if_same_then_else fires because two of the `should_prompt` arms
+// below both evaluate to `true`, but the conditions guarding them
+// (a path-exists check and an interactive `get_input_confirmation()`
+// prompt) are deliberately distinct side-effecting checks mirroring the
+// original C control flow; merging them would change which of them runs.
+#[allow(clippy::if_same_then_else)]
 pub fn save_game() -> bool {
     loop {
         if save_char(&config::files::save_game()) {
@@ -710,6 +714,46 @@ fn write_save_data() -> bool {
     flush_and_check()
 }
 
+// Writes the save-file header (version bytes + random xor seed byte)
+// followed by the full serialized game state. Assumes FILEPTR is already
+// set to an open, writable file. Contains no UI/curses calls: this is the
+// pure serialization core shared by `save_char()` (used by the interactive
+// `save_game()`) and `save_game_state_to_file()` below (used by tests).
+fn write_header_and_save_data() -> bool {
+    *XOR_BYTE.get() = 0;
+    wr_byte(CURRENT_VERSION_MAJOR);
+    *XOR_BYTE.get() = 0;
+    wr_byte(CURRENT_VERSION_MINOR);
+    *XOR_BYTE.get() = 0;
+    wr_byte(CURRENT_VERSION_PATCH);
+    *XOR_BYTE.get() = 0;
+
+    let char_tmp = (random_number(256) - 1) as u8;
+    wr_byte(char_tmp);
+    // Note that xor_byte is now equal to char_tmp
+
+    write_save_data()
+}
+
+// Opens `filename` for writing (creating it, or truncating it if it already
+// exists) and writes the full save-file header + serialized game state.
+// Unlike `save_game()`/`save_char()`, this performs no curses/UI calls and
+// does not touch player-disturbance/speed state; it is exposed (`pub`) so
+// integration tests can exercise the save file format without a terminal.
+pub fn save_game_state_to_file(filename: &str) -> bool {
+    *WRITE_ERROR.get() = false;
+    *FILEPTR.get() = None;
+
+    match OpenOptions::new().write(true).create(true).truncate(true).open(filename) {
+        Ok(file) => *FILEPTR.get() = Some(file),
+        Err(_) => return false,
+    }
+
+    let ok = write_header_and_save_data();
+    close_fileptr();
+    ok
+}
+
 fn save_char(filename: &str) -> bool {
     // The C code's fopen/open were #defined to tfopen/topen (ui_io), which
     // expand a leading ~ to the user's home directory.
@@ -755,19 +799,7 @@ fn save_char(filename: &str) -> bool {
     let mut ok = false;
 
     if FILEPTR.get().is_some() {
-        *XOR_BYTE.get() = 0;
-        wr_byte(CURRENT_VERSION_MAJOR);
-        *XOR_BYTE.get() = 0;
-        wr_byte(CURRENT_VERSION_MINOR);
-        *XOR_BYTE.get() = 0;
-        wr_byte(CURRENT_VERSION_PATCH);
-        *XOR_BYTE.get() = 0;
-
-        let char_tmp = (random_number(256) - 1) as u8;
-        wr_byte(char_tmp);
-        // Note that xor_byte is now equal to char_tmp
-
-        ok = write_save_data();
+        ok = write_header_and_save_data();
 
         close_fileptr();
     }
@@ -836,7 +868,7 @@ pub fn load_game(generate: &mut bool) -> bool {
     } else if let Some(file) = try_open_for_read(&config::files::save_game()) {
         dg().game_turn = -1;
 
-        if let Some(result) = restore_from_file(file, generate) {
+        if let Some(result) = restore_from_file(file, generate, true) {
             return result;
         }
         // ok was false: "Error during reading of file." was already printed.
@@ -853,11 +885,28 @@ pub fn load_game(generate: &mut bool) -> bool {
     crate::game::exit_program();
 }
 
-fn restore_from_file(file: File, generate: &mut bool) -> Option<bool> {
+// Opens `filename` and restores the game state from it, with no curses/UI
+// calls (the shared `interactive` core below is run with `interactive:
+// false`). This is the non-interactive counterpart to `load_game()`,
+// exposed (`pub`) so integration tests can exercise the restore path
+// without a terminal.
+pub fn load_game_state_from_file(filename: &str, generate: &mut bool) -> Option<bool> {
+    let file = File::open(filename).ok()?;
+    restore_from_file(file, generate, false)
+}
+
+// Shared restore core for `load_game()` (interactive = true) and
+// `load_game_state_from_file()` (interactive = false, used by tests). The
+// `interactive` flag only gates progress/error messages printed via curses;
+// it never changes which data is read, in what order, or any game-logic
+// call (matching the interactive path exactly when `interactive` is true).
+fn restore_from_file(file: File, generate: &mut bool, interactive: bool) -> Option<bool> {
     set_fileptr(file);
 
-    put_string_clear_to_eol("Restoring Memory...", Coord::new(0, 0));
-    put_qio();
+    if interactive {
+        put_string_clear_to_eol("Restoring Memory...", Coord::new(0, 0));
+        put_qio();
+    }
 
     // Note: setting these xor_byte is correct!
     *XOR_BYTE.get() = 0;
@@ -870,9 +919,13 @@ fn restore_from_file(file: File, generate: &mut bool) -> Option<bool> {
     *XOR_BYTE.get() = get_byte();
 
     if !valid_game_version(version_maj, version_min, patch_level) {
-        put_string_clear_to_eol("Sorry. This save file is from a different version of umoria.", Coord::new(2, 0));
+        if interactive {
+            put_string_clear_to_eol("Sorry. This save file is from a different version of umoria.", Coord::new(2, 0));
+        }
         close_fileptr();
-        print_message(Some("Error during reading of file."));
+        if interactive {
+            print_message(Some("Error during reading of file."));
+        }
         return None;
     }
 
@@ -1084,7 +1137,9 @@ fn restore_from_file(file: File, generate: &mut bool) -> Option<bool> {
                 if !game().to_be_wizard || dg().game_turn < 0 {
                     break 'restore false;
                 }
-                put_string_clear_to_eol("Attempting a resurrection!", Coord::new(0, 0));
+                if interactive {
+                    put_string_clear_to_eol("Attempting a resurrection!", Coord::new(0, 0));
+                }
                 if py().misc.current_hp < 0 {
                     py().misc.current_hp = 0;
                     py().misc.current_hp_fraction = 0;
@@ -1109,10 +1164,14 @@ fn restore_from_file(file: File, generate: &mut bool) -> Option<bool> {
             } else {
                 // Make sure that this message is seen, since it is a bit
                 // more interesting than the other messages.
-                print_message(Some("Restoring Memory of a departed spirit..."));
+                if interactive {
+                    print_message(Some("Restoring Memory of a departed spirit..."));
+                }
                 dg().game_turn = -1;
             }
-            put_qio();
+            if interactive {
+                put_qio();
+            }
             break 'restore true;
         }
 
@@ -1121,8 +1180,10 @@ fn restore_from_file(file: File, generate: &mut bool) -> Option<bool> {
             break 'restore false;
         }
 
-        put_string_clear_to_eol("Restoring Character...", Coord::new(0, 0));
-        put_qio();
+        if interactive {
+            put_string_clear_to_eol("Restoring Character...", Coord::new(0, 0));
+            put_qio();
+        }
 
         // only level specific info should follow,
         // not present for dead characters
@@ -1219,7 +1280,9 @@ fn restore_from_file(file: File, generate: &mut bool) -> Option<bool> {
 
     if !ok {
         close_fileptr();
-        print_message(Some("Error during reading of file."));
+        if interactive {
+            print_message(Some("Error during reading of file."));
+        }
         return None;
     }
 
@@ -1229,7 +1292,9 @@ fn restore_from_file(file: File, generate: &mut bool) -> Option<bool> {
     *FROM_SAVE_FILE.get() = true;
 
     if *panic_save() {
-        print_message(Some("This game is from a panic save.  Score will not be added to scoreboard."));
+        if interactive {
+            print_message(Some("This game is from a panic save.  Score will not be added to scoreboard."));
+        }
     } else {
         // NOTE: faithfully ports `(!game.noscore) & 0x04` from the original
         // C++. Since `!game.noscore` is a logical negation (always 0 or 1),
@@ -1238,7 +1303,9 @@ fn restore_from_file(file: File, generate: &mut bool) -> Option<bool> {
         // fidelity with the reference implementation.
         let logical_not_noscore: i16 = if game().noscore == 0 { 1 } else { 0 };
         if (logical_not_noscore & 0x4) != 0 {
-            print_message(Some("This character is already on the scoreboard; it will not be scored again."));
+            if interactive {
+                print_message(Some("This character is already on the scoreboard; it will not be scored again."));
+            }
             game().noscore |= 0x4;
         }
     }
@@ -1266,10 +1333,10 @@ fn restore_from_file(file: File, generate: &mut bool) -> Option<bool> {
         }
     }
 
-    if game().noscore != 0 {
+    if interactive && game().noscore != 0 {
         print_message(Some("This save file cannot be used to get on the score board."));
     }
-    if valid_game_version(version_maj, version_min, patch_level) && !is_current_game_version(version_maj, version_min, patch_level) {
+    if interactive && valid_game_version(version_maj, version_min, patch_level) && !is_current_game_version(version_maj, version_min, patch_level) {
         let msg = format!(
             "Save file version {}.{} accepted on game version {}.{}.",
             version_maj, version_min, CURRENT_VERSION_MAJOR, CURRENT_VERSION_MINOR

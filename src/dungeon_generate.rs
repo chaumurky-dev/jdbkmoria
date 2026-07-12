@@ -1072,12 +1072,7 @@ fn dungeon_generate() {
         dungeon_place_door_if_next_to_two_walls(Coord::new(door.y + 1, door.x));
     }
 
-    let mut alloc_level = dg().current_level as i32 / 3;
-    if alloc_level < 2 {
-        alloc_level = 2;
-    } else if alloc_level > 10 {
-        alloc_level = 10;
-    }
+    let alloc_level = (dg().current_level as i32 / 3).clamp(2, 10);
 
     dungeon_place_stairs(2, random_number(2) + 2, 3);
     dungeon_place_stairs(1, random_number(2), 3);

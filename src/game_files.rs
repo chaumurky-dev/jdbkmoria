@@ -58,7 +58,7 @@ pub fn display_splash_screen() {
     if let Ok(file) = File::open(config::files::SPLASH_SCREEN) {
         clear_screen();
 
-        for (i, line) in BufReader::new(file).lines().flatten().enumerate() {
+        for (i, line) in BufReader::new(file).lines().map_while(Result::ok).enumerate() {
             put_string(&line, Coord::new(i as i32, 0));
         }
 
@@ -182,11 +182,11 @@ pub fn output_random_level_objects_to_file() {
 
     put_qio();
 
-    let _ = write!(file, "*** Random Object Sampling:\n");
-    let _ = write!(file, "*** {} objects\n", count);
-    let _ = write!(file, "*** For Level {}\n", level);
-    let _ = write!(file, "\n");
-    let _ = write!(file, "\n");
+    let _ = writeln!(file, "*** Random Object Sampling:");
+    let _ = writeln!(file, "*** {} objects", count);
+    let _ = writeln!(file, "*** For Level {}", level);
+    let _ = writeln!(file);
+    let _ = writeln!(file);
 
     let treasure_id = popt();
 
@@ -205,7 +205,7 @@ pub fn output_random_level_objects_to_file() {
 
         let item = game().treasure.list[treasure_id as usize];
         let description = item_description(&item, true);
-        let _ = write!(file, "{} {}\n", item.depth_first_found, description);
+        let _ = writeln!(file, "{} {}", item.depth_first_found, description);
     }
 
     pusht(treasure_id as u8);
@@ -225,23 +225,23 @@ fn write_character_sheet_to_file(char_file: &mut File) -> io::Result<()> {
 
     write!(char_file, " Name{:>9} {:<23}", colon, py().misc.name)?;
     write!(char_file, " Age{:>11} {:>6}", colon, py().misc.age)?;
-    write!(char_file, "   STR : {}\n", stats_as_string(py().stats.used[A_STR]))?;
+    writeln!(char_file, "   STR : {}", stats_as_string(py().stats.used[A_STR]))?;
 
     write!(char_file, " Race{:>9} {:<23}", colon, CHARACTER_RACES[py().misc.race_id as usize].name)?;
     write!(char_file, " Height{:>8} {:>6}", colon, py().misc.height)?;
-    write!(char_file, "   INT : {}\n", stats_as_string(py().stats.used[A_INT]))?;
+    writeln!(char_file, "   INT : {}", stats_as_string(py().stats.used[A_INT]))?;
 
     write!(char_file, " Sex{:>10} {:<23}", colon, player_get_gender_label())?;
     write!(char_file, " Weight{:>8} {:>6}", colon, py().misc.weight)?;
-    write!(char_file, "   WIS : {}\n", stats_as_string(py().stats.used[A_WIS]))?;
+    writeln!(char_file, "   WIS : {}", stats_as_string(py().stats.used[A_WIS]))?;
 
     write!(char_file, " Class{:>8} {:<23}", colon, CLASSES[py().misc.class_id as usize].title)?;
     write!(char_file, " Social Class : {:>6}", py().misc.social_class)?;
-    write!(char_file, "   DEX : {}\n", stats_as_string(py().stats.used[A_DEX]))?;
+    writeln!(char_file, "   DEX : {}", stats_as_string(py().stats.used[A_DEX]))?;
 
     write!(char_file, " Title{:>8} {:<23}", colon, player_rank_title())?;
     write!(char_file, "{:>22}", blank)?;
-    write!(char_file, "   CON : {}\n", stats_as_string(py().stats.used[A_CON]))?;
+    writeln!(char_file, "   CON : {}", stats_as_string(py().stats.used[A_CON]))?;
 
     write!(char_file, "{:>34}", blank)?;
     write!(char_file, "{:>26}", blank)?;
@@ -249,15 +249,15 @@ fn write_character_sheet_to_file(char_file: &mut File) -> io::Result<()> {
 
     write!(char_file, " + To Hit    : {:>6}", py().misc.display_to_hit)?;
     write!(char_file, "{:>7}Level      : {:>7}", blank, py().misc.level)?;
-    write!(char_file, "    Max Hit Points : {:>6}\n", py().misc.max_hp)?;
+    writeln!(char_file, "    Max Hit Points : {:>6}", py().misc.max_hp)?;
 
     write!(char_file, " + To Damage : {:>6}", py().misc.display_to_damage)?;
     write!(char_file, "{:>7}Experience : {:>7}", blank, py().misc.exp)?;
-    write!(char_file, "    Cur Hit Points : {:>6}\n", py().misc.current_hp)?;
+    writeln!(char_file, "    Cur Hit Points : {:>6}", py().misc.current_hp)?;
 
     write!(char_file, " + To AC     : {:>6}", py().misc.display_to_ac)?;
     write!(char_file, "{:>7}Max Exp    : {:>7}", blank, py().misc.max_exp)?;
-    write!(char_file, "    Max Mana{:>8} {:>6}\n", colon, py().misc.mana)?;
+    writeln!(char_file, "    Max Mana{:>8} {:>6}", colon, py().misc.mana)?;
 
     write!(char_file, "   Total AC  : {:>6}", py().misc.display_ac)?;
     if py().misc.level as usize >= PLAYER_MAX_LEVEL {
@@ -267,7 +267,7 @@ fn write_character_sheet_to_file(char_file: &mut File) -> io::Result<()> {
             (py().base_exp_levels[py().misc.level as usize - 1] as i64 * py().misc.experience_factor as i64 / 100) as i32;
         write!(char_file, "{:>7}Exp to Adv : {:>7}", blank, exp_to_adv)?;
     }
-    write!(char_file, "    Cur Mana{:>8} {:>6}\n", colon, py().misc.current_mana)?;
+    writeln!(char_file, "    Cur Mana{:>8} {:>6}", colon, py().misc.current_mana)?;
 
     write!(char_file, "{:>28}Gold{:>8} {:>7}\n\n", blank, colon, py().misc.au)?;
 
@@ -301,18 +301,18 @@ fn write_character_sheet_to_file(char_file: &mut File) -> io::Result<()> {
     write!(char_file, "(Miscellaneous Abilities)\n\n")?;
     write!(char_file, " Fighting    : {:<10}", stat_rating(Coord::new(12, xbth)))?;
     write!(char_file, "   Stealth     : {:<10}", stat_rating(Coord::new(1, xstl)))?;
-    write!(char_file, "   Perception  : {}\n", stat_rating(Coord::new(3, xfos)))?;
+    writeln!(char_file, "   Perception  : {}", stat_rating(Coord::new(3, xfos)))?;
     write!(char_file, " Bows/Throw  : {:<10}", stat_rating(Coord::new(12, xbthb)))?;
     write!(char_file, "   Disarming   : {:<10}", stat_rating(Coord::new(8, xdis)))?;
-    write!(char_file, "   Searching   : {}\n", stat_rating(Coord::new(6, xsrh)))?;
+    writeln!(char_file, "   Searching   : {}", stat_rating(Coord::new(6, xsrh)))?;
     write!(char_file, " Saving Throw: {:<10}", stat_rating(Coord::new(6, xsave)))?;
     write!(char_file, "   Magic Device: {:<10}", stat_rating(Coord::new(6, xdev)))?;
     write!(char_file, "   Infra-Vision: {}\n\n", xinfra)?;
 
     // Write out the character's history
-    write!(char_file, "Character Background\n")?;
+    writeln!(char_file, "Character Background")?;
     for entry in &py().misc.history {
-        write!(char_file, " {}\n", entry)?;
+        writeln!(char_file, " {}", entry)?;
     }
 
     Ok(())
@@ -341,7 +341,7 @@ fn write_equipment_list_to_file(equip_file: &mut File) -> io::Result<()> {
     write!(equip_file, "\n  [Character's Equipment List]\n\n")?;
 
     if py().equipment_count == 0 {
-        write!(equip_file, "  Character has no equipment in use.\n")?;
+        writeln!(equip_file, "  Character has no equipment in use.")?;
         return Ok(());
     }
 
@@ -353,7 +353,7 @@ fn write_equipment_list_to_file(equip_file: &mut File) -> io::Result<()> {
         }
 
         let description = item_description(&py().inventory[i], true);
-        write!(equip_file, "  {}) {:<19}: {}\n", (b'a' + item_slot_id) as char, equipment_placement_description(i), description)?;
+        writeln!(equip_file, "  {}) {:<19}: {}", (b'a' + item_slot_id) as char, equipment_placement_description(i), description)?;
 
         item_slot_id += 1;
     }
@@ -368,13 +368,13 @@ fn write_inventory_to_file(inv_file: &mut File) -> io::Result<()> {
     write!(inv_file, "  [General Inventory List]\n\n")?;
 
     if py().pack.unique_items == 0 {
-        write!(inv_file, "  Character has no objects in inventory.\n")?;
+        writeln!(inv_file, "  Character has no objects in inventory.")?;
         return Ok(());
     }
 
     for i in 0..py().pack.unique_items as usize {
         let description = item_description(&py().inventory[i], true);
-        write!(inv_file, "{}) {}\n", (b'a' + i as u8) as char, description)?;
+        writeln!(inv_file, "{}) {}", (b'a' + i as u8) as char, description)?;
     }
 
     write!(inv_file, "{}", ctrl_key('L'))?;
