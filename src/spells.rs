@@ -2280,6 +2280,8 @@ pub fn spell_lose_wis() {
 }
 
 // Lose a dexterity point. -RAK-
+// (never called in the original C++ either; kept for fidelity)
+#[allow(dead_code)]
 pub fn spell_lose_dex() {
     if !py().flags.sustain_dex {
         player_stat_random_decrease(A_DEX);

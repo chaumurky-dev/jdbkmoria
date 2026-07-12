@@ -83,7 +83,6 @@ pub enum SpecialNameIds {
     SnArraySize, // 56th item (size value for arrays)
 }
 
-pub const SN_NULL: u8 = SpecialNameIds::SnNull as u8;
 pub const SN_ARRAY_SIZE: usize = SpecialNameIds::SnArraySize as usize;
 
 pub const MAX_COLORS: usize = 49; // Used with potions

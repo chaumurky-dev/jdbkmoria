@@ -22,7 +22,10 @@ use crate::ui_io::print_message;
 pub const PLAYER_INVENTORY_SIZE: usize = 34;
 
 // Inventory stacking `sub_category_id`s - these never stack
+// (range-documentation constants; unused in the original C++ as well)
+#[allow(dead_code)]
 pub const ITEM_NEVER_STACK_MIN: u8 = 0;
+#[allow(dead_code)]
 pub const ITEM_NEVER_STACK_MAX: u8 = 63;
 // these items always stack with others of same `sub_category_id`s, always treated as
 // single objects, must be power of 2;
@@ -31,6 +34,7 @@ pub const ITEM_SINGLE_STACK_MAX: u8 = 192; // see NOTE below
 // these items stack with others only if have same `sub_category_id`s and same `misc_use`,
 // they are treated as a group for wielding, etc.
 pub const ITEM_GROUP_MIN: u8 = 192;
+#[allow(dead_code)]
 pub const ITEM_GROUP_MAX: u8 = 255;
 // NOTE: items with `sub_category_id`s = 192 are treated as single objects,
 // but only stack with others of same `sub_category_id`s if have the same

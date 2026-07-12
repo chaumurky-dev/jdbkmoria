@@ -636,11 +636,12 @@ fn store_sell_haggle(store_id: usize, price: &mut i32, item: &Inventory) -> BidS
     }
 
     let mut final_asking_price = 0;
-    let mut current_asking_price = 0;
+    // assigned on every path before first read (the C declared these uninitialized)
+    let mut current_asking_price;
 
     let mut final_flag = 0;
 
-    let mut comment = String::new();
+    let mut comment;
     let mut accepted_without_haggle = false;
 
     if !rejected {

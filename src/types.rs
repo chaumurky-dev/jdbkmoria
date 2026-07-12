@@ -11,6 +11,8 @@ pub const MORIA_MESSAGE_SIZE: usize = 80;
 // Note: since its output can easily exceed 80 characters,
 // an object description must always be called with an
 // obj_desc_t type as the first parameter.
+// (buffer-size documentation; Rust Strings make the fixed buffer unnecessary)
+#[allow(dead_code)]
 pub const MORIA_OBJ_DESC_SIZE: usize = 160;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]

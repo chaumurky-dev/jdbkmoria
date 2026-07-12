@@ -10,7 +10,10 @@ pub const MAX_OWNERS: usize = 18; // Number of owners to choose from
 pub const MAX_STORES: usize = 6; // Number of different stores
 pub const STORE_MAX_DISCRETE_ITEMS: usize = 24; // Max number of discrete objects in inventory
 pub const STORE_MAX_ITEM_TYPES: usize = 26; // Number of items to choose stock from
-pub const COST_ADJUSTMENT: i32 = 100; // Adjust prices for buying and selling
+// Adjust prices for buying and selling. Only consumed by the C++
+// preprocessor (`#if COST_ADJUSTMENT != 100`), so unused at runtime.
+#[allow(dead_code)]
+pub const COST_ADJUSTMENT: i32 = 100;
 
 // InventoryRecord data for a store inventory item
 #[derive(Debug, Clone, Copy, Default)]

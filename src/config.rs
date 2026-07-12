@@ -5,6 +5,13 @@
 
 // Basic Configuration
 
+// Some constants below are never referenced by the game logic; they were
+// unused in the original C++ as well (e.g. the individual CS_* monster
+// spell bits, which the code decodes positionally, and the PY_INT..PY_CHR
+// status bits, addressed as `PY_STR << stat`). They are kept to document
+// the bit layouts and to stay faithful to `config.cpp`.
+#![allow(dead_code)]
+
 // Data files used by Umoria
 // NOTE: use relative paths to the executable binary.
 pub mod files {

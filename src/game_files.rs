@@ -384,6 +384,10 @@ fn write_inventory_to_file(inv_file: &mut File) -> io::Result<()> {
 
 // Print the character to a file or device -RAK-
 pub fn output_player_character_to_file(filename: &str) -> bool {
+    // The C code's fopen/open were #defined to tfopen/topen (ui_io), which
+    // expand a leading ~ to the user's home directory.
+    let expanded = crate::ui_io::tilde(filename).unwrap_or_else(|| filename.to_string());
+    let filename: &str = &expanded;
     let file = match std::fs::OpenOptions::new().write(true).create_new(true).open(filename) {
         Ok(file) => Some(file),
         Err(e) if e.kind() == io::ErrorKind::AlreadyExists => {

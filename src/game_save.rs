@@ -711,6 +711,10 @@ fn write_save_data() -> bool {
 }
 
 fn save_char(filename: &str) -> bool {
+    // The C code's fopen/open were #defined to tfopen/topen (ui_io), which
+    // expand a leading ~ to the user's home directory.
+    let expanded = crate::ui_io::tilde(filename).unwrap_or_else(|| filename.to_string());
+    let filename: &str = &expanded;
     if game().character_saved {
         return true; // Nothing to save.
     }
@@ -790,7 +794,8 @@ fn save_char(filename: &str) -> bool {
 }
 
 fn try_open_for_read(filename: &str) -> Option<File> {
-    if let Ok(f) = File::open(filename) {
+    // tfopen_read applies the same ~ expansion the C tfopen performed
+    if let Ok(f) = crate::ui_io::tfopen_read(filename) {
         return Some(f);
     }
 

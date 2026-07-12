@@ -483,6 +483,8 @@ pub fn exit_program() -> ! {
 }
 
 // Abort the program with a message displayed on the terminal.
+// (never called in the original C++ either; kept for fidelity)
+#[allow(dead_code)]
 pub fn abort_program(msg: &str) -> ! {
     flush_input_buffer();
     terminal_restore();
