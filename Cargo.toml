@@ -1,0 +1,18 @@
+[package]
+name = "rmoria"
+version = "5.7.15"
+edition = "2021"
+description = "Rust port of Umoria - Robert A. Koeneke's classic dungeon crawler, The Dungeons of Moria"
+license = "GPL-3.0-or-later"
+repository = "https://github.com/dungeons-of-moria/umoria"
+authors = [
+    "Robert A. Koeneke (original Moria)",
+    "James E. Wilson (Umoria)",
+    "Umoria contributors (see AUTHORS)",
+]
+
+[dependencies]
+pancurses = "0.17"
+
+[profile.release]
+opt-level = 3
