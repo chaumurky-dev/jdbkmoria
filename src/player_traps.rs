@@ -128,7 +128,7 @@ pub fn player_disarm_trap() {
     let mut coord = py().pos;
     player_move_position(dir, &mut coord);
 
-    let tile = dg().floor[coord.y as usize][coord.x as usize];
+    let tile = *dg().tile(coord);
 
     let mut no_disarm = false;
 
@@ -212,7 +212,7 @@ fn chest_explode(coord: Coord) {
 // Chests have traps too. -RAK-
 // Note: Chest traps are based on the FLAGS value
 pub fn chest_trap(coord: Coord) {
-    let flags = game().treasure.list[dg().floor[coord.y as usize][coord.x as usize].treasure_id as usize].flags;
+    let flags = game().treasure.list[dg().tile(coord).treasure_id as usize].flags;
 
     if (flags & config::treasure::chests::CH_LOSE_STR) != 0 {
         chest_loose_strength();

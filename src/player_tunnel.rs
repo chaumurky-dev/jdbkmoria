@@ -121,10 +121,10 @@ fn dungeon_dig_rubble(coord: Coord, digging_ability: i32) {
 // Return `true` if a wall was dug at
 fn dungeon_dig_at_location(coord: Coord, wall_type: u8, digging_ability: i32) -> bool {
     match wall_type {
-        x if x == TILE_GRANITE_WALL => dungeon_dig_granite_wall(coord, digging_ability),
-        x if x == TILE_MAGMA_WALL => dungeon_dig_magma_wall(coord, digging_ability),
-        x if x == TILE_QUARTZ_WALL => dungeon_dig_quartz_wall(coord, digging_ability),
-        x if x == TILE_BOUNDARY_WALL => print_message(Some("This seems to be permanent rock.")),
+        TILE_GRANITE_WALL => dungeon_dig_granite_wall(coord, digging_ability),
+        TILE_MAGMA_WALL => dungeon_dig_magma_wall(coord, digging_ability),
+        TILE_QUARTZ_WALL => dungeon_dig_quartz_wall(coord, digging_ability),
+        TILE_BOUNDARY_WALL => print_message(Some("This seems to be permanent rock.")),
         _ => return false,
     }
     true
@@ -143,7 +143,7 @@ pub fn player_tunnel(direction: i32) {
     let mut coord = py().pos;
     player_move_position(direction, &mut coord);
 
-    let tile = dg().floor[coord.y as usize][coord.x as usize];
+    let tile = *dg().tile(coord);
     let item = py().inventory[PlayerEquipment::Wield as usize];
 
     if !player_can_tunnel(tile.treasure_id, tile.feature_id) {

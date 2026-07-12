@@ -139,16 +139,17 @@ pub fn wizard_summon_monster() {
 // Light up the dungeon -RAK-
 pub fn wizard_light_up_dungeon() {
     let pos = py().pos;
-    let flag = !dg().floor[pos.y as usize][pos.x as usize].permanent_light;
+    let flag = !dg().tile(pos).permanent_light;
 
     for y in 0..dg().height as i32 {
         for x in 0..dg().width as i32 {
-            if dg().floor[y as usize][x as usize].feature_id <= MAX_CAVE_FLOOR {
+            if dg().tile(Coord::new(y, x)).feature_id <= MAX_CAVE_FLOOR {
                 for yy in (y - 1)..=(y + 1) {
                     for xx in (x - 1)..=(x + 1) {
-                        dg().floor[yy as usize][xx as usize].permanent_light = flag;
+                        let c = Coord::new(yy, xx);
+                        dg().tile_mut(c).permanent_light = flag;
                         if !flag {
-                            dg().floor[yy as usize][xx as usize].field_mark = false;
+                            dg().tile_mut(c).field_mark = false;
                         }
                     }
                 }
@@ -486,17 +487,17 @@ pub fn wizard_generate_object() {
         coord.x = pos.x - 4 + random_number(7);
 
         if coord_in_bounds(coord)
-            && dg().floor[coord.y as usize][coord.x as usize].feature_id <= MAX_CAVE_FLOOR
-            && dg().floor[coord.y as usize][coord.x as usize].treasure_id == 0
+            && dg().tile(coord).feature_id <= MAX_CAVE_FLOOR
+            && dg().tile(coord).treasure_id == 0
         {
             // delete any object at location, before call popt()
-            if dg().floor[coord.y as usize][coord.x as usize].treasure_id != 0 {
+            if dg().tile(coord).treasure_id != 0 {
                 dungeon_delete_object(coord);
             }
 
             // place the object
             let free_treasure_id = popt();
-            dg().floor[coord.y as usize][coord.x as usize].treasure_id = free_treasure_id as u8;
+            dg().tile_mut(coord).treasure_id = free_treasure_id as u8;
             inventory_item_copy_to(id as usize, &mut game().treasure.list[free_treasure_id as usize]);
             magic_treasure_magical_ability(free_treasure_id, dg().current_level as i32);
 
@@ -659,14 +660,14 @@ pub fn wizard_create_objects() {
         // delete object first if any, before call popt()
         let pos = py().pos;
 
-        if dg().floor[pos.y as usize][pos.x as usize].treasure_id != 0 {
+        if dg().tile(pos).treasure_id != 0 {
             dungeon_delete_object(pos);
         }
 
         let allocated_id = popt();
 
         game().treasure.list[allocated_id as usize] = item;
-        dg().floor[pos.y as usize][pos.x as usize].treasure_id = allocated_id as u8;
+        dg().tile_mut(pos).treasure_id = allocated_id as u8;
 
         print_message(Some("Allocated."));
     } else {

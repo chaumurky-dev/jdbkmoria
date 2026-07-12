@@ -169,7 +169,7 @@ pub fn player_end_running() {
 }
 
 fn area_affect_stop_looking_at_squares(i: i32, dir: i32, new_dir: i32, coord: Coord, check_dir: &mut i32, dir_a: &mut i32, dir_b: &mut i32) -> bool {
-    let tile = dg().floor[coord.y as usize][coord.x as usize];
+    let tile = *dg().tile(coord);
 
     // Default: Square unseen. Treat as open.
     let mut invisible = true;

@@ -282,13 +282,13 @@ pub fn magic_initialize_item_names() {
 
 pub fn object_position_offset(category_id: u8, sub_category_id: u8) -> i16 {
     match category_id {
-        x if x == TV_AMULET => 0,
-        x if x == TV_RING => 1,
-        x if x == TV_STAFF => 2,
-        x if x == TV_WAND => 3,
-        x if x == TV_SCROLL1 || x == TV_SCROLL2 => 4,
-        x if x == TV_POTION1 || x == TV_POTION2 => 5,
-        x if x == TV_FOOD => {
+        TV_AMULET => 0,
+        TV_RING => 1,
+        TV_STAFF => 2,
+        TV_WAND => 3,
+        TV_SCROLL1 | TV_SCROLL2 => 4,
+        TV_POTION1 | TV_POTION2 => 5,
+        TV_FOOD => {
             if ((sub_category_id & (ITEM_SINGLE_STACK_MIN - 1)) as usize) < MAX_MUSHROOMS {
                 6
             } else {
@@ -511,28 +511,28 @@ pub fn item_description(item: &Inventory, add_prefix: bool) -> String {
     let mut misc_type = ItemMiscUse::Ignored;
 
     match item.category_id {
-        x if x == TV_MISC || x == TV_CHEST => {}
-        x if x == TV_SLING_AMMO || x == TV_BOLT || x == TV_ARROW => {
+        TV_MISC | TV_CHEST => {}
+        TV_SLING_AMMO | TV_BOLT | TV_ARROW => {
             damstr = format!(" ({}d{})", item.damage.dice, item.damage.sides);
         }
-        x if x == TV_LIGHT => {
+        TV_LIGHT => {
             misc_type = ItemMiscUse::Light;
         }
-        x if x == TV_SPIKE => {}
-        x if x == TV_BOW => {
+        TV_SPIKE => {}
+        TV_BOW => {
             damstr = format!(" (x{})", bow_damage_value(item.misc_use));
         }
-        x if x == TV_HAFTED || x == TV_POLEARM || x == TV_SWORD => {
+        TV_HAFTED | TV_POLEARM | TV_SWORD => {
             damstr = format!(" ({}d{})", item.damage.dice, item.damage.sides);
             misc_type = ItemMiscUse::Flags;
         }
-        x if x == TV_DIGGING => {
+        TV_DIGGING => {
             misc_type = ItemMiscUse::ZPlusses;
             // NOTE: the original prints sides twice (not dice), kept for fidelity
             damstr = format!(" ({}d{})", item.damage.sides, item.damage.sides);
         }
-        x if x == TV_BOOTS || x == TV_GLOVES || x == TV_CLOAK || x == TV_HELM || x == TV_SHIELD || x == TV_HARD_ARMOR || x == TV_SOFT_ARMOR => {}
-        x if x == TV_AMULET => {
+        TV_BOOTS | TV_GLOVES | TV_CLOAK | TV_HELM | TV_SHIELD | TV_HARD_ARMOR | TV_SOFT_ARMOR => {}
+        TV_AMULET => {
             if modify {
                 basenm = "& %s Amulet".to_string();
                 modstr = Some(amulets()[indexx]);
@@ -542,7 +542,7 @@ pub fn item_description(item: &Inventory, add_prefix: bool) -> String {
             }
             misc_type = ItemMiscUse::Plusses;
         }
-        x if x == TV_RING => {
+        TV_RING => {
             if modify {
                 basenm = "& %s Ring".to_string();
                 modstr = Some(rocks()[indexx]);
@@ -552,7 +552,7 @@ pub fn item_description(item: &Inventory, add_prefix: bool) -> String {
             }
             misc_type = ItemMiscUse::Plusses;
         }
-        x if x == TV_STAFF => {
+        TV_STAFF => {
             if modify {
                 basenm = "& %s Staff".to_string();
                 modstr = Some(woods()[indexx]);
@@ -562,7 +562,7 @@ pub fn item_description(item: &Inventory, add_prefix: bool) -> String {
             }
             misc_type = ItemMiscUse::Charges;
         }
-        x if x == TV_WAND => {
+        TV_WAND => {
             if modify {
                 basenm = "& %s Wand".to_string();
                 modstr = Some(metals()[indexx]);
@@ -572,7 +572,7 @@ pub fn item_description(item: &Inventory, add_prefix: bool) -> String {
             }
             misc_type = ItemMiscUse::Charges;
         }
-        x if x == TV_SCROLL1 || x == TV_SCROLL2 => {
+        TV_SCROLL1 | TV_SCROLL2 => {
             if modify {
                 basenm = "& Scroll~ titled \"%s\"".to_string();
                 modstr = Some(&magic_item_titles()[indexx]);
@@ -581,7 +581,7 @@ pub fn item_description(item: &Inventory, add_prefix: bool) -> String {
                 append_name = true;
             }
         }
-        x if x == TV_POTION1 || x == TV_POTION2 => {
+        TV_POTION1 | TV_POTION2 => {
             if modify {
                 basenm = "& %s Potion~".to_string();
                 modstr = Some(colors()[indexx]);
@@ -590,8 +590,8 @@ pub fn item_description(item: &Inventory, add_prefix: bool) -> String {
                 append_name = true;
             }
         }
-        x if x == TV_FLASK => {}
-        x if x == TV_FOOD => {
+        TV_FLASK => {}
+        TV_FOOD => {
             if modify {
                 if indexx <= 15 {
                     basenm = "& %s Mushroom~".to_string();
@@ -613,21 +613,21 @@ pub fn item_description(item: &Inventory, add_prefix: bool) -> String {
                 }
             }
         }
-        x if x == TV_MAGIC_BOOK => {
+        TV_MAGIC_BOOK => {
             modstr = None;
             let name = basenm;
             basenm = format!("& Book~ of Magic Spells {}", name);
         }
-        x if x == TV_PRAYER_BOOK => {
+        TV_PRAYER_BOOK => {
             modstr = None;
             let name = basenm;
             basenm = format!("& Holy Book~ of Prayers {}", name);
         }
-        x if x == TV_OPEN_DOOR || x == TV_CLOSED_DOOR || x == TV_SECRET_DOOR || x == TV_RUBBLE => {}
-        x if x == TV_GOLD || x == TV_INVIS_TRAP || x == TV_VIS_TRAP || x == TV_UP_STAIR || x == TV_DOWN_STAIR => {
+        TV_OPEN_DOOR | TV_CLOSED_DOOR | TV_SECRET_DOOR | TV_RUBBLE => {}
+        TV_GOLD | TV_INVIS_TRAP | TV_VIS_TRAP | TV_UP_STAIR | TV_DOWN_STAIR => {
             return format!("{}.", GAME_OBJECTS[item.id as usize].name);
         }
-        x if x == TV_STORE_DOOR => {
+        TV_STORE_DOOR => {
             return format!("the entrance to the {}.", GAME_OBJECTS[item.id as usize].name);
         }
         _ => {

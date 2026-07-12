@@ -182,7 +182,7 @@ pub fn dungeon_reset_view() {
     // Move the light source
     crate::dungeon::dungeon_move_character_light(py().pos, py().pos);
 
-    let tile = dg().floor[py().pos.y as usize][py().pos.x as usize];
+    let tile = *dg().tile(py().pos);
 
     // A room of light should be lit.
     if tile.feature_id == TILE_LIGHT_FLOOR {
@@ -196,7 +196,7 @@ pub fn dungeon_reset_view() {
     if tile.perma_lit_room && py().flags.blind < 1 {
         for i in (py().pos.y - 1)..=(py().pos.y + 1) {
             for j in (py().pos.x - 1)..=(py().pos.x + 1) {
-                let neighbour = dg().floor[i as usize][j as usize];
+                let neighbour = *dg().tile(Coord::new(i, j));
                 if neighbour.feature_id == TILE_LIGHT_FLOOR && !neighbour.permanent_light {
                     crate::dungeon::dungeon_light_room(Coord::new(i, j));
                 }

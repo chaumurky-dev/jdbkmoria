@@ -147,7 +147,7 @@ fn inventory_drop_or_throw_item(coord: crate::types::Coord, item: &Inventory) {
         let mut k = 0;
         while !flag && k <= 9 {
             if coord_in_bounds(position) {
-                let tile = dg().floor[position.y as usize][position.x as usize];
+                let tile = *dg().tile(position);
                 if tile.feature_id <= MAX_OPEN_SPACE && tile.treasure_id == 0 {
                     flag = true;
                 }
@@ -163,7 +163,7 @@ fn inventory_drop_or_throw_item(coord: crate::types::Coord, item: &Inventory) {
 
     if flag {
         let cur_pos = popt();
-        dg().floor[position.y as usize][position.x as usize].treasure_id = cur_pos as u8;
+        dg().tile_mut(position).treasure_id = cur_pos as u8;
         game().treasure.list[cur_pos as usize] = *item;
         dungeon_lite_spot(position);
     } else {
@@ -228,7 +228,7 @@ pub fn player_throw_item() {
             flag = true;
         }
 
-        let tile = dg().floor[coord.y as usize][coord.x as usize];
+        let tile = *dg().tile(coord);
 
         if tile.feature_id <= MAX_OPEN_SPACE && !flag {
             if tile.creature_id > 1 {

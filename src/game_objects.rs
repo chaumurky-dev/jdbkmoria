@@ -27,17 +27,17 @@ fn compact_objects() {
         for y in 0..dg().height as i32 {
             for x in 0..dg().width as i32 {
                 let coord = Coord::new(y, x);
-                let treasure_id = dg().floor[y as usize][x as usize].treasure_id;
+                let treasure_id = dg().tile(coord).treasure_id;
 
                 if treasure_id != 0 && crate::dungeon::coord_distance_between(coord, py().pos) > current_distance {
                     let chance = match game().treasure.list[treasure_id as usize].category_id {
-                        x if x == TV_VIS_TRAP => 15,
-                        x if x == TV_INVIS_TRAP || x == TV_RUBBLE || x == TV_OPEN_DOOR || x == TV_CLOSED_DOOR => 5,
+                        TV_VIS_TRAP => 15,
+                        TV_INVIS_TRAP | TV_RUBBLE | TV_OPEN_DOOR | TV_CLOSED_DOOR => 5,
                         // Stairs, don't delete them.
                         // Shop doors, don't delete them.
-                        x if x == TV_UP_STAIR || x == TV_DOWN_STAIR || x == TV_STORE_DOOR => 0,
+                        TV_UP_STAIR | TV_DOWN_STAIR | TV_STORE_DOOR => 0,
                         // secret doors
-                        x if x == TV_SECRET_DOOR => 3,
+                        TV_SECRET_DOOR => 3,
                         _ => 10,
                     };
 
@@ -97,8 +97,8 @@ pub fn pusht(treasure_id: u8) {
 // Use a DungeonObject since the item has not yet been created
 fn item_bigger_than_chest(obj: &DungeonObject) -> bool {
     match obj.category_id {
-        x if x == TV_CHEST || x == TV_BOW || x == TV_POLEARM || x == TV_HARD_ARMOR || x == TV_SOFT_ARMOR || x == TV_STAFF => true,
-        x if x == TV_HAFTED || x == TV_SWORD || x == TV_DIGGING => obj.weight > 150,
+        TV_CHEST | TV_BOW | TV_POLEARM | TV_HARD_ARMOR | TV_SOFT_ARMOR | TV_STAFF => true,
+        TV_HAFTED | TV_SWORD | TV_DIGGING => obj.weight > 150,
         _ => false,
     }
 }

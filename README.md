@@ -45,3 +45,19 @@ Options:
     -v           Print version info and exit
     -h           Display this message
 ```
+
+## Testing
+
+Run the unit tests with:
+
+```sh
+cargo test
+```
+
+Run the end-to-end PTY smoke test (requires a debug build):
+
+```sh
+python3 tools/smoke_test.py
+```
+
+The smoke test verifies version reporting, character creation, movement, and graceful exit. It runs the game in a temporary directory to avoid dirtying the repository with save files.

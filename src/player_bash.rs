@@ -57,7 +57,7 @@ pub fn player_bash() {
     let mut coord = py().pos;
     player_move_position(dir, &mut coord);
 
-    let tile = dg().floor[coord.y as usize][coord.x as usize];
+    let tile = *dg().tile(coord);
 
     if tile.creature_id > 1 {
         player_bash_position(coord);
@@ -91,7 +91,7 @@ pub fn player_bash() {
 // Make a bash attack on someone. -CJS-
 // Used to be part of bash above.
 fn player_bash_attack(coord: Coord) {
-    let monster_id = dg().floor[coord.y as usize][coord.x as usize].creature_id as usize;
+    let monster_id = dg().tile(coord).creature_id as usize;
 
     monsters()[monster_id].sleep_count = 0;
 
@@ -187,7 +187,7 @@ fn player_bash_position(coord: Coord) {
 fn player_bash_closed_door(coord: Coord, dir: i32) {
     print_message_no_command_interrupt("You smash into the door!");
 
-    let treasure_id = dg().floor[coord.y as usize][coord.x as usize].treasure_id as usize;
+    let treasure_id = dg().tile(coord).treasure_id as usize;
 
     let chance = py().stats.used[A_STR] as i32 + py().misc.weight as i32 / 2;
 
@@ -201,7 +201,7 @@ fn player_bash_closed_door(coord: Coord, dir: i32) {
         // 50% chance of breaking door
         game().treasure.list[treasure_id].misc_use = (1 - random_number(2)) as i16;
 
-        dg().floor[coord.y as usize][coord.x as usize].feature_id = TILE_CORR_FLOOR;
+        dg().tile_mut(coord).feature_id = TILE_CORR_FLOOR;
 
         if py().flags.confused == 0 {
             player_move(dir, false);

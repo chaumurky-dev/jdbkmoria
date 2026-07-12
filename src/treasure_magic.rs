@@ -818,14 +818,14 @@ pub fn magic_treasure_magical_ability(item_id: i32, level: i32) {
 
     // Depending on treasure type, it can have certain magical properties
     match item.category_id {
-        x if x == TV_SHIELD || x == TV_HARD_ARMOR || x == TV_SOFT_ARMOR => {
+        TV_SHIELD | TV_HARD_ARMOR | TV_SOFT_ARMOR => {
             if magic_should_be_enchanted(chance) {
                 magical_armor(item, special, level);
             } else if magic_should_be_enchanted(cursed) {
                 cursed_armor(item, level);
             }
         }
-        x if x == TV_HAFTED || x == TV_POLEARM || x == TV_SWORD => {
+        TV_HAFTED | TV_POLEARM | TV_SWORD => {
             // always show to_hit/to_damage values if identified
             item.identification |= config::identification::ID_SHOW_HIT_DAM;
 
@@ -835,7 +835,7 @@ pub fn magic_treasure_magical_ability(item_id: i32, level: i32) {
                 cursed_sword(item, level);
             }
         }
-        x if x == TV_BOW => {
+        TV_BOW => {
             // always show to_hit/to_damage values if identified
             item.identification |= config::identification::ID_SHOW_HIT_DAM;
 
@@ -845,7 +845,7 @@ pub fn magic_treasure_magical_ability(item_id: i32, level: i32) {
                 cursed_bow(item, level);
             }
         }
-        x if x == TV_DIGGING => {
+        TV_DIGGING => {
             // always show to_hit/to_damage values if identified
             item.identification |= config::identification::ID_SHOW_HIT_DAM;
 
@@ -857,21 +857,21 @@ pub fn magic_treasure_magical_ability(item_id: i32, level: i32) {
                 }
             }
         }
-        x if x == TV_GLOVES => {
+        TV_GLOVES => {
             if magic_should_be_enchanted(chance) {
                 magical_gloves(item, special, level);
             } else if magic_should_be_enchanted(cursed) {
                 cursed_gloves(item, special, level);
             }
         }
-        x if x == TV_BOOTS => {
+        TV_BOOTS => {
             if magic_should_be_enchanted(chance) {
                 magical_boots(item, special, level);
             } else if magic_should_be_enchanted(cursed) {
                 cursed_boots(item, level);
             }
         }
-        x if x == TV_HELM => {
+        TV_HELM => {
             // give crowns a higher chance for magic
             if item.sub_category_id >= 6 && item.sub_category_id <= 8 {
                 chance += item.cost / 100;
@@ -884,9 +884,9 @@ pub fn magic_treasure_magical_ability(item_id: i32, level: i32) {
                 cursed_helms(item, special, level);
             }
         }
-        x if x == TV_RING => process_rings(item, level, cursed),
-        x if x == TV_AMULET => process_amulets(item, level, cursed),
-        x if x == TV_LIGHT => {
+        TV_RING => process_rings(item, level, cursed),
+        TV_AMULET => process_amulets(item, level, cursed),
+        TV_LIGHT => {
             // `sub_category_id` should be even for store, odd for dungeon
             // Dungeon found ones will be partially charged
             if (item.sub_category_id % 2) == 1 {
@@ -894,13 +894,13 @@ pub fn magic_treasure_magical_ability(item_id: i32, level: i32) {
                 item.sub_category_id -= 1;
             }
         }
-        x if x == TV_WAND => {
+        TV_WAND => {
             let magic_amount = wand_magic(item.sub_category_id);
             if magic_amount != -1 {
                 item.misc_use = magic_amount as i16;
             }
         }
-        x if x == TV_STAFF => {
+        TV_STAFF => {
             let magic_amount = staff_magic(item.sub_category_id);
             if magic_amount != -1 {
                 item.misc_use = magic_amount as i16;
@@ -913,18 +913,18 @@ pub fn magic_treasure_magical_ability(item_id: i32, level: i32) {
                 item.depth_first_found = 5;
             }
         }
-        x if x == TV_CLOAK => {
+        TV_CLOAK => {
             if magic_should_be_enchanted(chance) {
                 magical_cloak(item, special, level);
             } else if magic_should_be_enchanted(cursed) {
                 cursed_cloak(item, level);
             }
         }
-        x if x == TV_CHEST => magical_chests(item, level),
-        x if x == TV_SLING_AMMO || x == TV_SPIKE || x == TV_BOLT || x == TV_ARROW => {
+        TV_CHEST => magical_chests(item, level),
+        TV_SLING_AMMO | TV_SPIKE | TV_BOLT | TV_ARROW => {
             magical_projectile(item, special, level, chance, cursed);
         }
-        x if x == TV_FOOD => {
+        TV_FOOD => {
             // make sure all food rations have the same level
             if item.sub_category_id == 90 {
                 item.depth_first_found = 0;
@@ -935,7 +935,7 @@ pub fn magic_treasure_magical_ability(item_id: i32, level: i32) {
                 item.depth_first_found = 6;
             }
         }
-        x if x == TV_SCROLL1 => {
+        TV_SCROLL1 => {
             if item.sub_category_id == 67 {
                 // give all identify scrolls the same level
                 item.depth_first_found = 1;
@@ -950,7 +950,7 @@ pub fn magic_treasure_magical_ability(item_id: i32, level: i32) {
                 item.depth_first_found = 5;
             }
         }
-        x if x == TV_POTION1 => {
+        TV_POTION1 => {
             // cure light
             if item.sub_category_id == 76 {
                 item.depth_first_found = 0;

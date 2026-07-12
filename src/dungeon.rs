@@ -70,6 +70,14 @@ impl Dungeon {
             floor: [[Tile::empty(); MAX_WIDTH as usize]; MAX_HEIGHT as usize],
         }
     }
+
+    pub fn tile(&self, coord: Coord) -> &Tile {
+        &self.floor[coord.y as usize][coord.x as usize]
+    }
+
+    pub fn tile_mut(&mut self, coord: Coord) -> &mut Tile {
+        &mut self.floor[coord.y as usize][coord.x as usize]
+    }
 }
 
 static DG: RacyCell<Dungeon> = RacyCell::new(Dungeon::empty());
@@ -200,24 +208,21 @@ pub fn coord_distance_between(from: Coord, to: Coord) -> i32 {
 // note that y,x is always coord_in_bounds(), i.e. 0 < y < dg.height-1,
 // and 0 < x < dg.width-1
 pub fn coord_walls_next_to(coord: Coord) -> i32 {
-    let y = coord.y as usize;
-    let x = coord.x as usize;
-
     let mut walls = 0;
 
-    if dg().floor[y - 1][x].feature_id >= MIN_CAVE_WALL {
+    if dg().tile(Coord::new(coord.y - 1, coord.x)).feature_id >= MIN_CAVE_WALL {
         walls += 1;
     }
 
-    if dg().floor[y + 1][x].feature_id >= MIN_CAVE_WALL {
+    if dg().tile(Coord::new(coord.y + 1, coord.x)).feature_id >= MIN_CAVE_WALL {
         walls += 1;
     }
 
-    if dg().floor[y][x - 1].feature_id >= MIN_CAVE_WALL {
+    if dg().tile(Coord::new(coord.y, coord.x - 1)).feature_id >= MIN_CAVE_WALL {
         walls += 1;
     }
 
-    if dg().floor[y][x + 1].feature_id >= MIN_CAVE_WALL {
+    if dg().tile(Coord::new(coord.y, coord.x + 1)).feature_id >= MIN_CAVE_WALL {
         walls += 1;
     }
 
@@ -232,8 +237,9 @@ pub fn coord_corridor_walls_next_to(coord: Coord) -> i32 {
 
     for y in (coord.y - 1)..=(coord.y + 1) {
         for x in (coord.x - 1)..=(coord.x + 1) {
-            let tile_id = dg().floor[y as usize][x as usize].feature_id;
-            let treasure_id = dg().floor[y as usize][x as usize].treasure_id;
+            let c = Coord::new(y, x);
+            let tile_id = dg().tile(c).feature_id;
+            let treasure_id = dg().tile(c).treasure_id;
 
             // should fail if there is already a door present
             if tile_id == TILE_CORR_FLOOR && (treasure_id == 0 || game().treasure.list[treasure_id as usize].category_id < TV_MIN_DOORS) {
@@ -247,7 +253,7 @@ pub fn coord_corridor_walls_next_to(coord: Coord) -> i32 {
 
 // Returns symbol for given row, column -RAK-
 pub fn cave_get_tile_symbol(coord: Coord) -> char {
-    let tile = dg().floor[coord.y as usize][coord.x as usize];
+    let tile = *dg().tile(coord);
 
     if tile.creature_id == 1 && (py().running_tracker == 0 || config::options::options().run_print_self) {
         return '@';
@@ -288,21 +294,21 @@ pub fn cave_get_tile_symbol(coord: Coord) -> char {
 
 // Tests a spot for light or field mark status -RAK-
 pub fn cave_tile_visible(coord: Coord) -> bool {
-    let tile = &dg().floor[coord.y as usize][coord.x as usize];
+    let tile = dg().tile(coord);
     tile.permanent_light || tile.temporary_light || tile.field_mark
 }
 
 // Places a particular trap at location y, x -RAK-
 pub fn dungeon_set_trap(coord: Coord, sub_type_id: i32) {
     let free_treasure_id = popt() as usize;
-    dg().floor[coord.y as usize][coord.x as usize].treasure_id = free_treasure_id as u8;
+    dg().tile_mut(coord).treasure_id = free_treasure_id as u8;
     inventory_item_copy_to(config::dungeon::objects::OBJ_TRAP_LIST as usize + sub_type_id as usize, &mut game().treasure.list[free_treasure_id]);
 }
 
 // Change a trap from invisible to visible -RAK-
 // Note: Secret doors are handled here
 pub fn trap_change_visibility(coord: Coord) {
-    let treasure_id = dg().floor[coord.y as usize][coord.x as usize].treasure_id as usize;
+    let treasure_id = dg().tile(coord).treasure_id as usize;
 
     let item = &mut game().treasure.list[treasure_id];
 
@@ -324,8 +330,8 @@ pub fn trap_change_visibility(coord: Coord) {
 // Places rubble at location y, x -RAK-
 pub fn dungeon_place_rubble(coord: Coord) {
     let free_treasure_id = popt() as usize;
-    dg().floor[coord.y as usize][coord.x as usize].treasure_id = free_treasure_id as u8;
-    dg().floor[coord.y as usize][coord.x as usize].feature_id = TILE_BLOCKED_FLOOR;
+    dg().tile_mut(coord).treasure_id = free_treasure_id as u8;
+    dg().tile_mut(coord).feature_id = TILE_BLOCKED_FLOOR;
     inventory_item_copy_to(config::dungeon::objects::OBJ_RUBBLE as usize, &mut game().treasure.list[free_treasure_id]);
 }
 
@@ -343,12 +349,12 @@ pub fn dungeon_place_gold(coord: Coord) {
         gold_type_id = config::dungeon::objects::MAX_GOLD_TYPES as i32 - 1;
     }
 
-    dg().floor[coord.y as usize][coord.x as usize].treasure_id = free_treasure_id as u8;
+    dg().tile_mut(coord).treasure_id = free_treasure_id as u8;
     inventory_item_copy_to(config::dungeon::objects::OBJ_GOLD_LIST as usize + gold_type_id as usize, &mut game().treasure.list[free_treasure_id]);
     let cost = game().treasure.list[free_treasure_id].cost;
     game().treasure.list[free_treasure_id].cost += 8 * random_number(cost) + random_number(8);
 
-    if dg().floor[coord.y as usize][coord.x as usize].creature_id == 1 {
+    if dg().tile(coord).creature_id == 1 {
         print_message(Some("You feel something roll beneath your feet."));
     }
 }
@@ -357,14 +363,14 @@ pub fn dungeon_place_gold(coord: Coord) {
 pub fn dungeon_place_random_object_at(coord: Coord, must_be_small: bool) {
     let free_treasure_id = popt() as usize;
 
-    dg().floor[coord.y as usize][coord.x as usize].treasure_id = free_treasure_id as u8;
+    dg().tile_mut(coord).treasure_id = free_treasure_id as u8;
 
     let object_id = item_get_random_object_id(dg().current_level as i32, must_be_small);
     inventory_item_copy_to(sorted_objects()[object_id as usize] as usize, &mut game().treasure.list[free_treasure_id]);
 
     crate::treasure_magic::magic_treasure_magical_ability(free_treasure_id as i32, dg().current_level as i32);
 
-    if dg().floor[coord.y as usize][coord.x as usize].creature_id == 1 {
+    if dg().tile(coord).creature_id == 1 {
         print_message(Some("You feel something roll beneath your feet.")); // -CJS-
     }
 }
@@ -380,7 +386,7 @@ pub fn dungeon_allocate_and_place_object(set_function: fn(i32) -> bool, object_t
             coord.y = random_number(dg().height as i32) - 1;
             coord.x = random_number(dg().width as i32) - 1;
 
-            let tile = &dg().floor[coord.y as usize][coord.x as usize];
+            let tile = dg().tile(coord);
             if set_function(tile.feature_id as i32) && tile.treasure_id == 0 && !(coord.y == py().pos.y && coord.x == py().pos.x) {
                 break;
             }
@@ -407,7 +413,7 @@ pub fn dungeon_place_random_object_near(coord: Coord, tries: i32) {
         while i <= 10 {
             let at = Coord::new(coord.y - 3 + random_number(5), coord.x - 4 + random_number(7));
 
-            if coord_in_bounds(at) && dg().floor[at.y as usize][at.x as usize].feature_id <= MAX_CAVE_FLOOR && dg().floor[at.y as usize][at.x as usize].treasure_id == 0 {
+            if coord_in_bounds(at) && dg().tile(at).feature_id <= MAX_CAVE_FLOOR && dg().tile(at).treasure_id == 0 {
                 if random_number(100) < 75 {
                     dungeon_place_random_object_at(at, false);
                 } else {
@@ -428,9 +434,9 @@ pub fn dungeon_place_random_object_near(coord: Coord, tries: i32) {
 // Moves creature record from one space to another -RAK-
 // this always works correctly, even if y1==y2 and x1==x2
 pub fn dungeon_move_creature_record(from: Coord, to: Coord) {
-    let id = dg().floor[from.y as usize][from.x as usize].creature_id;
-    dg().floor[from.y as usize][from.x as usize].creature_id = 0;
-    dg().floor[to.y as usize][to.x as usize].creature_id = id;
+    let id = dg().tile(from).creature_id;
+    dg().tile_mut(from).creature_id = 0;
+    dg().tile_mut(to).creature_id = id;
 }
 
 // Room is lit, make it appear -RAK-
@@ -446,7 +452,7 @@ pub fn dungeon_light_room(coord: Coord) {
     for y in top..=bottom {
         for x in left..=right {
             let location = Coord::new(y, x);
-            let tile = &mut dg().floor[y as usize][x as usize];
+            let tile = dg().tile_mut(location);
 
             if tile.perma_lit_room && !tile.permanent_light {
                 tile.permanent_light = true;
@@ -457,7 +463,7 @@ pub fn dungeon_light_room(coord: Coord) {
                 if !tile.field_mark && tile.treasure_id != 0 {
                     let treasure_id = game().treasure.list[tile.treasure_id as usize].category_id;
                     if (TV_MIN_VISIBLE..=TV_MAX_VISIBLE).contains(&treasure_id) {
-                        dg().floor[y as usize][x as usize].field_mark = true;
+                        dg().tile_mut(location).field_mark = true;
                     }
                 }
                 panel_put_tile(cave_get_tile_symbol(location), location);
@@ -483,7 +489,7 @@ fn sub1_move_light(from: Coord, to: Coord) {
         // Turn off lamp light
         for y in (from.y - 1)..=(from.y + 1) {
             for x in (from.x - 1)..=(from.x + 1) {
-                dg().floor[y as usize][x as usize].temporary_light = false;
+                dg().tile_mut(Coord::new(y, x)).temporary_light = false;
             }
         }
         if py().running_tracker != 0 && !config::options::options().run_print_self {
@@ -495,7 +501,8 @@ fn sub1_move_light(from: Coord, to: Coord) {
 
     for y in (to.y - 1)..=(to.y + 1) {
         for x in (to.x - 1)..=(to.x + 1) {
-            let tile = &mut dg().floor[y as usize][x as usize];
+            let c = Coord::new(y, x);
+            let tile = dg().tile_mut(c);
 
             // only light up if normal movement
             if py().temporary_light_only {
@@ -508,7 +515,7 @@ fn sub1_move_light(from: Coord, to: Coord) {
                 let tval = game().treasure.list[tile.treasure_id as usize].category_id;
 
                 if (TV_MIN_VISIBLE..=TV_MAX_VISIBLE).contains(&tval) {
-                    dg().floor[y as usize][x as usize].field_mark = true;
+                    dg().tile_mut(c).field_mark = true;
                 }
             }
         }
@@ -542,7 +549,7 @@ fn sub3_move_light(from: Coord, to: Coord) {
         for y in (from.y - 1)..=(from.y + 1) {
             for x in (from.x - 1)..=(from.x + 1) {
                 let coord = Coord::new(y, x);
-                dg().floor[y as usize][x as usize].temporary_light = false;
+                dg().tile_mut(coord).temporary_light = false;
                 panel_put_tile(cave_get_tile_symbol(coord), coord);
             }
         }
@@ -592,7 +599,7 @@ pub fn dungeon_remove_monster_from_level(id: i32) {
     let pos = monster.pos;
     let lit = monster.lit;
 
-    dg().floor[pos.y as usize][pos.x as usize].creature_id = 0;
+    dg().tile_mut(pos).creature_id = 0;
 
     if lit {
         dungeon_lite_spot(pos);
@@ -610,7 +617,7 @@ pub fn dungeon_delete_monster_record(id: i32) {
     let monster = monsters()[last_id];
 
     if id as usize != last_id {
-        dg().floor[monster.pos.y as usize][monster.pos.x as usize].creature_id = id as u8;
+        dg().tile_mut(monster.pos).creature_id = id as u8;
         monsters()[id as usize] = monsters()[last_id];
     }
 
@@ -635,7 +642,7 @@ pub fn dungeon_summon_object(coord: Coord, amount: i32, object_type: i32) -> i32
             let at = Coord::new(coord.y - 3 + random_number(5), coord.x - 3 + random_number(5));
 
             if coord_in_bounds(at) && crate::dungeon_los::los(coord, at) {
-                let tile = &dg().floor[at.y as usize][at.x as usize];
+                let tile = dg().tile(at);
                 if tile.feature_id <= MAX_OPEN_SPACE && tile.treasure_id == 0 {
                     // object_type == 3 -> 50% objects, 50% gold
                     if object_type == 3 || object_type == 7 {
@@ -675,7 +682,7 @@ pub fn dungeon_summon_object(coord: Coord, amount: i32, object_type: i32) -> i32
 
 // Deletes object from given location -RAK-
 pub fn dungeon_delete_object(coord: Coord) -> bool {
-    let tile = &mut dg().floor[coord.y as usize][coord.x as usize];
+    let tile = dg().tile_mut(coord);
 
     if tile.feature_id == TILE_BLOCKED_FLOOR {
         tile.feature_id = TILE_CORR_FLOOR;

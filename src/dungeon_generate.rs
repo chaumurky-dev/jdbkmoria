@@ -95,14 +95,14 @@ fn dungeon_fill_empty_tiles_with(rock_type: u8) {
 fn dungeon_place_boundary_walls() {
     // put permanent wall on leftmost row and rightmost row
     for i in 0..dg().height as usize {
-        dg().floor[i][0].feature_id = TILE_BOUNDARY_WALL;
-        dg().floor[i][dg().width as usize - 1].feature_id = TILE_BOUNDARY_WALL;
+        dg().tile_mut(Coord::new(i as i32, 0)).feature_id = TILE_BOUNDARY_WALL;
+        dg().tile_mut(Coord::new(i as i32, dg().width as i32 - 1)).feature_id = TILE_BOUNDARY_WALL;
     }
 
     // put permanent wall on top row and bottom row
     for i in 0..dg().width as usize {
-        dg().floor[0][i].feature_id = TILE_BOUNDARY_WALL;
-        dg().floor[dg().height as usize - 1][i].feature_id = TILE_BOUNDARY_WALL;
+        dg().tile_mut(Coord::new(0, i as i32)).feature_id = TILE_BOUNDARY_WALL;
+        dg().tile_mut(Coord::new(dg().height as i32 - 1, i as i32)).feature_id = TILE_BOUNDARY_WALL;
     }
 }
 
@@ -129,8 +129,8 @@ fn dungeon_place_streamer_rock(rock_type: u8, chance_of_treasure: i32) {
             let spot = Coord::new(coord.y + random_number(t1) - t2, coord.x + random_number(t1) - t2);
 
             if coord_in_bounds(spot) {
-                if dg().floor[spot.y as usize][spot.x as usize].feature_id == TILE_GRANITE_WALL {
-                    dg().floor[spot.y as usize][spot.x as usize].feature_id = rock_type;
+                if dg().tile(spot).feature_id == TILE_GRANITE_WALL {
+                    dg().tile_mut(spot).feature_id = rock_type;
 
                     if random_number(chance_of_treasure) == 1 {
                         dungeon_place_gold(spot);
@@ -147,47 +147,47 @@ fn dungeon_place_streamer_rock(rock_type: u8, chance_of_treasure: i32) {
 
 fn dungeon_place_open_door(coord: Coord) {
     let cur_pos = popt() as usize;
-    dg().floor[coord.y as usize][coord.x as usize].treasure_id = cur_pos as u8;
+    dg().tile_mut(coord).treasure_id = cur_pos as u8;
     inventory_item_copy_to(config::dungeon::objects::OBJ_OPEN_DOOR as usize, &mut game().treasure.list[cur_pos]);
-    dg().floor[coord.y as usize][coord.x as usize].feature_id = TILE_CORR_FLOOR;
+    dg().tile_mut(coord).feature_id = TILE_CORR_FLOOR;
 }
 
 fn dungeon_place_broken_door(coord: Coord) {
     let cur_pos = popt() as usize;
-    dg().floor[coord.y as usize][coord.x as usize].treasure_id = cur_pos as u8;
+    dg().tile_mut(coord).treasure_id = cur_pos as u8;
     inventory_item_copy_to(config::dungeon::objects::OBJ_OPEN_DOOR as usize, &mut game().treasure.list[cur_pos]);
-    dg().floor[coord.y as usize][coord.x as usize].feature_id = TILE_CORR_FLOOR;
+    dg().tile_mut(coord).feature_id = TILE_CORR_FLOOR;
     game().treasure.list[cur_pos].misc_use = 1;
 }
 
 fn dungeon_place_closed_door(coord: Coord) {
     let cur_pos = popt() as usize;
-    dg().floor[coord.y as usize][coord.x as usize].treasure_id = cur_pos as u8;
+    dg().tile_mut(coord).treasure_id = cur_pos as u8;
     inventory_item_copy_to(config::dungeon::objects::OBJ_CLOSED_DOOR as usize, &mut game().treasure.list[cur_pos]);
-    dg().floor[coord.y as usize][coord.x as usize].feature_id = TILE_BLOCKED_FLOOR;
+    dg().tile_mut(coord).feature_id = TILE_BLOCKED_FLOOR;
 }
 
 fn dungeon_place_locked_door(coord: Coord) {
     let cur_pos = popt() as usize;
-    dg().floor[coord.y as usize][coord.x as usize].treasure_id = cur_pos as u8;
+    dg().tile_mut(coord).treasure_id = cur_pos as u8;
     inventory_item_copy_to(config::dungeon::objects::OBJ_CLOSED_DOOR as usize, &mut game().treasure.list[cur_pos]);
-    dg().floor[coord.y as usize][coord.x as usize].feature_id = TILE_BLOCKED_FLOOR;
+    dg().tile_mut(coord).feature_id = TILE_BLOCKED_FLOOR;
     game().treasure.list[cur_pos].misc_use = (random_number(10) + 10) as i16;
 }
 
 fn dungeon_place_stuck_door(coord: Coord) {
     let cur_pos = popt() as usize;
-    dg().floor[coord.y as usize][coord.x as usize].treasure_id = cur_pos as u8;
+    dg().tile_mut(coord).treasure_id = cur_pos as u8;
     inventory_item_copy_to(config::dungeon::objects::OBJ_CLOSED_DOOR as usize, &mut game().treasure.list[cur_pos]);
-    dg().floor[coord.y as usize][coord.x as usize].feature_id = TILE_BLOCKED_FLOOR;
+    dg().tile_mut(coord).feature_id = TILE_BLOCKED_FLOOR;
     game().treasure.list[cur_pos].misc_use = (-random_number(10) - 10) as i16;
 }
 
 fn dungeon_place_secret_door(coord: Coord) {
     let cur_pos = popt() as usize;
-    dg().floor[coord.y as usize][coord.x as usize].treasure_id = cur_pos as u8;
+    dg().tile_mut(coord).treasure_id = cur_pos as u8;
     inventory_item_copy_to(config::dungeon::objects::OBJ_SECRET_DOOR as usize, &mut game().treasure.list[cur_pos]);
-    dg().floor[coord.y as usize][coord.x as usize].feature_id = TILE_BLOCKED_FLOOR;
+    dg().tile_mut(coord).feature_id = TILE_BLOCKED_FLOOR;
 }
 
 fn dungeon_place_door(coord: Coord) {
@@ -216,23 +216,23 @@ fn dungeon_place_door(coord: Coord) {
 
 // Place an up staircase at given y, x -RAK-
 fn dungeon_place_up_stairs(coord: Coord) {
-    if dg().floor[coord.y as usize][coord.x as usize].treasure_id != 0 {
+    if dg().tile(coord).treasure_id != 0 {
         dungeon_delete_object(coord);
     }
 
     let cur_pos = popt() as usize;
-    dg().floor[coord.y as usize][coord.x as usize].treasure_id = cur_pos as u8;
+    dg().tile_mut(coord).treasure_id = cur_pos as u8;
     inventory_item_copy_to(config::dungeon::objects::OBJ_UP_STAIR as usize, &mut game().treasure.list[cur_pos]);
 }
 
 // Place a down staircase at given y, x -RAK-
 fn dungeon_place_down_stairs(coord: Coord) {
-    if dg().floor[coord.y as usize][coord.x as usize].treasure_id != 0 {
+    if dg().tile(coord).treasure_id != 0 {
         dungeon_delete_object(coord);
     }
 
     let cur_pos = popt() as usize;
-    dg().floor[coord.y as usize][coord.x as usize].treasure_id = cur_pos as u8;
+    dg().tile_mut(coord).treasure_id = cur_pos as u8;
     inventory_item_copy_to(config::dungeon::objects::OBJ_DOWN_STAIR as usize, &mut game().treasure.list[cur_pos]);
 }
 
@@ -256,7 +256,7 @@ fn dungeon_place_stairs(stair_type: i32, number: i32, walls: i32) {
 
                 loop {
                     loop {
-                        let tile = &dg().floor[coord1.y as usize][coord1.x as usize];
+                        let tile = dg().tile(coord1);
                         if tile.feature_id <= MAX_OPEN_SPACE && tile.treasure_id == 0 && coord_walls_next_to(coord1) >= walls {
                             placed = true;
                             if stair_type == 1 {
@@ -301,7 +301,7 @@ fn dungeon_place_vault_trap(coord: Coord, displacement: Coord, number: i32) {
                 coord.x - displacement.x - 1 + random_number(2 * displacement.x + 1),
             );
 
-            let tile = &dg().floor[spot.y as usize][spot.x as usize];
+            let tile = dg().tile(spot);
             if tile.feature_id != TILE_NULL_WALL && tile.feature_id <= MAX_CAVE_FLOOR && tile.treasure_id == 0 {
                 dungeon_set_trap(spot, random_number(config::dungeon::objects::MAX_TRAPS as i32) - 1);
                 placed = true;
@@ -333,25 +333,30 @@ fn dungeon_build_room(coord: Coord) {
 
     for y in height..=depth {
         for x in left..=right {
-            dg().floor[y as usize][x as usize].feature_id = floor;
-            dg().floor[y as usize][x as usize].perma_lit_room = true;
+            let c = Coord::new(y, x);
+            dg().tile_mut(c).feature_id = floor;
+            dg().tile_mut(c).perma_lit_room = true;
         }
     }
 
     for y in (height - 1)..=(depth + 1) {
-        dg().floor[y as usize][(left - 1) as usize].feature_id = TILE_GRANITE_WALL;
-        dg().floor[y as usize][(left - 1) as usize].perma_lit_room = true;
+        let left_c = Coord::new(y, left - 1);
+        dg().tile_mut(left_c).feature_id = TILE_GRANITE_WALL;
+        dg().tile_mut(left_c).perma_lit_room = true;
 
-        dg().floor[y as usize][(right + 1) as usize].feature_id = TILE_GRANITE_WALL;
-        dg().floor[y as usize][(right + 1) as usize].perma_lit_room = true;
+        let right_c = Coord::new(y, right + 1);
+        dg().tile_mut(right_c).feature_id = TILE_GRANITE_WALL;
+        dg().tile_mut(right_c).perma_lit_room = true;
     }
 
     for x in left..=right {
-        dg().floor[(height - 1) as usize][x as usize].feature_id = TILE_GRANITE_WALL;
-        dg().floor[(height - 1) as usize][x as usize].perma_lit_room = true;
+        let top_c = Coord::new(height - 1, x);
+        dg().tile_mut(top_c).feature_id = TILE_GRANITE_WALL;
+        dg().tile_mut(top_c).perma_lit_room = true;
 
-        dg().floor[(depth + 1) as usize][x as usize].feature_id = TILE_GRANITE_WALL;
-        dg().floor[(depth + 1) as usize][x as usize].perma_lit_room = true;
+        let bottom_c = Coord::new(depth + 1, x);
+        dg().tile_mut(bottom_c).feature_id = TILE_GRANITE_WALL;
+        dg().tile_mut(bottom_c).perma_lit_room = true;
     }
 }
 
@@ -373,31 +378,36 @@ fn dungeon_build_room_overlapping_rectangles(coord: Coord) {
 
         for y in height..=depth {
             for x in left..=right {
-                dg().floor[y as usize][x as usize].feature_id = floor;
-                dg().floor[y as usize][x as usize].perma_lit_room = true;
+                let c = Coord::new(y, x);
+                dg().tile_mut(c).feature_id = floor;
+                dg().tile_mut(c).perma_lit_room = true;
             }
         }
         for y in (height - 1)..=(depth + 1) {
-            if dg().floor[y as usize][(left - 1) as usize].feature_id != floor {
-                dg().floor[y as usize][(left - 1) as usize].feature_id = TILE_GRANITE_WALL;
-                dg().floor[y as usize][(left - 1) as usize].perma_lit_room = true;
+            let left_c = Coord::new(y, left - 1);
+            if dg().tile(left_c).feature_id != floor {
+                dg().tile_mut(left_c).feature_id = TILE_GRANITE_WALL;
+                dg().tile_mut(left_c).perma_lit_room = true;
             }
 
-            if dg().floor[y as usize][(right + 1) as usize].feature_id != floor {
-                dg().floor[y as usize][(right + 1) as usize].feature_id = TILE_GRANITE_WALL;
-                dg().floor[y as usize][(right + 1) as usize].perma_lit_room = true;
+            let right_c = Coord::new(y, right + 1);
+            if dg().tile(right_c).feature_id != floor {
+                dg().tile_mut(right_c).feature_id = TILE_GRANITE_WALL;
+                dg().tile_mut(right_c).perma_lit_room = true;
             }
         }
 
         for x in left..=right {
-            if dg().floor[(height - 1) as usize][x as usize].feature_id != floor {
-                dg().floor[(height - 1) as usize][x as usize].feature_id = TILE_GRANITE_WALL;
-                dg().floor[(height - 1) as usize][x as usize].perma_lit_room = true;
+            let top_c = Coord::new(height - 1, x);
+            if dg().tile(top_c).feature_id != floor {
+                dg().tile_mut(top_c).feature_id = TILE_GRANITE_WALL;
+                dg().tile_mut(top_c).perma_lit_room = true;
             }
 
-            if dg().floor[(depth + 1) as usize][x as usize].feature_id != floor {
-                dg().floor[(depth + 1) as usize][x as usize].feature_id = TILE_GRANITE_WALL;
-                dg().floor[(depth + 1) as usize][x as usize].perma_lit_room = true;
+            let bottom_c = Coord::new(depth + 1, x);
+            if dg().tile(bottom_c).feature_id != floor {
+                dg().tile_mut(bottom_c).feature_id = TILE_GRANITE_WALL;
+                dg().tile_mut(bottom_c).perma_lit_room = true;
             }
         }
     }
@@ -414,12 +424,12 @@ fn dungeon_place_random_secret_door(coord: Coord, depth: i32, height: i32, left:
 
 fn dungeon_place_vault(coord: Coord) {
     for y in (coord.y - 1)..=(coord.y + 1) {
-        dg().floor[y as usize][(coord.x - 1) as usize].feature_id = TMP1_WALL;
-        dg().floor[y as usize][(coord.x + 1) as usize].feature_id = TMP1_WALL;
+        dg().tile_mut(Coord::new(y, coord.x - 1)).feature_id = TMP1_WALL;
+        dg().tile_mut(Coord::new(y, coord.x + 1)).feature_id = TMP1_WALL;
     }
 
-    dg().floor[(coord.y - 1) as usize][coord.x as usize].feature_id = TMP1_WALL;
-    dg().floor[(coord.y + 1) as usize][coord.x as usize].feature_id = TMP1_WALL;
+    dg().tile_mut(Coord::new(coord.y - 1, coord.x)).feature_id = TMP1_WALL;
+    dg().tile_mut(Coord::new(coord.y + 1, coord.x)).feature_id = TMP1_WALL;
 }
 
 fn dungeon_place_treasure_vault(coord: Coord, depth: i32, height: i32, left: i32, right: i32) {
@@ -439,7 +449,7 @@ fn dungeon_place_treasure_vault(coord: Coord, depth: i32, height: i32, left: i32
 fn dungeon_place_inner_pillars(coord: Coord) {
     for y in (coord.y - 1)..=(coord.y + 1) {
         for x in (coord.x - 1)..=(coord.x + 1) {
-            dg().floor[y as usize][x as usize].feature_id = TMP1_WALL;
+            dg().tile_mut(Coord::new(y, x)).feature_id = TMP1_WALL;
         }
     }
 
@@ -451,13 +461,13 @@ fn dungeon_place_inner_pillars(coord: Coord) {
 
     for y in (coord.y - 1)..=(coord.y + 1) {
         for x in (coord.x - 5 - offset)..=(coord.x - 3 - offset) {
-            dg().floor[y as usize][x as usize].feature_id = TMP1_WALL;
+            dg().tile_mut(Coord::new(y, x)).feature_id = TMP1_WALL;
         }
     }
 
     for y in (coord.y - 1)..=(coord.y + 1) {
         for x in (coord.x + 3 + offset)..=(coord.x + 5 + offset) {
-            dg().floor[y as usize][x as usize].feature_id = TMP1_WALL;
+            dg().tile_mut(Coord::new(y, x)).feature_id = TMP1_WALL;
         }
     }
 }
@@ -466,7 +476,7 @@ fn dungeon_place_maze_inside_room(depth: i32, height: i32, left: i32, right: i32
     for y in height..=depth {
         for x in left..=right {
             if (0x1 & (x + y)) != 0 {
-                dg().floor[y as usize][x as usize].feature_id = TMP1_WALL;
+                dg().tile_mut(Coord::new(y, x)).feature_id = TMP1_WALL;
             }
         }
     }
@@ -474,11 +484,11 @@ fn dungeon_place_maze_inside_room(depth: i32, height: i32, left: i32, right: i32
 
 fn dungeon_place_four_small_rooms(coord: Coord, depth: i32, height: i32, left: i32, right: i32) {
     for y in height..=depth {
-        dg().floor[y as usize][coord.x as usize].feature_id = TMP1_WALL;
+        dg().tile_mut(Coord::new(y, coord.x)).feature_id = TMP1_WALL;
     }
 
     for x in left..=right {
-        dg().floor[coord.y as usize][x as usize].feature_id = TMP1_WALL;
+        dg().tile_mut(Coord::new(coord.y, x)).feature_id = TMP1_WALL;
     }
 
     // place random secret door
@@ -518,25 +528,30 @@ fn dungeon_build_room_with_inner_rooms(coord: Coord) {
 
     for i in height..=depth {
         for j in left..=right {
-            dg().floor[i as usize][j as usize].feature_id = floor;
-            dg().floor[i as usize][j as usize].perma_lit_room = true;
+            let c = Coord::new(i, j);
+            dg().tile_mut(c).feature_id = floor;
+            dg().tile_mut(c).perma_lit_room = true;
         }
     }
 
     for i in (height - 1)..=(depth + 1) {
-        dg().floor[i as usize][(left - 1) as usize].feature_id = TILE_GRANITE_WALL;
-        dg().floor[i as usize][(left - 1) as usize].perma_lit_room = true;
+        let left_c = Coord::new(i, left - 1);
+        dg().tile_mut(left_c).feature_id = TILE_GRANITE_WALL;
+        dg().tile_mut(left_c).perma_lit_room = true;
 
-        dg().floor[i as usize][(right + 1) as usize].feature_id = TILE_GRANITE_WALL;
-        dg().floor[i as usize][(right + 1) as usize].perma_lit_room = true;
+        let right_c = Coord::new(i, right + 1);
+        dg().tile_mut(right_c).feature_id = TILE_GRANITE_WALL;
+        dg().tile_mut(right_c).perma_lit_room = true;
     }
 
     for i in left..=right {
-        dg().floor[(height - 1) as usize][i as usize].feature_id = TILE_GRANITE_WALL;
-        dg().floor[(height - 1) as usize][i as usize].perma_lit_room = true;
+        let top_c = Coord::new(height - 1, i);
+        dg().tile_mut(top_c).feature_id = TILE_GRANITE_WALL;
+        dg().tile_mut(top_c).perma_lit_room = true;
 
-        dg().floor[(depth + 1) as usize][i as usize].feature_id = TILE_GRANITE_WALL;
-        dg().floor[(depth + 1) as usize][i as usize].perma_lit_room = true;
+        let bottom_c = Coord::new(depth + 1, i);
+        dg().tile_mut(bottom_c).feature_id = TILE_GRANITE_WALL;
+        dg().tile_mut(bottom_c).perma_lit_room = true;
     }
 
     // The inner room
@@ -546,13 +561,13 @@ fn dungeon_build_room_with_inner_rooms(coord: Coord) {
     right -= 2;
 
     for i in (height - 1)..=(depth + 1) {
-        dg().floor[i as usize][(left - 1) as usize].feature_id = TMP1_WALL;
-        dg().floor[i as usize][(right + 1) as usize].feature_id = TMP1_WALL;
+        dg().tile_mut(Coord::new(i, left - 1)).feature_id = TMP1_WALL;
+        dg().tile_mut(Coord::new(i, right + 1)).feature_id = TMP1_WALL;
     }
 
     for i in left..=right {
-        dg().floor[(height - 1) as usize][i as usize].feature_id = TMP1_WALL;
-        dg().floor[(depth + 1) as usize][i as usize].feature_id = TMP1_WALL;
+        dg().tile_mut(Coord::new(height - 1, i)).feature_id = TMP1_WALL;
+        dg().tile_mut(Coord::new(depth + 1, i)).feature_id = TMP1_WALL;
     }
 
     // Inner room variations
@@ -584,11 +599,11 @@ fn dungeon_build_room_with_inner_rooms(coord: Coord) {
 
             // Inner rooms
             for i in (coord.x - 5)..=(coord.x + 5) {
-                dg().floor[(coord.y - 1) as usize][i as usize].feature_id = TMP1_WALL;
-                dg().floor[(coord.y + 1) as usize][i as usize].feature_id = TMP1_WALL;
+                dg().tile_mut(Coord::new(coord.y - 1, i)).feature_id = TMP1_WALL;
+                dg().tile_mut(Coord::new(coord.y + 1, i)).feature_id = TMP1_WALL;
             }
-            dg().floor[coord.y as usize][(coord.x - 5) as usize].feature_id = TMP1_WALL;
-            dg().floor[coord.y as usize][(coord.x + 5) as usize].feature_id = TMP1_WALL;
+            dg().tile_mut(Coord::new(coord.y, coord.x - 5)).feature_id = TMP1_WALL;
+            dg().tile_mut(Coord::new(coord.y, coord.x + 5)).feature_id = TMP1_WALL;
 
             dungeon_place_secret_door(Coord::new(coord.y - 3 + (random_number(2) << 1), coord.x - 3));
             dungeon_place_secret_door(Coord::new(coord.y - 3 + (random_number(2) << 1), coord.x + 3));
@@ -645,7 +660,7 @@ fn dungeon_build_room_with_inner_rooms(coord: Coord) {
 fn dungeon_place_large_middle_pillar(coord: Coord) {
     for y in (coord.y - 1)..=(coord.y + 1) {
         for x in (coord.x - 1)..=(coord.x + 1) {
-            dg().floor[y as usize][x as usize].feature_id = TMP1_WALL;
+            dg().tile_mut(Coord::new(y, x)).feature_id = TMP1_WALL;
         }
     }
 }
@@ -664,25 +679,30 @@ fn dungeon_build_room_cross_shaped(coord: Coord) {
 
     for i in height..=depth {
         for j in left..=right {
-            dg().floor[i as usize][j as usize].feature_id = floor;
-            dg().floor[i as usize][j as usize].perma_lit_room = true;
+            let c = Coord::new(i, j);
+            dg().tile_mut(c).feature_id = floor;
+            dg().tile_mut(c).perma_lit_room = true;
         }
     }
 
     for i in (height - 1)..=(depth + 1) {
-        dg().floor[i as usize][(left - 1) as usize].feature_id = TILE_GRANITE_WALL;
-        dg().floor[i as usize][(left - 1) as usize].perma_lit_room = true;
+        let left_c = Coord::new(i, left - 1);
+        dg().tile_mut(left_c).feature_id = TILE_GRANITE_WALL;
+        dg().tile_mut(left_c).perma_lit_room = true;
 
-        dg().floor[i as usize][(right + 1) as usize].feature_id = TILE_GRANITE_WALL;
-        dg().floor[i as usize][(right + 1) as usize].perma_lit_room = true;
+        let right_c = Coord::new(i, right + 1);
+        dg().tile_mut(right_c).feature_id = TILE_GRANITE_WALL;
+        dg().tile_mut(right_c).perma_lit_room = true;
     }
 
     for i in left..=right {
-        dg().floor[(height - 1) as usize][i as usize].feature_id = TILE_GRANITE_WALL;
-        dg().floor[(height - 1) as usize][i as usize].perma_lit_room = true;
+        let top_c = Coord::new(height - 1, i);
+        dg().tile_mut(top_c).feature_id = TILE_GRANITE_WALL;
+        dg().tile_mut(top_c).perma_lit_room = true;
 
-        dg().floor[(depth + 1) as usize][i as usize].feature_id = TILE_GRANITE_WALL;
-        dg().floor[(depth + 1) as usize][i as usize].perma_lit_room = true;
+        let bottom_c = Coord::new(depth + 1, i);
+        dg().tile_mut(bottom_c).feature_id = TILE_GRANITE_WALL;
+        dg().tile_mut(bottom_c).perma_lit_room = true;
     }
 
     random_offset = 2 + random_number(9);
@@ -694,32 +714,37 @@ fn dungeon_build_room_cross_shaped(coord: Coord) {
 
     for i in height..=depth {
         for j in left..=right {
-            dg().floor[i as usize][j as usize].feature_id = floor;
-            dg().floor[i as usize][j as usize].perma_lit_room = true;
+            let c = Coord::new(i, j);
+            dg().tile_mut(c).feature_id = floor;
+            dg().tile_mut(c).perma_lit_room = true;
         }
     }
 
     for i in (height - 1)..=(depth + 1) {
-        if dg().floor[i as usize][(left - 1) as usize].feature_id != floor {
-            dg().floor[i as usize][(left - 1) as usize].feature_id = TILE_GRANITE_WALL;
-            dg().floor[i as usize][(left - 1) as usize].perma_lit_room = true;
+        let left_c = Coord::new(i, left - 1);
+        if dg().tile(left_c).feature_id != floor {
+            dg().tile_mut(left_c).feature_id = TILE_GRANITE_WALL;
+            dg().tile_mut(left_c).perma_lit_room = true;
         }
 
-        if dg().floor[i as usize][(right + 1) as usize].feature_id != floor {
-            dg().floor[i as usize][(right + 1) as usize].feature_id = TILE_GRANITE_WALL;
-            dg().floor[i as usize][(right + 1) as usize].perma_lit_room = true;
+        let right_c = Coord::new(i, right + 1);
+        if dg().tile(right_c).feature_id != floor {
+            dg().tile_mut(right_c).feature_id = TILE_GRANITE_WALL;
+            dg().tile_mut(right_c).perma_lit_room = true;
         }
     }
 
     for i in left..=right {
-        if dg().floor[(height - 1) as usize][i as usize].feature_id != floor {
-            dg().floor[(height - 1) as usize][i as usize].feature_id = TILE_GRANITE_WALL;
-            dg().floor[(height - 1) as usize][i as usize].perma_lit_room = true;
+        let top_c = Coord::new(height - 1, i);
+        if dg().tile(top_c).feature_id != floor {
+            dg().tile_mut(top_c).feature_id = TILE_GRANITE_WALL;
+            dg().tile_mut(top_c).perma_lit_room = true;
         }
 
-        if dg().floor[(depth + 1) as usize][i as usize].feature_id != floor {
-            dg().floor[(depth + 1) as usize][i as usize].feature_id = TILE_GRANITE_WALL;
-            dg().floor[(depth + 1) as usize][i as usize].perma_lit_room = true;
+        let bottom_c = Coord::new(depth + 1, i);
+        if dg().tile(bottom_c).feature_id != floor {
+            dg().tile_mut(bottom_c).feature_id = TILE_GRANITE_WALL;
+            dg().tile_mut(bottom_c).perma_lit_room = true;
         }
     }
 
@@ -752,14 +777,14 @@ fn dungeon_build_room_cross_shaped(coord: Coord) {
         }
         3 => {
             if random_number(3) == 1 {
-                dg().floor[(coord.y - 1) as usize][(coord.x - 2) as usize].feature_id = TMP1_WALL;
-                dg().floor[(coord.y + 1) as usize][(coord.x - 2) as usize].feature_id = TMP1_WALL;
-                dg().floor[(coord.y - 1) as usize][(coord.x + 2) as usize].feature_id = TMP1_WALL;
-                dg().floor[(coord.y + 1) as usize][(coord.x + 2) as usize].feature_id = TMP1_WALL;
-                dg().floor[(coord.y - 2) as usize][(coord.x - 1) as usize].feature_id = TMP1_WALL;
-                dg().floor[(coord.y - 2) as usize][(coord.x + 1) as usize].feature_id = TMP1_WALL;
-                dg().floor[(coord.y + 2) as usize][(coord.x - 1) as usize].feature_id = TMP1_WALL;
-                dg().floor[(coord.y + 2) as usize][(coord.x + 1) as usize].feature_id = TMP1_WALL;
+                dg().tile_mut(Coord::new(coord.y - 1, coord.x - 2)).feature_id = TMP1_WALL;
+                dg().tile_mut(Coord::new(coord.y + 1, coord.x - 2)).feature_id = TMP1_WALL;
+                dg().tile_mut(Coord::new(coord.y - 1, coord.x + 2)).feature_id = TMP1_WALL;
+                dg().tile_mut(Coord::new(coord.y + 1, coord.x + 2)).feature_id = TMP1_WALL;
+                dg().tile_mut(Coord::new(coord.y - 2, coord.x - 1)).feature_id = TMP1_WALL;
+                dg().tile_mut(Coord::new(coord.y - 2, coord.x + 1)).feature_id = TMP1_WALL;
+                dg().tile_mut(Coord::new(coord.y + 2, coord.x - 1)).feature_id = TMP1_WALL;
+                dg().tile_mut(Coord::new(coord.y + 2, coord.x + 1)).feature_id = TMP1_WALL;
                 if random_number(3) == 1 {
                     dungeon_place_secret_door(Coord::new(coord.y, coord.x - 2));
                     dungeon_place_secret_door(Coord::new(coord.y, coord.x + 2));
@@ -767,13 +792,13 @@ fn dungeon_build_room_cross_shaped(coord: Coord) {
                     dungeon_place_secret_door(Coord::new(coord.y + 2, coord.x));
                 }
             } else if random_number(3) == 1 {
-                dg().floor[coord.y as usize][coord.x as usize].feature_id = TMP1_WALL;
-                dg().floor[(coord.y - 1) as usize][coord.x as usize].feature_id = TMP1_WALL;
-                dg().floor[(coord.y + 1) as usize][coord.x as usize].feature_id = TMP1_WALL;
-                dg().floor[coord.y as usize][(coord.x - 1) as usize].feature_id = TMP1_WALL;
-                dg().floor[coord.y as usize][(coord.x + 1) as usize].feature_id = TMP1_WALL;
+                dg().tile_mut(coord).feature_id = TMP1_WALL;
+                dg().tile_mut(Coord::new(coord.y - 1, coord.x)).feature_id = TMP1_WALL;
+                dg().tile_mut(Coord::new(coord.y + 1, coord.x)).feature_id = TMP1_WALL;
+                dg().tile_mut(Coord::new(coord.y, coord.x - 1)).feature_id = TMP1_WALL;
+                dg().tile_mut(Coord::new(coord.y, coord.x + 1)).feature_id = TMP1_WALL;
             } else if random_number(3) == 1 {
-                dg().floor[coord.y as usize][coord.x as usize].feature_id = TMP1_WALL;
+                dg().tile_mut(coord).feature_id = TMP1_WALL;
             }
         }
         _ => {
@@ -831,9 +856,9 @@ fn dungeon_build_tunnel(start: Coord, end: Coord) {
             tmp_col = start.x + x_direction;
         }
 
-        let feature_id = dg().floor[tmp_row as usize][tmp_col as usize].feature_id;
+        let feature_id = dg().tile(Coord::new(tmp_row, tmp_col)).feature_id;
         match feature_id {
-            x if x == TILE_NULL_WALL => {
+            TILE_NULL_WALL => {
                 start.y = tmp_row;
                 start.x = tmp_col;
                 if tunnel_index < 1000 {
@@ -842,10 +867,10 @@ fn dungeon_build_tunnel(start: Coord, end: Coord) {
                 }
                 door_flag = false;
             }
-            x if x == TMP2_WALL => {
+            TMP2_WALL => {
                 // do nothing
             }
-            x if x == TILE_GRANITE_WALL => {
+            TILE_GRANITE_WALL => {
                 start.y = tmp_row;
                 start.x = tmp_col;
 
@@ -856,17 +881,18 @@ fn dungeon_build_tunnel(start: Coord, end: Coord) {
 
                 for y in (start.y - 1)..=(start.y + 1) {
                     for x in (start.x - 1)..=(start.x + 1) {
-                        if coord_in_bounds(Coord::new(y, x)) {
+                        let c = Coord::new(y, x);
+                        if coord_in_bounds(c) {
                             // values 11 and 12 are impossible here, dungeon_place_streamer_rock
                             // is never run before dungeon_build_tunnel
-                            if dg().floor[y as usize][x as usize].feature_id == TILE_GRANITE_WALL {
-                                dg().floor[y as usize][x as usize].feature_id = TMP2_WALL;
+                            if dg().tile(c).feature_id == TILE_GRANITE_WALL {
+                                dg().tile_mut(c).feature_id = TMP2_WALL;
                             }
                         }
                     }
                 }
             }
-            x if x == TILE_CORR_FLOOR || x == TILE_BLOCKED_FLOOR => {
+            TILE_CORR_FLOOR | TILE_BLOCKED_FLOOR => {
                 start.y = tmp_row;
                 start.x = tmp_col;
 
@@ -903,16 +929,16 @@ fn dungeon_build_tunnel(start: Coord, end: Coord) {
     }
 
     for tunnel in tunnels_tk.iter().take(tunnel_index) {
-        dg().floor[tunnel.y as usize][tunnel.x as usize].feature_id = TILE_CORR_FLOOR;
+        dg().tile_mut(*tunnel).feature_id = TILE_CORR_FLOOR;
     }
 
     for wall in walls_tk.iter().take(wall_index) {
-        if dg().floor[wall.y as usize][wall.x as usize].feature_id == TMP2_WALL {
+        if dg().tile(*wall).feature_id == TMP2_WALL {
             if random_number(100) < config::dungeon::DUN_ROOM_DOORS as i32 {
                 dungeon_place_door(*wall);
             } else {
                 // these have to be doorways to rooms
-                dg().floor[wall.y as usize][wall.x as usize].feature_id = TILE_CORR_FLOOR;
+                dg().tile_mut(*wall).feature_id = TILE_CORR_FLOOR;
             }
         }
     }
@@ -920,10 +946,10 @@ fn dungeon_build_tunnel(start: Coord, end: Coord) {
 
 fn dungeon_is_next_to(coord: Coord) -> bool {
     if coord_corridor_walls_next_to(coord) > 2 {
-        let y = coord.y as usize;
-        let x = coord.x as usize;
-        let vertical = dg().floor[y - 1][x].feature_id >= MIN_CAVE_WALL && dg().floor[y + 1][x].feature_id >= MIN_CAVE_WALL;
-        let horizontal = dg().floor[y][x - 1].feature_id >= MIN_CAVE_WALL && dg().floor[y][x + 1].feature_id >= MIN_CAVE_WALL;
+        let vertical = dg().tile(Coord::new(coord.y - 1, coord.x)).feature_id >= MIN_CAVE_WALL
+            && dg().tile(Coord::new(coord.y + 1, coord.x)).feature_id >= MIN_CAVE_WALL;
+        let horizontal = dg().tile(Coord::new(coord.y, coord.x - 1)).feature_id >= MIN_CAVE_WALL
+            && dg().tile(Coord::new(coord.y, coord.x + 1)).feature_id >= MIN_CAVE_WALL;
 
         return vertical || horizontal;
     }
@@ -933,7 +959,7 @@ fn dungeon_is_next_to(coord: Coord) -> bool {
 
 // Places door at y, x position if at least 2 walls found
 fn dungeon_place_door_if_next_to_two_walls(coord: Coord) {
-    if dg().floor[coord.y as usize][coord.x as usize].feature_id == TILE_CORR_FLOOR
+    if dg().tile(coord).feature_id == TILE_CORR_FLOOR
         && random_number(100) > config::dungeon::DUN_TUNNEL_DOORS as i32
         && dungeon_is_next_to(coord)
     {
@@ -947,7 +973,7 @@ fn dungeon_new_spot(coord: &mut Coord) {
 
     loop {
         position = Coord::new(random_number(dg().height as i32 - 2), random_number(dg().width as i32 - 2));
-        let tile = &dg().floor[position.y as usize][position.x as usize];
+        let tile = dg().tile(position);
         if tile.feature_id < MIN_CLOSED_SPACE && tile.creature_id == 0 && tile.treasure_id == 0 {
             break;
         }
@@ -1084,7 +1110,7 @@ fn dungeon_build_store(store_id: i32, coord: Coord) {
 
     for y in height..=depth {
         for x in left..=right {
-            dg().floor[y as usize][x as usize].feature_id = TILE_BOUNDARY_WALL;
+            dg().tile_mut(Coord::new(y, x)).feature_id = TILE_BOUNDARY_WALL;
         }
     }
 
@@ -1099,10 +1125,11 @@ fn dungeon_build_store(store_id: i32, coord: Coord) {
         (y, x)
     };
 
-    dg().floor[y as usize][x as usize].feature_id = TILE_CORR_FLOOR;
+    let door_pos = Coord::new(y, x);
+    dg().tile_mut(door_pos).feature_id = TILE_CORR_FLOOR;
 
     let cur_pos = popt() as usize;
-    dg().floor[y as usize][x as usize].treasure_id = cur_pos as u8;
+    dg().tile_mut(door_pos).treasure_id = cur_pos as u8;
 
     inventory_item_copy_to(config::dungeon::objects::OBJ_STORE_DOOR as usize + store_id as usize, &mut game().treasure.list[cur_pos]);
 }

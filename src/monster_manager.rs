@@ -69,7 +69,7 @@ pub fn monster_place_new(coord: Coord, creature_id: i32, sleeping: bool) -> bool
     monster.lit = false;
     monster.sleep_count = sleep_count;
 
-    dg().floor[coord.y as usize][coord.x as usize].creature_id = monster_id as u8;
+    dg().tile_mut(coord).creature_id = monster_id as u8;
 
     true
 }
@@ -85,7 +85,7 @@ pub fn monster_place_winning() {
     loop {
         coord = Coord::new(random_number(dg().height as i32 - 2), random_number(dg().width as i32 - 2));
 
-        let tile = &dg().floor[coord.y as usize][coord.x as usize];
+        let tile = dg().tile(coord);
         if tile.feature_id < MIN_CLOSED_SPACE
             && tile.creature_id == 0
             && tile.treasure_id == 0
@@ -126,7 +126,7 @@ pub fn monster_place_winning() {
     monster.stunned_amount = 0;
     monster.distance_from_player = coord_distance_between(py().pos, coord) as u8;
 
-    dg().floor[coord.y as usize][coord.x as usize].creature_id = monster_id as u8;
+    dg().tile_mut(coord).creature_id = monster_id as u8;
 
     monster.sleep_count = 0;
 }
@@ -176,7 +176,7 @@ pub fn monster_place_new_within_distance(number: i32, distance_from_source: i32,
 
         loop {
             position = Coord::new(random_number(dg().height as i32 - 2), random_number(dg().width as i32 - 2));
-            let tile = &dg().floor[position.y as usize][position.x as usize];
+            let tile = dg().tile(position);
             if tile.feature_id < MIN_CLOSED_SPACE && tile.creature_id == 0 && coord_distance_between(position, py().pos) > distance_from_source {
                 break;
             }
@@ -205,7 +205,7 @@ fn place_monster_adjacent_to(monster_id: i32, coord: &mut Coord, slp: bool) -> b
         let position = Coord::new(coord.y - 2 + random_number(3), coord.x - 2 + random_number(3));
 
         if coord_in_bounds(position) {
-            let tile = &dg().floor[position.y as usize][position.x as usize];
+            let tile = dg().tile(position);
             if tile.feature_id <= MAX_OPEN_SPACE && tile.creature_id == 0 {
                 // Place_monster() should always return true here.
                 if !monster_place_new(position, monster_id, slp) {

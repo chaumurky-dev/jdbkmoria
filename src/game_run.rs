@@ -345,7 +345,7 @@ fn reset_dungeon_flags() {
     py().running_tracker = 0;
     game().teleport_player = false;
     *monster_multiply_total() = 0;
-    dg().floor[py().pos.y as usize][py().pos.x as usize].creature_id = 1;
+    dg().tile_mut(py().pos).creature_id = 1;
 }
 
 // Check light status for dungeon setup
@@ -1922,7 +1922,7 @@ fn examine_book() {
 
 // Go up one level -RAK-
 fn dungeon_go_up_level() {
-    let tile_id = dg().floor[py().pos.y as usize][py().pos.x as usize].treasure_id;
+    let tile_id = dg().tile(py().pos).treasure_id;
 
     if tile_id != 0 && game().treasure.list[tile_id as usize].category_id == TV_UP_STAIR {
         dg().current_level -= 1;
@@ -1939,7 +1939,7 @@ fn dungeon_go_up_level() {
 
 // Go down one level -RAK-
 fn dungeon_go_down_level() {
-    let tile_id = dg().floor[py().pos.y as usize][py().pos.x as usize].treasure_id;
+    let tile_id = dg().tile(py().pos).treasure_id;
 
     if tile_id != 0 && game().treasure.list[tile_id as usize].category_id == TV_DOWN_STAIR {
         dg().current_level += 1;
@@ -1966,7 +1966,7 @@ fn dungeon_jam_door() {
     }
     player_move_position(direction, &mut coord);
 
-    let tile = dg().floor[coord.y as usize][coord.x as usize];
+    let tile = *dg().tile(coord);
 
     if tile.treasure_id == 0 {
         print_message(Some("That isn't a door!"));

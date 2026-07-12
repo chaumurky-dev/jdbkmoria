@@ -175,7 +175,7 @@ pub fn inventory_take_one_item(to_item: &mut Inventory, from_item: &Inventory) {
 pub fn inventory_drop_item(item_id: usize, drop_all: bool) {
     let mut item_id = item_id;
 
-    if dg().floor[py().pos.y as usize][py().pos.x as usize].treasure_id != 0 {
+    if dg().tile(py().pos).treasure_id != 0 {
         crate::dungeon::dungeon_delete_object(py().pos);
     }
 
@@ -184,7 +184,7 @@ pub fn inventory_drop_item(item_id: usize, drop_all: bool) {
     let item = py().inventory[item_id];
     game().treasure.list[treasure_id] = item;
 
-    dg().floor[py().pos.y as usize][py().pos.x as usize].treasure_id = treasure_id as u8;
+    dg().tile_mut(py().pos).treasure_id = treasure_id as u8;
 
     if item_id >= WIELD {
         crate::player::player_take_off(item_id as i32, -1);
@@ -543,24 +543,24 @@ pub fn set_null(_item: &Inventory) -> bool {
 }
 
 fn set_corrodable_items(item: &Inventory) -> bool {
-    matches!(item.category_id, x if x == TV_SWORD || x == TV_HELM || x == TV_SHIELD || x == TV_HARD_ARMOR || x == TV_WAND)
+    matches!(item.category_id, TV_SWORD | TV_HELM | TV_SHIELD | TV_HARD_ARMOR | TV_WAND)
 }
 
 fn set_flammable_items(item: &Inventory) -> bool {
     match item.category_id {
-        x if x == TV_ARROW || x == TV_BOW || x == TV_HAFTED || x == TV_POLEARM || x == TV_BOOTS || x == TV_GLOVES || x == TV_CLOAK || x == TV_SOFT_ARMOR => {
+        TV_ARROW | TV_BOW | TV_HAFTED | TV_POLEARM | TV_BOOTS | TV_GLOVES | TV_CLOAK | TV_SOFT_ARMOR => {
             // Items of (RF) should not be destroyed.
             (item.flags & config::treasure::flags::TR_RES_FIRE) == 0
         }
-        x if x == TV_STAFF || x == TV_SCROLL1 || x == TV_SCROLL2 => true,
+        TV_STAFF | TV_SCROLL1 | TV_SCROLL2 => true,
         _ => false,
     }
 }
 
 fn set_acid_affected_items(item: &Inventory) -> bool {
     match item.category_id {
-        x if x == TV_MISC || x == TV_CHEST => true,
-        x if x == TV_BOLT || x == TV_ARROW || x == TV_BOW || x == TV_HAFTED || x == TV_POLEARM || x == TV_BOOTS || x == TV_GLOVES || x == TV_CLOAK || x == TV_SOFT_ARMOR => {
+        TV_MISC | TV_CHEST => true,
+        TV_BOLT | TV_ARROW | TV_BOW | TV_HAFTED | TV_POLEARM | TV_BOOTS | TV_GLOVES | TV_CLOAK | TV_SOFT_ARMOR => {
             (item.flags & config::treasure::flags::TR_RES_ACID) == 0
         }
         _ => false,
@@ -577,35 +577,20 @@ pub fn set_lightning_destroyable_items(item: &Inventory) -> bool {
 
 pub fn set_acid_destroyable_items(item: &Inventory) -> bool {
     match item.category_id {
-        x if x == TV_ARROW
-            || x == TV_BOW
-            || x == TV_HAFTED
-            || x == TV_POLEARM
-            || x == TV_BOOTS
-            || x == TV_GLOVES
-            || x == TV_CLOAK
-            || x == TV_HELM
-            || x == TV_SHIELD
-            || x == TV_HARD_ARMOR
-            || x == TV_SOFT_ARMOR =>
-        {
+        TV_ARROW | TV_BOW | TV_HAFTED | TV_POLEARM | TV_BOOTS | TV_GLOVES | TV_CLOAK | TV_HELM | TV_SHIELD | TV_HARD_ARMOR | TV_SOFT_ARMOR => {
             (item.flags & config::treasure::flags::TR_RES_ACID) == 0
         }
-        x if x == TV_STAFF || x == TV_SCROLL1 || x == TV_SCROLL2 || x == TV_FOOD || x == TV_OPEN_DOOR || x == TV_CLOSED_DOOR => true,
+        TV_STAFF | TV_SCROLL1 | TV_SCROLL2 | TV_FOOD | TV_OPEN_DOOR | TV_CLOSED_DOOR => true,
         _ => false,
     }
 }
 
 pub fn set_fire_destroyable_items(item: &Inventory) -> bool {
     match item.category_id {
-        x if x == TV_ARROW || x == TV_BOW || x == TV_HAFTED || x == TV_POLEARM || x == TV_BOOTS || x == TV_GLOVES || x == TV_CLOAK || x == TV_SOFT_ARMOR => {
+        TV_ARROW | TV_BOW | TV_HAFTED | TV_POLEARM | TV_BOOTS | TV_GLOVES | TV_CLOAK | TV_SOFT_ARMOR => {
             (item.flags & config::treasure::flags::TR_RES_FIRE) == 0
         }
-        x if x == TV_STAFF || x == TV_SCROLL1 || x == TV_SCROLL2 || x == TV_POTION1 || x == TV_POTION2 || x == TV_FLASK || x == TV_FOOD || x == TV_OPEN_DOOR
-            || x == TV_CLOSED_DOOR =>
-        {
-            true
-        }
+        TV_STAFF | TV_SCROLL1 | TV_SCROLL2 | TV_POTION1 | TV_POTION2 | TV_FLASK | TV_FOOD | TV_OPEN_DOOR | TV_CLOSED_DOOR => true,
         _ => false,
     }
 }

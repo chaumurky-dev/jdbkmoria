@@ -132,7 +132,7 @@ use crate::ui_io::{print_message, screen_has_changed};
 fn monster_is_visible(monster: &Monster) -> bool {
     let mut visible = false;
 
-    let tile = &dg().floor[monster.pos.y as usize][monster.pos.x as usize];
+    let tile = dg().tile(monster.pos);
     let creature = &CREATURES_LIST[monster.creature_id as usize];
 
     if tile.permanent_light || tile.temporary_light || (py().running_tracker != 0 && monster.distance_from_player < 2 && py().carrying_light) {
@@ -213,7 +213,7 @@ fn monster_movement_rate(speed: i16) -> i32 {
 
 // Makes sure a new creature gets lit up. -CJS-
 fn monster_make_visible(coord: Coord) -> bool {
-    let monster_id = dg().floor[coord.y as usize][coord.x as usize].creature_id as i32;
+    let monster_id = dg().tile(coord).creature_id as i32;
     if monster_id <= 1 {
         return false;
     }
@@ -527,7 +527,7 @@ fn monster_attack_player(monster_id: i32) {
 }
 
 fn monster_open_door(monster_hp: i16, move_bits: u32, do_turn: &mut bool, do_move: &mut bool, rcmove: &mut u32, coord: Coord) {
-    let treasure_id = dg().floor[coord.y as usize][coord.x as usize].treasure_id as usize;
+    let treasure_id = dg().tile(coord).treasure_id as usize;
 
     // Creature can open doors.
     if (move_bits & config::monsters::move_flags::CM_OPEN_DOOR) != 0 {
@@ -568,7 +568,7 @@ fn monster_open_door(monster_hp: i16, move_bits: u32, do_turn: &mut bool, do_mov
             if door_is_stuck {
                 game().treasure.list[treasure_id].misc_use = (1 - random_number(2)) as i16;
             }
-            dg().floor[coord.y as usize][coord.x as usize].feature_id = TILE_CORR_FLOOR;
+            dg().tile_mut(coord).feature_id = TILE_CORR_FLOOR;
             dungeon_lite_spot(coord);
             *rcmove |= config::monsters::move_flags::CM_OPEN_DOOR;
             *do_move = false;
@@ -583,7 +583,7 @@ fn monster_open_door(monster_hp: i16, move_bits: u32, do_turn: &mut bool, do_mov
 
             // 50% chance of breaking door
             game().treasure.list[treasure_id].misc_use = (1 - random_number(2)) as i16;
-            dg().floor[coord.y as usize][coord.x as usize].feature_id = TILE_CORR_FLOOR;
+            dg().tile_mut(coord).feature_id = TILE_CORR_FLOOR;
             dungeon_lite_spot(coord);
             print_message(Some("You hear a door burst open!"));
             player_disturb(1, 0);
@@ -651,7 +651,7 @@ fn monster_moves_on_player(monster_id: i32, creature_id: u8, move_bits: u32, do_
 fn monster_allowed_to_move(monster_id: i32, move_bits: u32, do_turn: &mut bool, rcmove: &mut u32, coord: Coord) {
     // Pick up or eat an object
     if (move_bits & config::monsters::move_flags::CM_PICKS_UP) != 0 {
-        let treasure_id = dg().floor[coord.y as usize][coord.x as usize].treasure_id;
+        let treasure_id = dg().tile(coord).treasure_id;
 
         if treasure_id != 0 && game().treasure.list[treasure_id as usize].category_id <= TV_MAX_OBJECT {
             *rcmove |= config::monsters::move_flags::CM_PICKS_UP;
@@ -689,7 +689,7 @@ fn make_move(monster_id: i32, directions: &[i32; 9], rcmove: &mut u32) {
 
         crate::player::player_move_position(directions[i], &mut coord);
 
-        let feature_id = dg().floor[coord.y as usize][coord.x as usize].feature_id;
+        let feature_id = dg().tile(coord).feature_id;
 
         if feature_id == TILE_BOUNDARY_WALL {
             i += 1;
@@ -703,14 +703,14 @@ fn make_move(monster_id: i32, directions: &[i32; 9], rcmove: &mut u32) {
             // Creature moves through walls?
             do_move = true;
             *rcmove |= config::monsters::move_flags::CM_PHASE;
-        } else if dg().floor[coord.y as usize][coord.x as usize].treasure_id != 0 {
+        } else if dg().tile(coord).treasure_id != 0 {
             // Creature can open doors?
             let monster_hp = monsters()[monster_id as usize].hp;
             monster_open_door(monster_hp, move_bits, &mut do_turn, &mut do_move, rcmove, coord);
         }
 
         // Glyph of warding present?
-        let treasure_id = dg().floor[coord.y as usize][coord.x as usize].treasure_id as usize;
+        let treasure_id = dg().tile(coord).treasure_id as usize;
         if do_move
             && treasure_id != 0
             && game().treasure.list[treasure_id].category_id == TV_VIS_TRAP
@@ -722,7 +722,7 @@ fn make_move(monster_id: i32, directions: &[i32; 9], rcmove: &mut u32) {
 
         // Creature has attempted to move on player?
         if do_move {
-            let creature_id = dg().floor[coord.y as usize][coord.x as usize].creature_id;
+            let creature_id = dg().tile(coord).creature_id;
             monster_moves_on_player(monster_id, creature_id, move_bits, &mut do_move, &mut do_turn, rcmove, coord);
         }
 
@@ -832,7 +832,7 @@ pub fn monster_execute_casting_of_spell(monster_id: i32, spell_id: i32, level: u
             *hack_monptr() = monster_id;
             crate::monster_manager::monster_summon(&mut coord, false);
             *hack_monptr() = -1;
-            monster_update_visibility(dg().floor[coord.y as usize][coord.x as usize].creature_id as i32);
+            monster_update_visibility(dg().tile(coord).creature_id as i32);
         }
         15 => {
             // Summon Undead
@@ -843,7 +843,7 @@ pub fn monster_execute_casting_of_spell(monster_id: i32, spell_id: i32, level: u
             *hack_monptr() = monster_id;
             crate::monster_manager::monster_summon_undead(&mut coord);
             *hack_monptr() = -1;
-            monster_update_visibility(dg().floor[coord.y as usize][coord.x as usize].creature_id as i32);
+            monster_update_visibility(dg().tile(coord).creature_id as i32);
         }
         16 => {
             // Slow Person
@@ -998,7 +998,7 @@ pub fn monster_multiply(coord: Coord, creature_id: i32, monster_id: i32) -> bool
         // don't create a new creature on top of the old one, that
         // causes invincible/invisible creatures to appear.
         if coord_in_bounds(position) && (position.y != coord.y || position.x != coord.x) {
-            let tile = dg().floor[position.y as usize][position.x as usize];
+            let tile = *dg().tile(position);
 
             if tile.feature_id <= MAX_OPEN_SPACE && tile.treasure_id == 0 && tile.creature_id != 1 {
                 // Creature there already?
@@ -1063,7 +1063,7 @@ fn monster_multiply_critter(monster_id: i32, rcmove: &mut u32) {
     for y in (monster.pos.y - 1)..=(monster.pos.y + 1) {
         for x in (monster.pos.x - 1)..=(monster.pos.x + 1) {
             let coord = Coord::new(y, x);
-            if coord_in_bounds(coord) && dg().floor[y as usize][x as usize].creature_id > 1 {
+            if coord_in_bounds(coord) && dg().tile(coord).creature_id > 1 {
                 counter += 1;
             }
         }
@@ -1102,7 +1102,8 @@ fn monster_move_out_of_wall(monster_id: i32, rcmove: &mut u32) {
     let mut y = monster.pos.y + 1;
     while y >= monster.pos.y - 1 {
         for x in (monster.pos.x - 1)..=(monster.pos.x + 1) {
-            if dir != 5 && dg().floor[y as usize][x as usize].feature_id <= MAX_OPEN_SPACE && dg().floor[y as usize][x as usize].creature_id != 1 {
+            let c = Coord::new(y, x);
+            if dir != 5 && dg().tile(c).feature_id <= MAX_OPEN_SPACE && dg().tile(c).creature_id != 1 {
                 directions[id] = dir;
                 id += 1;
             }
@@ -1123,7 +1124,7 @@ fn monster_move_out_of_wall(monster_id: i32, rcmove: &mut u32) {
 
     // if still in a wall, let it dig itself out, but also apply some more damage
     let pos = monsters()[monster_id as usize].pos;
-    if dg().floor[pos.y as usize][pos.x as usize].feature_id >= MIN_CAVE_WALL {
+    if dg().tile(pos).feature_id >= MIN_CAVE_WALL {
         // in case the monster dies, may need to call fix1_delete_monster()
         // instead of delete_monsters()
         *hack_monptr() = monster_id;
@@ -1259,7 +1260,7 @@ fn monster_move(monster_id: i32, rcmove: &mut u32) {
     // if in wall, must immediately escape to a clear area
     // then monster movement finished
     let pos = monsters()[monster_id as usize].pos;
-    if (movement & config::monsters::move_flags::CM_PHASE) == 0 && dg().floor[pos.y as usize][pos.x as usize].feature_id >= MIN_CAVE_WALL {
+    if (movement & config::monsters::move_flags::CM_PHASE) == 0 && dg().tile(pos).feature_id >= MIN_CAVE_WALL {
         monster_move_out_of_wall(monster_id, rcmove);
         return;
     }
@@ -1349,7 +1350,7 @@ fn monster_attacking_update(monster_id: i32, moves: i32) {
         if monster.lit
             || monster.distance_from_player <= CREATURES_LIST[creature_id].area_affect_radius
             || ((CREATURES_LIST[creature_id].movement & config::monsters::move_flags::CM_PHASE) == 0
-                && dg().floor[monster.pos.y as usize][monster.pos.x as usize].feature_id >= MIN_CAVE_WALL)
+                && dg().tile(monster.pos).feature_id >= MIN_CAVE_WALL)
         {
             if monsters()[monster_id as usize].sleep_count > 0 {
                 if py().flags.aggravate {
@@ -1601,7 +1602,7 @@ pub fn monster_sleep(coord: Coord) -> bool {
     while y <= coord.y + 1 && y < crate::dungeon::MAX_HEIGHT {
         let mut x = coord.x - 1;
         while x <= coord.x + 1 && x < crate::dungeon::MAX_WIDTH {
-            let monster_id = dg().floor[y as usize][x as usize].creature_id as usize;
+            let monster_id = dg().tile(Coord::new(y, x)).creature_id as usize;
 
             if monster_id <= 1 {
                 x += 1;

@@ -54,7 +54,7 @@ pub fn los(from: Coord, to: Coord) -> bool {
         }
 
         for yy in (from.y + 1)..to.y {
-            if dg().floor[yy as usize][from.x as usize].feature_id >= MIN_CLOSED_SPACE {
+            if dg().tile(Coord::new(yy, from.x)).feature_id >= MIN_CLOSED_SPACE {
                 return false;
             }
         }
@@ -68,7 +68,7 @@ pub fn los(from: Coord, to: Coord) -> bool {
         }
 
         for xx in (from.x + 1)..to.x {
-            if dg().floor[from.y as usize][xx as usize].feature_id >= MIN_CLOSED_SPACE {
+            if dg().tile(Coord::new(from.y, xx)).feature_id >= MIN_CLOSED_SPACE {
                 return false;
             }
         }
@@ -112,7 +112,7 @@ pub fn los(from: Coord, to: Coord) -> bool {
         }
 
         while to.x - xx != 0 {
-            if dg().floor[yy as usize][xx as usize].feature_id >= MIN_CLOSED_SPACE {
+            if dg().tile(Coord::new(yy, xx)).feature_id >= MIN_CLOSED_SPACE {
                 return false;
             }
 
@@ -122,7 +122,7 @@ pub fn los(from: Coord, to: Coord) -> bool {
                 xx += x_sign;
             } else if dy > scale_half {
                 yy += y_sign;
-                if dg().floor[yy as usize][xx as usize].feature_id >= MIN_CLOSED_SPACE {
+                if dg().tile(Coord::new(yy, xx)).feature_id >= MIN_CLOSED_SPACE {
                     return false;
                 }
                 xx += x_sign;
@@ -152,7 +152,7 @@ pub fn los(from: Coord, to: Coord) -> bool {
     }
 
     while to.y - yy != 0 {
-        if dg().floor[yy as usize][xx as usize].feature_id >= MIN_CLOSED_SPACE {
+        if dg().tile(Coord::new(yy, xx)).feature_id >= MIN_CLOSED_SPACE {
             return false;
         }
 
@@ -162,7 +162,7 @@ pub fn los(from: Coord, to: Coord) -> bool {
             yy += y_sign;
         } else if dx > scale_half {
             xx += x_sign;
-            if dg().floor[yy as usize][xx as usize].feature_id >= MIN_CLOSED_SPACE {
+            if dg().tile(Coord::new(yy, xx)).feature_id >= MIN_CLOSED_SPACE {
                 return false;
             }
             yy += y_sign;
@@ -458,7 +458,7 @@ fn look_see(coord: Coord, transparent: &mut bool) -> bool {
         return false;
     }
 
-    let tile = dg().floor[coord.y as usize][coord.x as usize];
+    let tile = *dg().tile(coord);
     *transparent = tile.feature_id <= MAX_OPEN_SPACE;
 
     if *LOS_HACK_NO_QUERY.get() {

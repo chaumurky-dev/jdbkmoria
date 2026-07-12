@@ -231,7 +231,7 @@ fn player_steps_on_trap(coord: Coord) {
     player_end_running();
     trap_change_visibility(coord);
 
-    let treasure_id = dg().floor[coord.y as usize][coord.x as usize].treasure_id as usize;
+    let treasure_id = dg().tile(coord).treasure_id as usize;
     let item = game().treasure.list[treasure_id];
 
     let damage = dice_roll(item.damage);
@@ -293,7 +293,7 @@ fn player_random_movement(dir: i32) -> bool {
 fn carry(coord: Coord, pickup: bool) {
     let mut pickup = pickup;
 
-    let treasure_id = dg().floor[coord.y as usize][coord.x as usize].treasure_id as usize;
+    let treasure_id = dg().tile(coord).treasure_id as usize;
     let item = game().treasure.list[treasure_id];
 
     let tile_flags = item.category_id;
@@ -379,7 +379,7 @@ pub fn player_move(direction: i32, do_pickup: bool) {
         return;
     }
 
-    let tile = dg().floor[coord.y as usize][coord.x as usize];
+    let tile = *dg().tile(coord);
     let monster_lit = monsters()[tile.creature_id as usize].lit;
 
     // if there is no creature, or an unlit creature in the walls then...
@@ -426,9 +426,10 @@ pub fn player_move(direction: i32, do_pickup: bool) {
 
                 for row in (py().pos.y - 1)..=(py().pos.y + 1) {
                     for col in (py().pos.x - 1)..=(py().pos.x + 1) {
-                        let neighbour = dg().floor[row as usize][col as usize];
+                        let neighbour_coord = Coord::new(row, col);
+                        let neighbour = *dg().tile(neighbour_coord);
                         if neighbour.feature_id == TILE_LIGHT_FLOOR && !neighbour.permanent_light {
-                            dungeon_light_room(Coord::new(row, col));
+                            dungeon_light_room(neighbour_coord);
                         }
                     }
                 }
@@ -450,7 +451,7 @@ pub fn player_move(direction: i32, do_pickup: bool) {
                     py().pos = old_coord;
 
                     // check to see if we have stepped back onto another trap, if so, set it off
-                    let id = dg().floor[py().pos.y as usize][py().pos.x as usize].treasure_id;
+                    let id = dg().tile(py().pos).treasure_id;
                     if id != 0 {
                         let val = game().treasure.list[id as usize].category_id;
                         if val == TV_INVIS_TRAP || val == TV_VIS_TRAP || val == TV_STORE_DOOR {

@@ -329,7 +329,7 @@ pub fn player_teleport(new_distance: i32) {
             location.x += (py().pos.x - location.x) / 2;
         }
 
-        let tile = &dg().floor[location.y as usize][location.x as usize];
+        let tile = dg().tile(location);
         if tile.feature_id < MIN_CLOSED_SPACE && tile.creature_id < 2 {
             break;
         }
@@ -340,7 +340,7 @@ pub fn player_teleport(new_distance: i32) {
     for y in (py().pos.y - 1)..=(py().pos.y + 1) {
         for x in (py().pos.x - 1)..=(py().pos.x + 1) {
             let spot = Coord::new(y, x);
-            dg().floor[y as usize][x as usize].temporary_light = false;
+            dg().tile_mut(spot).temporary_light = false;
             dungeon_lite_spot(spot);
         }
     }
@@ -357,7 +357,7 @@ pub fn player_teleport(new_distance: i32) {
 
 // Returns true if player has no light -RAK-
 pub fn player_no_light() -> bool {
-    let tile = &dg().floor[py().pos.y as usize][py().pos.x as usize];
+    let tile = dg().tile(py().pos);
     !tile.temporary_light && !tile.permanent_light
 }
 
@@ -816,7 +816,7 @@ pub fn player_search(coord: Coord, chance: i32) {
                 continue;
             }
 
-            let treasure_id = dg().floor[y as usize][x as usize].treasure_id as usize;
+            let treasure_id = dg().tile(spot).treasure_id as usize;
             if treasure_id == 0 {
                 continue;
             }
@@ -1248,7 +1248,7 @@ fn player_calculate_base_to_hit(creature_lit: bool, tot_tohit: i32) -> i32 {
 
 // Player attacks a (poor, defenseless) creature -RAK-
 fn player_attack_monster(coord: Coord) {
-    let creature_id = dg().floor[coord.y as usize][coord.x as usize].creature_id as usize;
+    let creature_id = dg().tile(coord).creature_id as usize;
 
     monsters()[creature_id].sleep_count = 0;
 
@@ -1368,7 +1368,7 @@ fn player_lock_picking_skill() -> i32 {
 }
 
 fn open_closed_door(coord: Coord) {
-    let treasure_id = dg().floor[coord.y as usize][coord.x as usize].treasure_id as usize;
+    let treasure_id = dg().tile(coord).treasure_id as usize;
 
     let misc_use = game().treasure.list[treasure_id].misc_use;
 
@@ -1393,14 +1393,14 @@ fn open_closed_door(coord: Coord) {
 
     if game().treasure.list[treasure_id].misc_use == 0 {
         inventory_item_copy_to(config::dungeon::objects::OBJ_OPEN_DOOR as usize, &mut game().treasure.list[treasure_id]);
-        dg().floor[coord.y as usize][coord.x as usize].feature_id = TILE_CORR_FLOOR;
+        dg().tile_mut(coord).feature_id = TILE_CORR_FLOOR;
         dungeon_lite_spot(coord);
         game().command_count = 0;
     }
 }
 
 fn open_closed_chest(coord: Coord) {
-    let treasure_id = dg().floor[coord.y as usize][coord.x as usize].treasure_id as usize;
+    let treasure_id = dg().tile(coord).treasure_id as usize;
 
     let mut success = false;
 
@@ -1437,7 +1437,7 @@ fn open_closed_chest(coord: Coord) {
     // Oh, yes it was...   (Snicker)
     crate::player_traps::chest_trap(coord);
 
-    let treasure_id = dg().floor[coord.y as usize][coord.x as usize].treasure_id as usize;
+    let treasure_id = dg().tile(coord).treasure_id as usize;
     if treasure_id != 0 {
         // Chest treasure is allocated as if a creature had been killed.
         // clear the cursed chest/monster win flag, so that people
@@ -1462,7 +1462,7 @@ pub fn player_open_closed_object() {
 
     let mut no_object = false;
 
-    let tile = dg().floor[coord.y as usize][coord.x as usize];
+    let tile = *dg().tile(coord);
     let category_id = game().treasure.list[tile.treasure_id as usize].category_id;
 
     if tile.creature_id > 1 && tile.treasure_id != 0 && (category_id == TV_CLOSED_DOOR || category_id == TV_CHEST) {
@@ -1496,7 +1496,7 @@ pub fn player_close_door() {
     let mut coord = py().pos;
     player_move_position(dir, &mut coord);
 
-    let tile = dg().floor[coord.y as usize][coord.x as usize];
+    let tile = *dg().tile(coord);
     let treasure_id = tile.treasure_id as usize;
 
     let mut no_object = false;
@@ -1506,7 +1506,7 @@ pub fn player_close_door() {
             if tile.creature_id == 0 {
                 if game().treasure.list[treasure_id].misc_use == 0 {
                     inventory_item_copy_to(config::dungeon::objects::OBJ_CLOSED_DOOR as usize, &mut game().treasure.list[treasure_id]);
-                    dg().floor[coord.y as usize][coord.x as usize].feature_id = TILE_BLOCKED_FLOOR;
+                    dg().tile_mut(coord).feature_id = TILE_BLOCKED_FLOOR;
                     dungeon_lite_spot(coord);
                 } else {
                     print_message(Some("The door appears to be broken."));
@@ -1534,10 +1534,7 @@ pub fn player_tunnel_wall(coord: Coord, digging_ability: i32, digging_chance: i3
         return false;
     }
 
-    let y = coord.y as usize;
-    let x = coord.x as usize;
-
-    if dg().floor[y][x].perma_lit_room {
+    if dg().tile(coord).perma_lit_room {
         // Should become a room space, check to see whether
         // it should be TILE_LIGHT_FLOOR or TILE_DARK_FLOOR.
         let mut found = false;
@@ -1550,9 +1547,10 @@ pub fn player_tunnel_wall(coord: Coord, digging_ability: i32, digging_chance: i3
                 if xx >= crate::dungeon::MAX_WIDTH {
                     break;
                 }
-                if dg().floor[yy as usize][xx as usize].feature_id <= MAX_CAVE_ROOM {
-                    dg().floor[y][x].feature_id = dg().floor[yy as usize][xx as usize].feature_id;
-                    dg().floor[y][x].permanent_light = dg().floor[yy as usize][xx as usize].permanent_light;
+                let ncoord = Coord::new(yy, xx);
+                if dg().tile(ncoord).feature_id <= MAX_CAVE_ROOM {
+                    dg().tile_mut(coord).feature_id = dg().tile(ncoord).feature_id;
+                    dg().tile_mut(coord).permanent_light = dg().tile(ncoord).permanent_light;
                     found = true;
                     break 'outer;
                 }
@@ -1560,18 +1558,18 @@ pub fn player_tunnel_wall(coord: Coord, digging_ability: i32, digging_chance: i3
         }
 
         if !found {
-            dg().floor[y][x].feature_id = TILE_CORR_FLOOR;
-            dg().floor[y][x].permanent_light = false;
+            dg().tile_mut(coord).feature_id = TILE_CORR_FLOOR;
+            dg().tile_mut(coord).permanent_light = false;
         }
     } else {
         // should become a corridor space
-        dg().floor[y][x].feature_id = TILE_CORR_FLOOR;
-        dg().floor[y][x].permanent_light = false;
+        dg().tile_mut(coord).feature_id = TILE_CORR_FLOOR;
+        dg().tile_mut(coord).permanent_light = false;
     }
 
-    dg().floor[y][x].field_mark = false;
+    dg().tile_mut(coord).field_mark = false;
 
-    if coord_inside_panel(coord) && (dg().floor[y][x].temporary_light || dg().floor[y][x].permanent_light) && dg().floor[y][x].treasure_id != 0 {
+    if coord_inside_panel(coord) && (dg().tile(coord).temporary_light || dg().tile(coord).permanent_light) && dg().tile(coord).treasure_id != 0 {
         print_message(Some("You have found something!"));
     }
 

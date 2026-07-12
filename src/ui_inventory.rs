@@ -355,7 +355,7 @@ fn ui_command_inventory_drop_item(command: &mut char, selecting: bool) -> bool {
         return selecting;
     }
 
-    if dg().floor[py().pos.y as usize][py().pos.x as usize].treasure_id != 0 {
+    if dg().tile(py().pos).treasure_id != 0 {
         print_message(Some("There's no room to drop anything here."));
         return selecting;
     }
@@ -530,18 +530,18 @@ fn request_put_ring_on_which_hand() -> i32 {
 fn inventory_get_slot_to_wear_equipment(category_id: u8) -> i32 {
     // Slot for equipment
     match category_id {
-        x if x == TV_SLING_AMMO || x == TV_BOLT || x == TV_ARROW || x == TV_BOW || x == TV_HAFTED || x == TV_POLEARM || x == TV_SWORD || x == TV_DIGGING || x == TV_SPIKE => {
+        TV_SLING_AMMO | TV_BOLT | TV_ARROW | TV_BOW | TV_HAFTED | TV_POLEARM | TV_SWORD | TV_DIGGING | TV_SPIKE => {
             PlayerEquipment::Wield as i32
         }
-        x if x == TV_LIGHT => PlayerEquipment::Light as i32,
-        x if x == TV_BOOTS => PlayerEquipment::Feet as i32,
-        x if x == TV_GLOVES => PlayerEquipment::Hands as i32,
-        x if x == TV_CLOAK => PlayerEquipment::Outer as i32,
-        x if x == TV_HELM => PlayerEquipment::Head as i32,
-        x if x == TV_SHIELD => PlayerEquipment::Arm as i32,
-        x if x == TV_HARD_ARMOR || x == TV_SOFT_ARMOR => PlayerEquipment::Body as i32,
-        x if x == TV_AMULET => PlayerEquipment::Neck as i32,
-        x if x == TV_RING => {
+        TV_LIGHT => PlayerEquipment::Light as i32,
+        TV_BOOTS => PlayerEquipment::Feet as i32,
+        TV_GLOVES => PlayerEquipment::Hands as i32,
+        TV_CLOAK => PlayerEquipment::Outer as i32,
+        TV_HELM => PlayerEquipment::Head as i32,
+        TV_SHIELD => PlayerEquipment::Arm as i32,
+        TV_HARD_ARMOR | TV_SOFT_ARMOR => PlayerEquipment::Body as i32,
+        TV_AMULET => PlayerEquipment::Neck as i32,
+        TV_RING => {
             if crate::player::player_right_hand_ring_empty() {
                 PlayerEquipment::Right as i32
             } else if crate::player::player_left_hand_ring_empty() {
@@ -594,7 +594,7 @@ fn execute_remove_item_command(selecting: bool, item_id: i32, command: &mut char
         item_id = -1;
         print_message(Some("Hmmm, it seems to be cursed."));
     } else if *command == 't' && !crate::inventory::inventory_can_carry_item_count(&py().inventory[item_id as usize]) {
-        if dg().floor[py().pos.y as usize][py().pos.x as usize].treasure_id != 0 {
+        if dg().tile(py().pos).treasure_id != 0 {
             item_id = -1;
             print_message(Some("You can't carry it."));
         } else if get_input_confirmation("You can't carry it.  Drop it?") {

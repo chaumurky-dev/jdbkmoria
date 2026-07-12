@@ -1145,7 +1145,7 @@ fn restore_from_file(file: File, generate: &mut bool) -> Option<bool> {
             if xchar as i32 > MAX_WIDTH || ychar as i32 > MAX_HEIGHT {
                 break 'restore false;
             }
-            dg().floor[ychar as usize][xchar as usize].creature_id = char_tmp;
+            dg().tile_mut(Coord::new(ychar as i32, xchar as i32)).creature_id = char_tmp;
             char_tmp = rd_byte();
         }
 
@@ -1158,7 +1158,7 @@ fn restore_from_file(file: File, generate: &mut bool) -> Option<bool> {
             if xchar as i32 > MAX_WIDTH || ychar as i32 > MAX_HEIGHT {
                 break 'restore false;
             }
-            dg().floor[ychar as usize][xchar as usize].treasure_id = char_tmp;
+            dg().tile_mut(Coord::new(ychar as i32, xchar as i32)).treasure_id = char_tmp;
             char_tmp = rd_byte();
         }
 

@@ -231,10 +231,10 @@ pub fn spell_detect_treasure_within_vicinity() -> bool {
     for y in top..=bottom {
         for x in left..=right {
             let coord = Coord::new(y, x);
-            let treasure_id = dg().floor[y as usize][x as usize].treasure_id;
+            let treasure_id = dg().tile(coord).treasure_id;
 
             if treasure_id != 0 && game().treasure.list[treasure_id as usize].category_id == TV_GOLD && !cave_tile_visible(coord) {
-                dg().floor[y as usize][x as usize].field_mark = true;
+                dg().tile_mut(coord).field_mark = true;
                 dungeon_lite_spot(coord);
                 detected = true;
             }
@@ -256,10 +256,10 @@ pub fn spell_detect_objects_within_vicinity() -> bool {
     for y in top..=bottom {
         for x in left..=right {
             let coord = Coord::new(y, x);
-            let treasure_id = dg().floor[y as usize][x as usize].treasure_id;
+            let treasure_id = dg().tile(coord).treasure_id;
 
             if treasure_id != 0 && game().treasure.list[treasure_id as usize].category_id < TV_MAX_OBJECT && !cave_tile_visible(coord) {
-                dg().floor[y as usize][x as usize].field_mark = true;
+                dg().tile_mut(coord).field_mark = true;
                 dungeon_lite_spot(coord);
                 detected = true;
             }
@@ -281,14 +281,14 @@ pub fn spell_detect_traps_within_vicinity() -> bool {
     for y in top..=bottom {
         for x in left..=right {
             let coord = Coord::new(y, x);
-            let treasure_id = dg().floor[y as usize][x as usize].treasure_id;
+            let treasure_id = dg().tile(coord).treasure_id;
 
             if treasure_id == 0 {
                 continue;
             }
 
             if game().treasure.list[treasure_id as usize].category_id == TV_INVIS_TRAP {
-                dg().floor[y as usize][x as usize].field_mark = true;
+                dg().tile_mut(coord).field_mark = true;
                 trap_change_visibility(coord);
                 detected = true;
             } else if game().treasure.list[treasure_id as usize].category_id == TV_CHEST {
@@ -313,7 +313,7 @@ pub fn spell_detect_secret_doors_within_vicinity() -> bool {
     for y in top..=bottom {
         for x in left..=right {
             let coord = Coord::new(y, x);
-            let treasure_id = dg().floor[y as usize][x as usize].treasure_id;
+            let treasure_id = dg().tile(coord).treasure_id;
 
             if treasure_id == 0 {
                 continue;
@@ -324,13 +324,13 @@ pub fn spell_detect_secret_doors_within_vicinity() -> bool {
             if category_id == TV_SECRET_DOOR {
                 // Secret doors
 
-                dg().floor[y as usize][x as usize].field_mark = true;
+                dg().tile_mut(coord).field_mark = true;
                 trap_change_visibility(coord);
                 detected = true;
-            } else if (category_id == TV_UP_STAIR || category_id == TV_DOWN_STAIR) && !dg().floor[y as usize][x as usize].field_mark {
+            } else if (category_id == TV_UP_STAIR || category_id == TV_DOWN_STAIR) && !dg().tile(coord).field_mark {
                 // Staircases
 
-                dg().floor[y as usize][x as usize].field_mark = true;
+                dg().tile_mut(coord).field_mark = true;
                 dungeon_lite_spot(coord);
                 detected = true;
             }
@@ -383,7 +383,7 @@ pub fn spell_light_area(coord: Coord) -> bool {
     // NOTE: this is not changed anywhere. A bug or correct? -MRC-
     let lit = true;
 
-    if dg().floor[coord.y as usize][coord.x as usize].perma_lit_room && dg().current_level > 0 {
+    if dg().tile(coord).perma_lit_room && dg().current_level > 0 {
         dungeon_light_room(coord);
     }
 
@@ -392,7 +392,7 @@ pub fn spell_light_area(coord: Coord) -> bool {
     for y in (coord.y - 1)..=(coord.y + 1) {
         for x in (coord.x - 1)..=(coord.x + 1) {
             let spot = Coord::new(y, x);
-            dg().floor[y as usize][x as usize].permanent_light = true;
+            dg().tile_mut(spot).permanent_light = true;
             dungeon_lite_spot(spot);
         }
     }
@@ -404,7 +404,7 @@ pub fn spell_light_area(coord: Coord) -> bool {
 pub fn spell_darken_area(coord: Coord) -> bool {
     let mut darkened = false;
 
-    if dg().floor[coord.y as usize][coord.x as usize].perma_lit_room && dg().current_level > 0 {
+    if dg().tile(coord).perma_lit_room && dg().current_level > 0 {
         let half_height = SCREEN_HEIGHT / 2;
         let half_width = SCREEN_WIDTH / 2;
         let start_row = (coord.y / half_height) * half_height + 1;
@@ -415,11 +415,11 @@ pub fn spell_darken_area(coord: Coord) -> bool {
         for y in start_row..=end_row {
             for x in start_col..=end_col {
                 let spot = Coord::new(y, x);
-                let tile = dg().floor[y as usize][x as usize];
+                let tile = *dg().tile(spot);
 
                 if tile.perma_lit_room && tile.feature_id <= MAX_CAVE_FLOOR {
-                    dg().floor[y as usize][x as usize].permanent_light = false;
-                    dg().floor[y as usize][x as usize].feature_id = TILE_DARK_FLOOR;
+                    dg().tile_mut(spot).permanent_light = false;
+                    dg().tile_mut(spot).feature_id = TILE_DARK_FLOOR;
 
                     dungeon_lite_spot(spot);
 
@@ -432,11 +432,12 @@ pub fn spell_darken_area(coord: Coord) -> bool {
     } else {
         for y in (coord.y - 1)..=(coord.y + 1) {
             for x in (coord.x - 1)..=(coord.x + 1) {
-                let tile = dg().floor[y as usize][x as usize];
+                let spot = Coord::new(y, x);
+                let tile = *dg().tile(spot);
 
                 if tile.feature_id == TILE_CORR_FLOOR && tile.permanent_light {
                     // permanent_light could have been set by star-lite wand, etc
-                    dg().floor[y as usize][x as usize].permanent_light = false;
+                    dg().tile_mut(spot).permanent_light = false;
                     darkened = true;
                 }
             }
@@ -453,14 +454,15 @@ pub fn spell_darken_area(coord: Coord) -> bool {
 fn dungeon_light_area_around_floor_tile(coord: Coord) {
     for y in (coord.y - 1)..=(coord.y + 1) {
         for x in (coord.x - 1)..=(coord.x + 1) {
-            let tile = dg().floor[y as usize][x as usize];
+            let spot = Coord::new(y, x);
+            let tile = *dg().tile(spot);
 
             if tile.feature_id >= MIN_CAVE_WALL {
-                dg().floor[y as usize][x as usize].permanent_light = true;
+                dg().tile_mut(spot).permanent_light = true;
             } else if tile.treasure_id != 0 {
                 let category_id = game().treasure.list[tile.treasure_id as usize].category_id;
                 if category_id >= TV_MIN_VISIBLE && category_id <= TV_MAX_VISIBLE {
-                    dg().floor[y as usize][x as usize].field_mark = true;
+                    dg().tile_mut(spot).field_mark = true;
                 }
             }
         }
@@ -478,7 +480,7 @@ pub fn spell_map_current_area() {
     for y in row_min..=row_max {
         for x in col_min..=col_max {
             let coord = Coord::new(y, x);
-            if coord_in_bounds(coord) && dg().floor[y as usize][x as usize].feature_id <= MAX_CAVE_FLOOR {
+            if coord_in_bounds(coord) && dg().tile(coord).feature_id <= MAX_CAVE_FLOOR {
                 dungeon_light_area_around_floor_tile(coord);
             }
         }
@@ -553,7 +555,7 @@ pub fn spell_surround_player_with_traps() -> bool {
             }
 
             let coord = Coord::new(y, x);
-            let tile = dg().floor[y as usize][x as usize];
+            let tile = *dg().tile(coord);
 
             if tile.feature_id <= MAX_CAVE_FLOOR {
                 if tile.treasure_id != 0 {
@@ -563,7 +565,7 @@ pub fn spell_surround_player_with_traps() -> bool {
                 dungeon_set_trap(coord, random_number(config::dungeon::objects::MAX_TRAPS as i32) - 1);
 
                 // don't let player gain exp from the newly created traps
-                let treasure_id = dg().floor[y as usize][x as usize].treasure_id;
+                let treasure_id = dg().tile(coord).treasure_id;
                 game().treasure.list[treasure_id as usize].misc_use = 0;
 
                 // open pits are immediately visible, so call dungeon_lite_spot
@@ -589,7 +591,7 @@ pub fn spell_surround_player_with_doors() -> bool {
             }
 
             let coord = Coord::new(y, x);
-            let tile = dg().floor[y as usize][x as usize];
+            let tile = *dg().tile(coord);
 
             if tile.feature_id <= MAX_CAVE_FLOOR {
                 if tile.treasure_id != 0 {
@@ -597,8 +599,8 @@ pub fn spell_surround_player_with_doors() -> bool {
                 }
 
                 let free_id = popt();
-                dg().floor[y as usize][x as usize].feature_id = TILE_BLOCKED_FLOOR;
-                dg().floor[y as usize][x as usize].treasure_id = free_id as u8;
+                dg().tile_mut(coord).feature_id = TILE_BLOCKED_FLOOR;
+                dg().tile_mut(coord).treasure_id = free_id as u8;
 
                 inventory_item_copy_to(config::dungeon::objects::OBJ_CLOSED_DOOR as usize, &mut game().treasure.list[free_id as usize]);
                 dungeon_lite_spot(coord);
@@ -619,7 +621,7 @@ pub fn spell_destroy_adjacent_doors_traps() -> bool {
     for y in (pos.y - 1)..=(pos.y + 1) {
         for x in (pos.x - 1)..=(pos.x + 1) {
             let coord = Coord::new(y, x);
-            let treasure_id = dg().floor[y as usize][x as usize].treasure_id;
+            let treasure_id = dg().tile(coord).treasure_id;
 
             if treasure_id == 0 {
                 continue;
@@ -713,7 +715,7 @@ pub fn spell_light_line(coord: Coord, direction: i32) {
     let mut finished = false;
 
     while !finished {
-        let tile = dg().floor[coord.y as usize][coord.x as usize];
+        let tile = *dg().tile(coord);
 
         if distance > config::treasure::OBJECT_BOLTS_MAX_RANGE as i32 || tile.feature_id >= MIN_CLOSED_SPACE {
             player_move_position(direction, &mut coord);
@@ -723,7 +725,7 @@ pub fn spell_light_line(coord: Coord, direction: i32) {
 
         if !tile.permanent_light && !tile.temporary_light {
             // set permanent_light so that dungeon_lite_spot will work
-            dg().floor[coord.y as usize][coord.x as usize].permanent_light = true;
+            dg().tile_mut(coord).permanent_light = true;
 
             let tmp_coord = coord;
 
@@ -737,7 +739,7 @@ pub fn spell_light_line(coord: Coord, direction: i32) {
         }
 
         // set permanent_light in case temporary_light was true above
-        dg().floor[coord.y as usize][coord.x as usize].permanent_light = true;
+        dg().tile_mut(coord).permanent_light = true;
 
         if tile.creature_id > 1 {
             spell_light_line_touches_monster(tile.creature_id as i32);
@@ -769,7 +771,7 @@ pub fn spell_disarm_all_in_direction(coord: Coord, direction: i32) -> bool {
     let mut disarmed = false;
 
     loop {
-        let tile = dg().floor[coord.y as usize][coord.x as usize];
+        let tile = *dg().tile(coord);
 
         // note, must continue up to and including the first non open space,
         // because secret doors have feature_id greater than MAX_OPEN_SPACE
@@ -785,7 +787,7 @@ pub fn spell_disarm_all_in_direction(coord: Coord, direction: i32) -> bool {
                 // Locked or jammed doors become merely closed.
                 game().treasure.list[treasure_id].misc_use = 0;
             } else if category_id == TV_SECRET_DOOR {
-                dg().floor[coord.y as usize][coord.x as usize].field_mark = true;
+                dg().tile_mut(coord).field_mark = true;
                 trap_change_visibility(coord);
                 disarmed = true;
             } else if category_id == TV_CHEST && game().treasure.list[treasure_id].flags != 0 {
@@ -806,7 +808,7 @@ pub fn spell_disarm_all_in_direction(coord: Coord, direction: i32) -> bool {
 
         distance += 1;
 
-        let tile = dg().floor[coord.y as usize][coord.x as usize];
+        let tile = *dg().tile(coord);
         if distance > config::treasure::OBJECT_BOLTS_MAX_RANGE as i32 || tile.feature_id > MAX_OPEN_SPACE {
             break;
         }
@@ -847,16 +849,16 @@ fn print_bolt_strikes_monster_message(creature_name: &str, bolt_name: &str, is_l
 
 // Light up, draw, and check for monster damage when Fire Bolt touches it.
 fn spell_fire_bolt_touches_monster(coord: Coord, damage: i32, harm_type: u16, weapon_id: u32, bolt_name: &str) {
-    let creature_id_of_tile = dg().floor[coord.y as usize][coord.x as usize].creature_id as i32;
+    let creature_id_of_tile = dg().tile(coord).creature_id as i32;
     let monster = monsters()[creature_id_of_tile as usize];
     let creature_id = monster.creature_id as usize;
 
     // light up monster and draw monster, temporarily set
     // permanent_light so that `monster_update_visibility()` will work
-    let saved_lit_status = dg().floor[coord.y as usize][coord.x as usize].permanent_light;
-    dg().floor[coord.y as usize][coord.x as usize].permanent_light = true;
+    let saved_lit_status = dg().tile(coord).permanent_light;
+    dg().tile_mut(coord).permanent_light = true;
     monster_update_visibility(creature_id_of_tile);
-    dg().floor[coord.y as usize][coord.x as usize].permanent_light = saved_lit_status;
+    dg().tile_mut(coord).permanent_light = saved_lit_status;
 
     // draw monster and clear previous bolt
     put_qio();
@@ -903,7 +905,7 @@ pub fn spell_fire_bolt(coord: Coord, direction: i32, damage_hp: i32, spell_type:
 
         distance += 1;
 
-        let tile = dg().floor[coord.y as usize][coord.x as usize];
+        let tile = *dg().tile(coord);
 
         dungeon_lite_spot(old_coord);
 
@@ -949,7 +951,7 @@ pub fn spell_fire_ball(coord: Coord, direction: i32, damage_hp: i32, spell_type:
             continue;
         }
 
-        let tile = dg().floor[coord.y as usize][coord.x as usize];
+        let tile = *dg().tile(coord);
 
         if tile.feature_id >= MIN_CLOSED_SPACE || tile.creature_id > 1 {
             finished = true;
@@ -966,13 +968,13 @@ pub fn spell_fire_ball(coord: Coord, direction: i32, damage_hp: i32, spell_type:
                     let spot = Coord::new(row, col);
 
                     if coord_in_bounds(spot) && coord_distance_between(coord, spot) <= max_distance && los(coord, spot) {
-                        let spot_tile = dg().floor[spot.y as usize][spot.x as usize];
+                        let spot_tile = *dg().tile(spot);
 
                         if spot_tile.treasure_id != 0 && destroy(&game().treasure.list[spot_tile.treasure_id as usize]) {
                             dungeon_delete_object(spot);
                         }
 
-                        let spot_tile = dg().floor[spot.y as usize][spot.x as usize];
+                        let spot_tile = *dg().tile(spot);
                         if spot_tile.feature_id <= MAX_OPEN_SPACE {
                             if spot_tile.creature_id > 1 {
                                 let monster_id = spot_tile.creature_id as i32;
@@ -982,7 +984,7 @@ pub fn spell_fire_ball(coord: Coord, direction: i32, damage_hp: i32, spell_type:
 
                                 // lite up creature if visible, temp set permanent_light so that monster_update_visibility works
                                 let saved_lit_status = spot_tile.permanent_light;
-                                dg().floor[spot.y as usize][spot.x as usize].permanent_light = true;
+                                dg().tile_mut(spot).permanent_light = true;
                                 monster_update_visibility(monster_id);
 
                                 total_hits += 1;
@@ -1006,7 +1008,7 @@ pub fn spell_fire_ball(coord: Coord, direction: i32, damage_hp: i32, spell_type:
                                 if monster_take_hit(monster_id, damage) >= 0 {
                                     total_kills += 1;
                                 }
-                                dg().floor[spot.y as usize][spot.x as usize].permanent_light = saved_lit_status;
+                                dg().tile_mut(spot).permanent_light = saved_lit_status;
                             } else if coord_inside_panel(spot) && py().flags.blind < 1 {
                                 panel_put_tile('*', spot);
                             }
@@ -1065,13 +1067,13 @@ pub fn spell_breath(coord: Coord, monster_id: i32, damage_hp: i32, spell_type: i
         for x in (coord.x - 2)..=(coord.x + 2) {
             let location = Coord::new(y, x);
             if coord_in_bounds(location) && coord_distance_between(coord, location) <= max_distance && los(coord, location) {
-                let tile = dg().floor[y as usize][x as usize];
+                let tile = *dg().tile(location);
 
                 if tile.treasure_id != 0 && destroy(&game().treasure.list[tile.treasure_id as usize]) {
                     dungeon_delete_object(location);
                 }
 
-                let tile = dg().floor[y as usize][x as usize];
+                let tile = *dg().tile(location);
                 if tile.feature_id <= MAX_OPEN_SPACE {
                     // must test status bit, not py.flags.blind here, flag could have
                     // been set by a previous monster, but the breath should still
@@ -1225,7 +1227,7 @@ pub fn spell_change_monster_hit_points(coord: Coord, direction: i32, damage_hp: 
         player_move_position(direction, &mut coord);
         distance += 1;
 
-        let tile = dg().floor[coord.y as usize][coord.x as usize];
+        let tile = *dg().tile(coord);
 
         if distance > config::treasure::OBJECT_BOLTS_MAX_RANGE as i32 || tile.feature_id >= MIN_CLOSED_SPACE {
             finished = true;
@@ -1266,7 +1268,7 @@ pub fn spell_drain_life_from_monster(coord: Coord, direction: i32) -> bool {
         player_move_position(direction, &mut coord);
         distance += 1;
 
-        let tile = dg().floor[coord.y as usize][coord.x as usize];
+        let tile = *dg().tile(coord);
 
         if distance > config::treasure::OBJECT_BOLTS_MAX_RANGE as i32 || tile.feature_id >= MIN_CLOSED_SPACE {
             finished = true;
@@ -1313,7 +1315,7 @@ pub fn spell_speed_monster(coord: Coord, direction: i32, speed: i32) -> bool {
         player_move_position(direction, &mut coord);
         distance += 1;
 
-        let tile = dg().floor[coord.y as usize][coord.x as usize];
+        let tile = *dg().tile(coord);
 
         if distance > config::treasure::OBJECT_BOLTS_MAX_RANGE as i32 || tile.feature_id >= MIN_CLOSED_SPACE {
             finished = true;
@@ -1365,7 +1367,7 @@ pub fn spell_confuse_monster(coord: Coord, direction: i32) -> bool {
         player_move_position(direction, &mut coord);
         distance += 1;
 
-        let tile = dg().floor[coord.y as usize][coord.x as usize];
+        let tile = *dg().tile(coord);
 
         if distance > config::treasure::OBJECT_BOLTS_MAX_RANGE as i32 || tile.feature_id >= MIN_CLOSED_SPACE {
             finished = true;
@@ -1423,7 +1425,7 @@ pub fn spell_sleep_monster(coord: Coord, direction: i32) -> bool {
         player_move_position(direction, &mut coord);
         distance += 1;
 
-        let tile = dg().floor[coord.y as usize][coord.x as usize];
+        let tile = *dg().tile(coord);
 
         if distance > config::treasure::OBJECT_BOLTS_MAX_RANGE as i32 || tile.feature_id >= MIN_CLOSED_SPACE {
             finished = true;
@@ -1470,7 +1472,7 @@ pub fn spell_wall_to_mud(coord: Coord, direction: i32) -> bool {
         player_move_position(direction, &mut coord);
         distance += 1;
 
-        let tile = dg().floor[coord.y as usize][coord.x as usize];
+        let tile = *dg().tile(coord);
 
         // note, this ray can move through walls as it turns them to mud
         if distance == config::treasure::OBJECT_BOLTS_MAX_RANGE as i32 {
@@ -1513,7 +1515,7 @@ pub fn spell_wall_to_mud(coord: Coord, direction: i32) -> bool {
             }
         }
 
-        let tile = dg().floor[coord.y as usize][coord.x as usize];
+        let tile = *dg().tile(coord);
         if tile.creature_id > 1 {
             let monster_id = tile.creature_id as i32;
             let monster = monsters()[monster_id as usize];
@@ -1550,7 +1552,7 @@ pub fn spell_destroy_doors_traps_in_direction(coord: Coord, direction: i32) -> b
         player_move_position(direction, &mut coord);
         distance += 1;
 
-        let tile = dg().floor[coord.y as usize][coord.x as usize];
+        let tile = *dg().tile(coord);
 
         // must move into first closed spot, as it might be a secret door
         if tile.treasure_id != 0 {
@@ -1575,7 +1577,7 @@ pub fn spell_destroy_doors_traps_in_direction(coord: Coord, direction: i32) -> b
             }
         }
 
-        let tile = dg().floor[coord.y as usize][coord.x as usize];
+        let tile = *dg().tile(coord);
         if !(distance <= config::treasure::OBJECT_BOLTS_MAX_RANGE as i32 || tile.feature_id <= MAX_OPEN_SPACE) {
             break;
         }
@@ -1596,7 +1598,7 @@ pub fn spell_polymorph_monster(coord: Coord, direction: i32) -> bool {
         player_move_position(direction, &mut coord);
         distance += 1;
 
-        let tile = dg().floor[coord.y as usize][coord.x as usize];
+        let tile = *dg().tile(coord);
 
         if distance > config::treasure::OBJECT_BOLTS_MAX_RANGE as i32 || tile.feature_id >= MIN_CLOSED_SPACE {
             finished = true;
@@ -1618,7 +1620,7 @@ pub fn spell_polymorph_monster(coord: Coord, direction: i32) -> bool {
                 morphed = monster_place_new(coord, random_number(level_range as i32) - 1 + monster_levels()[0] as i32, false);
 
                 // don't test tile.field_mark here, only permanent_light/temporary_light
-                let tile = dg().floor[coord.y as usize][coord.x as usize];
+                let tile = *dg().tile(coord);
                 if morphed && coord_inside_panel(coord) && (tile.temporary_light || tile.permanent_light) {
                     morphed = true;
                 }
@@ -1643,7 +1645,7 @@ pub fn spell_build_wall(coord: Coord, direction: i32) -> bool {
         player_move_position(direction, &mut coord);
         distance += 1;
 
-        let tile = dg().floor[coord.y as usize][coord.x as usize];
+        let tile = *dg().tile(coord);
 
         if distance > config::treasure::OBJECT_BOLTS_MAX_RANGE as i32 || tile.feature_id >= MIN_CLOSED_SPACE {
             finished = true;
@@ -1654,7 +1656,7 @@ pub fn spell_build_wall(coord: Coord, direction: i32) -> bool {
             dungeon_delete_object(coord);
         }
 
-        let tile = dg().floor[coord.y as usize][coord.x as usize];
+        let tile = *dg().tile(coord);
         if tile.creature_id > 1 {
             finished = true;
 
@@ -1686,7 +1688,7 @@ pub fn spell_build_wall(coord: Coord, direction: i32) -> bool {
             }
         }
 
-        let tile_ref = &mut dg().floor[coord.y as usize][coord.x as usize];
+        let tile_ref = dg().tile_mut(coord);
         tile_ref.feature_id = TILE_MAGMA_WALL;
         tile_ref.field_mark = false;
 
@@ -1710,7 +1712,7 @@ pub fn spell_clone_monster(coord: Coord, direction: i32) -> bool {
         player_move_position(direction, &mut coord);
         distance += 1;
 
-        let tile = dg().floor[coord.y as usize][coord.x as usize];
+        let tile = *dg().tile(coord);
 
         if distance > config::treasure::OBJECT_BOLTS_MAX_RANGE as i32 || tile.feature_id >= MIN_CLOSED_SPACE {
             finished = true;
@@ -1749,7 +1751,7 @@ pub fn spell_teleport_away_monster(monster_id: i32, distance_from_player: i32) {
             distance_from_player += 5;
         }
 
-        let tile = dg().floor[coord.y as usize][coord.x as usize];
+        let tile = *dg().tile(coord);
         if tile.feature_id < MIN_CLOSED_SPACE && tile.creature_id == 0 {
             break;
         }
@@ -1785,7 +1787,7 @@ pub fn spell_teleport_player_to(coord: Coord) {
         }
 
         if coord_in_bounds(rnd_coord) {
-            let tile = dg().floor[rnd_coord.y as usize][rnd_coord.x as usize];
+            let tile = *dg().tile(rnd_coord);
             if tile.feature_id < MIN_CLOSED_SPACE && tile.creature_id < 2 {
                 break;
             }
@@ -1798,7 +1800,7 @@ pub fn spell_teleport_player_to(coord: Coord) {
     for y in (pos.y - 1)..=(pos.y + 1) {
         for x in (pos.x - 1)..=(pos.x + 1) {
             let spot = Coord::new(y, x);
-            dg().floor[y as usize][x as usize].temporary_light = false;
+            dg().tile_mut(spot).temporary_light = false;
             dungeon_lite_spot(spot);
         }
     }
@@ -1824,7 +1826,7 @@ pub fn spell_teleport_away_monster_in_direction(coord: Coord, direction: i32) ->
         player_move_position(direction, &mut coord);
         distance += 1;
 
-        let tile = dg().floor[coord.y as usize][coord.x as usize];
+        let tile = *dg().tile(coord);
 
         if distance > config::treasure::OBJECT_BOLTS_MAX_RANGE as i32 || tile.feature_id >= MIN_CLOSED_SPACE {
             finished = true;
@@ -2107,7 +2109,7 @@ pub fn spell_earthquake() {
         for x in (pos.x - 8)..=(pos.x + 8) {
             let coord = Coord::new(y, x);
             if (y != pos.y || x != pos.x) && coord_in_bounds(coord) && random_number(8) == 1 {
-                let tile = dg().floor[y as usize][x as usize];
+                let tile = *dg().tile(coord);
 
                 if tile.treasure_id != 0 {
                     dungeon_delete_object(coord);
@@ -2117,7 +2119,7 @@ pub fn spell_earthquake() {
                     earthquake_hits_monster(tile.creature_id as i32);
                 }
 
-                let tile = &mut dg().floor[y as usize][x as usize];
+                let tile = dg().tile_mut(coord);
                 if tile.feature_id >= MIN_CAVE_WALL && tile.feature_id != TILE_BOUNDARY_WALL {
                     tile.feature_id = TILE_CORR_FLOOR;
                     tile.permanent_light = false;
@@ -2146,7 +2148,7 @@ pub fn spell_create_food() {
     let pos = py().pos;
 
     // take no action here, don't want to destroy object under player
-    if dg().floor[pos.y as usize][pos.x as usize].treasure_id != 0 {
+    if dg().tile(pos).treasure_id != 0 {
         // set player_free_turn so that scroll/spell points won't be used
         game().player_free_turn = true;
 
@@ -2156,7 +2158,7 @@ pub fn spell_create_food() {
     }
 
     dungeon_place_random_object_at(pos, false);
-    let treasure_id = dg().floor[pos.y as usize][pos.x as usize].treasure_id;
+    let treasure_id = dg().tile(pos).treasure_id;
     inventory_item_copy_to(config::dungeon::objects::OBJ_MUSH as usize, &mut game().treasure.list[treasure_id as usize]);
 }
 
@@ -2242,9 +2244,9 @@ pub fn spell_turn_undead() -> bool {
 // Leave a glyph of warding. Creatures will not pass over! -RAK-
 pub fn spell_warding_glyph() {
     let pos = py().pos;
-    if dg().floor[pos.y as usize][pos.x as usize].treasure_id == 0 {
+    if dg().tile(pos).treasure_id == 0 {
         let free_id = popt();
-        dg().floor[pos.y as usize][pos.x as usize].treasure_id = free_id as u8;
+        dg().tile_mut(pos).treasure_id = free_id as u8;
         inventory_item_copy_to(config::dungeon::objects::OBJ_SCARE_MON as usize, &mut game().treasure.list[free_id as usize]);
     }
 }
@@ -2363,7 +2365,7 @@ pub fn spell_slow_poison() -> bool {
 
 fn replace_spot(coord: Coord, typ: i32) {
     {
-        let tile = &mut dg().floor[coord.y as usize][coord.x as usize];
+        let tile = dg().tile_mut(coord);
 
         match typ {
             1 | 2 | 3 => tile.feature_id = TILE_CORR_FLOOR,
@@ -2378,7 +2380,7 @@ fn replace_spot(coord: Coord, typ: i32) {
         tile.perma_lit_room = false; // this is no longer part of a room
     }
 
-    let tile = dg().floor[coord.y as usize][coord.x as usize];
+    let tile = *dg().tile(coord);
 
     if tile.treasure_id != 0 {
         dungeon_delete_object(coord);
@@ -2398,7 +2400,7 @@ pub fn spell_destroy_area(coord: Coord) {
         for y in (coord.y - 15)..=(coord.y + 15) {
             for x in (coord.x - 15)..=(coord.x + 15) {
                 let spot = Coord::new(y, x);
-                if coord_in_bounds(spot) && dg().floor[y as usize][x as usize].feature_id != TILE_BOUNDARY_WALL {
+                if coord_in_bounds(spot) && dg().tile(spot).feature_id != TILE_BOUNDARY_WALL {
                     let distance = coord_distance_between(spot, coord);
 
                     // clear player's spot, but don't put wall there
