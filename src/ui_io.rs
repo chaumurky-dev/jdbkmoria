@@ -61,7 +61,10 @@ fn moria_terminal_initialize() {
     pancurses::raw(); // disable control characters. I.e. Ctrl-C does not work!
     pancurses::noecho(); // do not echo typed characters
     pancurses::nonl(); // disable translation return/newline for detection of return key
-    stdscr().keypad(false); // disable keypad input as we handle that ourselves
+    // disable curses keypad translation; escape sequences are decoded by
+    // parse_escape_sequence() instead, which keeps the terminal out of
+    // application keypad mode so the numpad keeps sending plain digits
+    stdscr().keypad(false);
 
     *CURSES_ON.get() = true;
 }
@@ -356,17 +359,134 @@ pub fn print_message_no_command_interrupt(msg: &str) {
     game().command_count = count;
 }
 
+// A single keypress pushed back after peeking past an ESC that turned
+// out not to start an escape sequence.
+static PUSHED_BACK_KEY: RacyCell<Option<char>> = RacyCell::new(None);
+
+// get_key_input() returns arrow/keypad keys as characters in the Unicode
+// private use area, which never arrives as ordinary terminal input:
+// value = base + direction (1-9, numpad layout), with separate bases for
+// plain (walk) and shifted (run) keys.
+const KEYPAD_WALK_BASE: u32 = 0xE000;
+const KEYPAD_RUN_BASE: u32 = 0xE010;
+
+// Decode a keypad character from get_key_input() into
+// (direction 1-9, shift held).
+pub fn keypad_direction(key: char) -> Option<(i32, bool)> {
+    match key as u32 {
+        v @ 0xE001..=0xE009 => Some(((v - KEYPAD_WALK_BASE) as i32, false)),
+        v @ 0xE011..=0xE019 => Some(((v - KEYPAD_RUN_BASE) as i32, true)),
+        _ => None,
+    }
+}
+
+// Read one character of an escape sequence. The terminal sends a whole
+// sequence at once, so a short timeout is enough to tell a lone ESC
+// keypress from the start of a sequence.
+fn get_sequence_char() -> Option<char> {
+    stdscr().timeout(50);
+    let input = stdscr().getch();
+    stdscr().timeout(-1);
+
+    match input {
+        Some(Input::Character(ch)) => Some(ch),
+        _ => None,
+    }
+}
+
+enum EscapeKey {
+    Escape,    // a lone ESC keypress
+    Key(char), // a decoded arrow/keypad key
+    Unknown,   // an unrecognized sequence, to be ignored
+}
+
+// Curses keypad() translation is left off (see moria_terminal_initialize),
+// so arrow and keypad keys arrive as raw escape sequences. Parse the two
+// xterm-style forms: ESC [ params final ("CSI") and ESC O final ("SS3").
+fn parse_escape_sequence() -> EscapeKey {
+    let Some(intro) = get_sequence_char() else {
+        return EscapeKey::Escape;
+    };
+
+    if intro != '[' && intro != 'O' {
+        // Not a sequence: keep the key for the next read.
+        *PUSHED_BACK_KEY.get() = Some(intro);
+        return EscapeKey::Escape;
+    }
+
+    // Accumulate parameter characters up to the final byte (0x40-0x7E).
+    let mut params = String::new();
+    let key_char = loop {
+        let Some(ch) = get_sequence_char() else {
+            return EscapeKey::Unknown; // sequence cut short
+        };
+        if ('@'..='~').contains(&ch) {
+            break ch;
+        }
+        if params.len() >= 8 {
+            return EscapeKey::Unknown; // implausibly long: bail out
+        }
+        params.push(ch);
+    };
+
+    match decode_keypad_sequence(key_char, &params) {
+        Some(key) => EscapeKey::Key(key),
+        None => EscapeKey::Unknown,
+    }
+}
+
+// Map a parsed sequence onto a keypad direction character. Letter finals
+// are the arrow/home/end/keypad keys (ESC [ A, ESC O A, ESC [ 1;2A, ...);
+// a '~' final is the legacy encoding with the key number as the first
+// parameter (ESC [ 5 ~ = page up, ESC [ 5;2 ~ = shift page up, ...).
+fn decode_keypad_sequence(key_char: char, params: &str) -> Option<char> {
+    let mut params = params.split(';');
+    let first: u32 = params.next().and_then(|p| p.parse().ok()).unwrap_or(1);
+    let modifier: u32 = params.next().and_then(|p| p.parse().ok()).unwrap_or(1);
+
+    let direction = match key_char {
+        'A' => 8, // up
+        'B' => 2, // down
+        'C' => 6, // right
+        'D' => 4, // left
+        'H' => 7, // home
+        'F' => 1, // end
+        'E' => 5, // keypad center
+        '~' => match first {
+            1 | 7 => 7, // home
+            4 | 8 => 1, // end
+            5 => 9,     // page up
+            6 => 3,     // page down
+            _ => return None,
+        },
+        _ => return None,
+    };
+
+    // The modifier parameter encodes the held modifier keys as a bitmask
+    // plus one, with shift as the low bit.
+    let shift = modifier.saturating_sub(1) & 1 == 1;
+
+    let base = if shift { KEYPAD_RUN_BASE } else { KEYPAD_WALK_BASE };
+    char::from_u32(base + direction)
+}
+
 // Returns a single character input from the terminal. -CJS-
 //
 // This silently consumes ^R to redraw the screen and reset the
 // terminal, so that this operation can always be performed at
 // any input prompt. get_key_input() never returns ^R.
+//
+// Arrow/keypad escape sequences are decoded into the private-use
+// characters described above keypad_direction().
 pub fn get_key_input() -> char {
     put_qio(); // Dump IO buffer
     game().command_count = 0; // Just to be safe -CJS-
 
     loop {
-        let input = stdscr().getch();
+        let input = match PUSHED_BACK_KEY.get().take() {
+            Some(key) => Some(Input::Character(key)),
+            None => stdscr().getch(),
+        };
 
         match input {
             None => {
@@ -398,6 +518,14 @@ pub fn get_key_input() -> char {
                 return ESCAPE;
             }
             Some(Input::Character(ch)) => {
+                if ch == ESCAPE {
+                    match parse_escape_sequence() {
+                        EscapeKey::Escape => return ESCAPE,
+                        EscapeKey::Key(key) => return key,
+                        EscapeKey::Unknown => continue,
+                    }
+                }
+
                 if ch != ctrl_key('R') {
                     return ch;
                 }

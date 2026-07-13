@@ -14,8 +14,8 @@ use crate::rng::{get_random_seed, rnd, set_random_seed};
 use crate::types::Coord;
 use crate::ui::{ESCAPE};
 use crate::ui_io::{
-    erase_line, flush_input_buffer, get_command, get_key_input, move_cursor, put_string,
-    put_string_clear_to_eol, terminal_bell_sound, terminal_restore,
+    erase_line, flush_input_buffer, get_command, get_key_input, keypad_direction, move_cursor,
+    put_string, put_string_clear_to_eol, terminal_bell_sound, terminal_restore,
 };
 use crate::version::{CURRENT_VERSION_MAJOR, CURRENT_VERSION_MINOR, CURRENT_VERSION_PATCH};
 
@@ -447,6 +447,11 @@ pub fn get_direction_with_memory(prompt: Option<&str>, direction: &mut i32) -> b
             command = map_roguelike_keys_to_keypad(command);
         }
 
+        // Arrow/keypad keys answer the prompt too (shifted or not).
+        if let Some((direction, _)) = keypad_direction(command) {
+            command = (b'0' + direction as u8) as char;
+        }
+
         if ('1'..='9').contains(&command) && command != '5' {
             py().prev_dir = command as i32 - '0' as i32;
             *direction = py().prev_dir;
@@ -470,6 +475,11 @@ pub fn get_all_directions(prompt: &str, direction: &mut i32) -> bool {
 
         if config::options::options().use_roguelike_keys {
             command = map_roguelike_keys_to_keypad(command);
+        }
+
+        // Arrow/keypad keys answer the prompt too (shifted or not).
+        if let Some((direction, _)) = keypad_direction(command) {
+            command = (b'0' + direction as u8) as char;
         }
 
         if ('1'..='9').contains(&command) {

@@ -80,7 +80,7 @@ use crate::ui_inventory::{
 };
 use crate::ui_io::{
     check_for_non_blocking_key_press, clear_screen, eof_flag, erase_line, flush_input_buffer,
-    get_command, get_input_confirmation, get_key_input, last_message_id, message_line_clear,
+    get_command, get_input_confirmation, get_key_input, keypad_direction, last_message_id, message_line_clear,
     message_ready_to_print, messages, panel_move_cursor, print_message,
     print_message_no_command_interrupt, put_qio, put_string, put_string_clear_to_eol,
     terminal_bell_sound, terminal_restore_screen, terminal_save_screen, wait_for_continue_key,
@@ -1149,7 +1149,11 @@ fn execute_input_commands(command: &mut char, find_count: &mut i32) {
                 panel_move_cursor(py().pos);
 
                 // Commands are always converted to rogue form. -CJS-
-                if !config::options::options().use_roguelike_keys {
+                // Arrow/keypad keys (see get_key_input()) map straight onto the
+                // rogue-form movement commands: a plain key walks, a shifted key runs.
+                if let Some((direction, shifted)) = keypad_direction(last_input_command) {
+                    last_input_command = keypad_movement_command(direction, shifted);
+                } else if !config::options::options().use_roguelike_keys {
                     last_input_command = original_commands(last_input_command);
                 }
 
@@ -1276,6 +1280,29 @@ fn original_commands(mut command: char) -> char {
     }
 
     command
+}
+
+// The rogue-form movement command for a keypad direction: walking is the
+// lowercase movement letter ('.' = rest for the keypad center), running
+// the uppercase one.
+fn keypad_movement_command(direction: i32, run: bool) -> char {
+    let walk = match direction {
+        1 => 'b',
+        2 => 'j',
+        3 => 'n',
+        4 => 'h',
+        6 => 'l',
+        7 => 'y',
+        8 => 'k',
+        9 => 'u',
+        _ => '.',
+    };
+
+    if run {
+        walk.to_ascii_uppercase()
+    } else {
+        walk
+    }
 }
 
 fn move_without_pickup(command: &mut char) -> bool {

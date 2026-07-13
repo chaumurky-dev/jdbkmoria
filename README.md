@@ -46,6 +46,18 @@ Options:
     -h           Display this message
 ```
 
+## Extensions over Umoria
+
+Gameplay is unchanged, but the terminal input handling accepts a few extra keys:
+
+- **Arrow / navigation keys** (arrows, Home, End, PgUp, PgDn — what a numpad
+  sends in most terminals) move the player, using the usual 8-way keypad
+  layout. They also answer any "Which direction?" prompt.
+- **Shift + arrow/keypad key** runs in that direction, exactly like `.`
+  followed by the direction (or the shifted letter in roguelike-keys mode).
+  This requires a terminal that sends xterm-style modified sequences for
+  shifted keys (most modern terminal emulators do).
+
 ## Testing
 
 Run the unit tests with:
