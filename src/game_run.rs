@@ -281,7 +281,8 @@ fn initialize_character_inventory() {
 }
 
 // Initializes M_LEVEL array for use with PLACE_MONSTER -RAK-
-fn initialize_monster_levels() {
+// pub so integration tests can generate a dungeon without a terminal
+pub fn initialize_monster_levels() {
     for level in monster_levels().iter_mut() {
         *level = 0;
     }
@@ -297,7 +298,8 @@ fn initialize_monster_levels() {
 }
 
 // Initializes T_LEVEL array for use with PLACE_OBJECT -RAK-
-fn initialize_treasure_levels() {
+// pub so integration tests can generate a dungeon without a terminal
+pub fn initialize_treasure_levels() {
     for level in treasure_levels().iter_mut() {
         *level = 0;
     }
@@ -1185,6 +1187,12 @@ fn execute_input_commands(command: &mut char, find_count: &mut i32) {
             } else if game().command_count != 0 {
                 game().command_count -= 1;
             }
+        }
+
+        // A teleport painting can trigger during a free-turn command (look);
+        // return to the main loop so the teleport happens immediately.
+        if game().teleport_player {
+            break;
         }
 
         if !(game().player_free_turn && !dg().generate_new_level && *eof_flag() == 0) {
@@ -2230,6 +2238,7 @@ fn play_dungeon() {
         // Move the creatures
         if !dg().generate_new_level {
             update_monsters(true);
+            crate::paintings::update_paintings();
         }
 
         if dg().generate_new_level || *eof_flag() != 0 {

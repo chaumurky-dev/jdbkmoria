@@ -298,6 +298,11 @@ pub fn spell_detect_traps_within_vicinity() -> bool {
         }
     }
 
+    // rmoria extension: trapped paintings register as traps too
+    if crate::paintings::detect_painting_traps() {
+        detected = true;
+    }
+
     detected
 }
 
@@ -451,7 +456,7 @@ pub fn spell_darken_area(coord: Coord) -> bool {
     darkened
 }
 
-fn dungeon_light_area_around_floor_tile(coord: Coord) {
+pub fn dungeon_light_area_around_floor_tile(coord: Coord) {
     for y in (coord.y - 1)..=(coord.y + 1) {
         for x in (coord.x - 1)..=(coord.x + 1) {
             let spot = Coord::new(y, x);
@@ -911,6 +916,12 @@ pub fn spell_fire_bolt(coord: Coord, direction: i32, damage_hp: i32, spell_type:
 
         if distance > config::treasure::OBJECT_BOLTS_MAX_RANGE as i32 || tile.feature_id >= MIN_CLOSED_SPACE {
             finished = true;
+
+            // rmoria extension: a bolt stopped by a painted wall strikes the painting
+            if distance <= config::treasure::OBJECT_BOLTS_MAX_RANGE as i32 && crate::paintings::painting_index_at(coord).is_some() {
+                crate::paintings::painting_struck_by_magic(coord, damage_hp, spell_name);
+            }
+
             continue; // we're done here, break out of the loop
         }
 
@@ -1012,6 +1023,10 @@ pub fn spell_fire_ball(coord: Coord, direction: i32, damage_hp: i32, spell_type:
                             } else if coord_inside_panel(spot) && py().flags.blind < 1 {
                                 panel_put_tile('*', spot);
                             }
+                        } else if crate::paintings::painting_index_at(spot).is_some() {
+                            // rmoria extension: the blast catches a painting on this wall
+                            let painting_damage = damage_hp / (coord_distance_between(spot, coord) + 1);
+                            crate::paintings::painting_struck_by_magic(spot, painting_damage, spell_name);
                         }
                     }
                 }

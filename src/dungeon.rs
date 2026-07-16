@@ -283,6 +283,11 @@ pub fn cave_get_tile_symbol(coord: Coord) -> char {
         return '.';
     }
 
+    // rmoria extension: a lit wall tile bearing a painting
+    if crate::paintings::painting_index_at(coord).is_some() {
+        return '0';
+    }
+
     if tile.feature_id == TILE_GRANITE_WALL || tile.feature_id == TILE_BOUNDARY_WALL || !config::options::options().highlight_seams {
         return '#';
     }

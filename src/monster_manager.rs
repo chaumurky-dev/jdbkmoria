@@ -197,7 +197,8 @@ pub fn monster_place_new_within_distance(number: i32, distance_from_source: i32,
     }
 }
 
-fn place_monster_adjacent_to(monster_id: i32, coord: &mut Coord, slp: bool) -> bool {
+// (pub for the rmoria paintings extension: creatures break out of a canvas)
+pub fn place_monster_adjacent_to(monster_id: i32, coord: &mut Coord, slp: bool) -> bool {
     let mut placed = false;
 
     let mut i = 0;

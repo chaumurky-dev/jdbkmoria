@@ -133,6 +133,7 @@ fn object_description(command: char) -> String {
         '-' => "- - A wand".to_string(),
         '.' => ". - Floor.".to_string(),
         '/' => "/ - A pole weapon.".to_string(),
+        '0' => "0 - A painting on a wall.".to_string(),
         '1' => "1 - Entrance to General Store.".to_string(),
         '2' => "2 - Entrance to Armory.".to_string(),
         '3' => "3 - Entrance to Weaponsmith.".to_string(),

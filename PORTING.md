@@ -82,3 +82,35 @@ Save files use the umoria 5.2.2+ compatible xor-encrypted format.
 | store.cpp | store.rs | done |
 | store_inventory.cpp | store_inventory.rs | done |
 | wizard.cpp | wizard.rs | done |
+
+## Extensions beyond upstream
+
+Deliberate gameplay additions, kept out of the ported modules where possible
+and marked `rmoria extension` at every hook site in shared code:
+
+- **Paintings** (`paintings.rs` + `data_paintings.rs`, 2026-07): ~50 paintings
+  per dungeon level on wall tiles. Registry is a per-level `Vec<Painting>`
+  keyed by coordinate (the save format packs `feature_id` into 4 bits, so no
+  new wall type). Monster paintings hold a real creature from
+  `CREATURES_LIST` (level-appropriate, `Painting::creature_id`) that sets
+  their hit points, armor class, and kill experience; they are dormant until
+  looked at up close or struck. Melee creatures then break out via
+  `place_monster_adjacent_to()` and fight as ordinary monsters; casters stay
+  in the canvas and bolt the player. A canvas whose monster died or escaped
+  re-rolls into loot / a trap / a harmless scene. Non-map, monster-free
+  paintings can all be reached into (at least half of reaches yield
+  nothing). Traps: teleport and sleep-gas fire on a look; fangs and poisoned
+  spikes only on a reach. Hooks: `dungeon_generate()` (placement),
+  `look_see()` (describe/interact), `player_bash()` (destroy),
+  `update_paintings()` in the main loop (roused monster paintings act),
+  `spell_fire_bolt()` / `spell_fire_ball()` / `player_throw_item()`
+  (missiles strike paintings), `spell_detect_traps_within_vicinity()`
+  (reveal trapped ones), `player_tunnel_wall()` (wall gone → painting gone),
+  `cave_get_tile_symbol()` (`'0'` glyph). Save format: a painting block is
+  appended after the monster data; restore probes for it with the same raw
+  EOF peek the dead/alive fork uses, so pre-painting save files still load.
+  The block's count byte carries a version flag in its high bit; legacy
+  (pre-creature) records are converted on load
+  (`painting_from_legacy_save()`). Tests: `tests/paintings.rs` (placement on
+  a real generated level, legacy conversion) and `tests/save_roundtrip.rs`
+  (serialization).

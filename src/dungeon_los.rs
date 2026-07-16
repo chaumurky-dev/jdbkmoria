@@ -8,7 +8,7 @@
 use crate::config;
 use crate::data_creatures::CREATURES_LIST;
 use crate::dungeon::dg;
-use crate::dungeon_tile::{MAX_OPEN_SPACE, MIN_CLOSED_SPACE, TILE_BOUNDARY_WALL, TILE_GRANITE_WALL, TILE_MAGMA_WALL, TILE_QUARTZ_WALL};
+use crate::dungeon_tile::{MAX_OPEN_SPACE, MIN_CAVE_WALL, MIN_CLOSED_SPACE, TILE_BOUNDARY_WALL, TILE_GRANITE_WALL, TILE_MAGMA_WALL, TILE_QUARTZ_WALL};
 use crate::game::{game, get_all_directions};
 use crate::globals::RacyCell;
 use crate::helpers::is_vowel;
@@ -510,7 +510,19 @@ fn look_see(coord: Coord, transparent: &mut bool) -> bool {
             }
         }
 
-        if goto_granite || ((*LOS_ROCKS_AND_OBJECTS.get() != 0 || !msg.is_empty()) && tile.feature_id >= MIN_CLOSED_SPACE) {
+        // rmoria extension: a painting hanging on this wall tile. Described
+        // on the first (objects) pass, like monsters and items.
+        let mut painting_described = false;
+        if *LOS_ROCKS_AND_OBJECTS.get() == 0 && tile.feature_id >= MIN_CAVE_WALL && crate::paintings::painting_index_at(coord).is_some() {
+            let (painting_msg, painting_key) = crate::paintings::look_at_painting(coord, description);
+            if !painting_msg.is_empty() {
+                msg = painting_msg;
+                key = painting_key;
+                painting_described = true;
+            }
+        }
+
+        if !painting_described && (goto_granite || ((*LOS_ROCKS_AND_OBJECTS.get() != 0 || !msg.is_empty()) && tile.feature_id >= MIN_CLOSED_SPACE)) {
             let wall_description: Option<&str> = if goto_granite || tile.feature_id == TILE_BOUNDARY_WALL || tile.feature_id == TILE_GRANITE_WALL {
                 // Granite is only interesting if it contains something.
                 if !msg.is_empty() {

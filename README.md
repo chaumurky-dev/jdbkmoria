@@ -48,7 +48,30 @@ Options:
 
 ## Extensions over Umoria
 
-Gameplay is unchanged, but the terminal input handling accepts a few extra keys:
+### Paintings
+
+Each dungeon level hangs around fifty paintings (`0`) on its walls — a
+deliberate gameplay addition not present in Umoria. Stand next to one and
+**l**ook at it for a description drawn from the classical oil-painting
+tradition. Roughly half are just art; the rest hide something:
+
+- **Monsters** — some strike anyone standing beside them, others hurl bolts
+  of magic from the canvas once roused.
+- **Magical larders** — reach in and pull out an item (sometimes two or
+  three). A few are fakes that bite instead; trap detection reveals those.
+- **Teleporters** — rarely, looking at a painting flings you across the
+  level like a teleport trap.
+- **The level map** — exactly one painting per level depicts the level
+  itself; looking at it reveals the whole map. On the first dungeon level it
+  is the painting nearest to where you arrived.
+
+Bashing a painting destroys it (the wall remains); tunneling out or
+dissolving the wall destroys it too. Save files remain compatible: old saves
+load fine, and the painting state rides along in new ones.
+
+### Input handling
+
+Gameplay is otherwise unchanged, but the terminal input handling accepts a few extra keys:
 
 - **Arrow / navigation keys** (arrows, Home, End, PgUp, PgDn — what a numpad
   sends in most terminals) move the player, using the usual 8-way keypad

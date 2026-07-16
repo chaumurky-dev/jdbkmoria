@@ -26,7 +26,10 @@ Run: `cargo run -- [OPTIONS] SAVEGAME` (e.g. `-n` new game, `-s NUMBER` fixed se
 
 This is a **faithful, gameplay-identical translation** of the C++ sources — this constraint
 drives every structural decision. See `PORTING.md` for the full file-by-file mapping and
-conventions.
+conventions. Deliberate gameplay additions (see "Extensions beyond upstream" in
+`PORTING.md`, e.g. `paintings.rs`) live in their own modules, and every hook they need in
+ported code is marked with an `rmoria extension` comment — keep new extensions to that
+pattern.
 
 - **One Rust module per C++ source file** (roughly), same names, C++ `camelCase`
   functions → `snake_case`. When changing logic, cross-check the corresponding

@@ -293,6 +293,32 @@ pub fn player_throw_item() {
             }
         } else {
             flag = true;
+
+            // rmoria extension: a missile that stops against a painted wall
+            // may strike the painting (and whatever lives in it).
+            if current_distance <= tdis {
+                if let Some(index) = crate::paintings::painting_index_at(coord) {
+                    tbth -= current_distance;
+
+                    if player_test_being_hit(tbth, py().misc.level as i32, tpth, crate::paintings::painting_armor_class(index), CLASS_BTHB) {
+                        let description = item_description(&thrown_item, false);
+                        let msg = format!("The {} strikes a painting.", description);
+                        print_message(Some(&msg));
+
+                        tdam = player_weapon_critical_blow(thrown_item.weight as i32, tpth, tdam, CLASS_BTHB);
+                        if tdam < 0 {
+                            tdam = 0;
+                        }
+
+                        match crate::paintings::painting_take_hit(index, tdam) {
+                            crate::paintings::PaintingHitResult::Destroyed => print_message(Some("The painting is torn from the wall!")),
+                            crate::paintings::PaintingHitResult::Damaged => print_message(Some("The canvas shudders.")),
+                            _ => {}
+                        }
+                    }
+                }
+            }
+
             inventory_drop_or_throw_item(old_coord, &thrown_item);
         }
 

@@ -16,9 +16,11 @@ use rmoria::dungeon::dg;
 use rmoria::game::game;
 use rmoria::game_save::{load_game_state_from_file, save_game_state_to_file};
 use rmoria::inventory::inventory_item_copy_to;
+use rmoria::paintings::{paintings, Painting, PaintingKind};
 use rmoria::player::py;
 use rmoria::recall_data::creature_recall;
 use rmoria::rng::set_random_seed;
+use rmoria::types::Coord;
 
 #[test]
 fn save_and_load_roundtrip() {
@@ -62,6 +64,29 @@ fn save_and_load_roundtrip() {
     creature_recall()[5].movement = 0x1234;
     creature_recall()[5].wake = 7;
 
+    // Two paintings (rmoria extension block appended to the save format).
+    paintings().clear();
+    paintings().push(Painting {
+        pos: Coord::new(10, 20),
+        kind: PaintingKind::RangedMonster,
+        desc_id: 3,
+        creature_id: 42,
+        hp: 42,
+        items: 0,
+        awake: true,
+        found: false,
+    });
+    paintings().push(Painting {
+        pos: Coord::new(33, 150),
+        kind: PaintingKind::Loot,
+        desc_id: 5,
+        creature_id: 0,
+        hp: 7,
+        items: 2,
+        awake: false,
+        found: true,
+    });
+
     // Write the save file into a tempdir with a unique name.
     let mut path = std::env::temp_dir();
     path.push(format!("rmoria_save_roundtrip_{}.sav", std::process::id()));
@@ -89,6 +114,7 @@ fn save_and_load_roundtrip() {
     creature_recall()[5].kills = 0;
     creature_recall()[5].movement = 0;
     creature_recall()[5].wake = 0;
+    paintings().clear();
 
     // (e) load.
     let mut generate = true;
@@ -124,4 +150,24 @@ fn save_and_load_roundtrip() {
     assert_eq!(creature_recall()[5].kills, 9);
     assert_eq!(creature_recall()[5].movement, 0x1234);
     assert_eq!(creature_recall()[5].wake, 7);
+
+    assert_eq!(paintings().len(), 2);
+    assert_eq!(paintings()[0].pos.y, 10);
+    assert_eq!(paintings()[0].pos.x, 20);
+    assert_eq!(paintings()[0].kind, PaintingKind::RangedMonster);
+    assert_eq!(paintings()[0].desc_id, 3);
+    assert_eq!(paintings()[0].creature_id, 42);
+    assert_eq!(paintings()[0].hp, 42);
+    assert_eq!(paintings()[0].items, 0);
+    assert!(paintings()[0].awake);
+    assert!(!paintings()[0].found);
+    assert_eq!(paintings()[1].pos.y, 33);
+    assert_eq!(paintings()[1].pos.x, 150);
+    assert_eq!(paintings()[1].kind, PaintingKind::Loot);
+    assert_eq!(paintings()[1].desc_id, 5);
+    assert_eq!(paintings()[1].creature_id, 0);
+    assert_eq!(paintings()[1].hp, 7);
+    assert_eq!(paintings()[1].items, 2);
+    assert!(!paintings()[1].awake);
+    assert!(paintings()[1].found);
 }

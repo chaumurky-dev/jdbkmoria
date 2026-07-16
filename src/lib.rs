@@ -34,6 +34,7 @@
 pub mod character;
 pub mod config;
 pub mod data_creatures;
+pub mod data_paintings;
 pub mod data_player;
 pub mod data_recall;
 pub mod data_store_owners;
@@ -58,6 +59,7 @@ pub mod inventory;
 pub mod mage_spells;
 pub mod monster;
 pub mod monster_manager;
+pub mod paintings;
 pub mod player;
 pub mod player_bash;
 pub mod player_eat;

@@ -17,6 +17,7 @@ use crate::helpers::get_current_unix_time;
 use crate::identification::objects_identified;
 use crate::inventory::{Inventory, PlayerEquipment, PLAYER_INVENTORY_SIZE};
 use crate::monster::{monster_multiply_total, monsters, next_free_monster_id, Monster, MON_MAX_CREATURES, MON_TOTAL_ALLOCATIONS};
+use crate::paintings::{painting_from_legacy_save, painting_from_save, painting_kind_to_u8, paintings, MAX_PAINTINGS};
 use crate::player::py;
 use crate::recall_data::creature_recall;
 use crate::scores::HighScore;
@@ -711,6 +712,23 @@ fn write_save_data() -> bool {
         wr_monster(&monsters()[i]);
     }
 
+    // rmoria extension: paintings, appended after all original umoria data.
+    // Restore probes for this block with a raw EOF peek (the same trick the
+    // dead/alive fork uses), so save files written without it still load.
+    // The high bit of the count byte marks the current (v2) record layout,
+    // which adds the creature id; MAX_PAINTINGS stays below 0x80.
+    wr_byte(0x80 | paintings().len() as u8);
+    for painting in paintings().iter() {
+        wr_byte(painting.pos.y as u8);
+        wr_byte(painting.pos.x as u8);
+        wr_byte(painting_kind_to_u8(painting.kind));
+        wr_byte(painting.desc_id);
+        wr_short(painting.creature_id);
+        wr_short(painting.hp as u16);
+        wr_byte(painting.items);
+        wr_byte((painting.awake as u8) | ((painting.found as u8) << 1));
+    }
+
     flush_and_check()
 }
 
@@ -930,6 +948,10 @@ fn restore_from_file(file: File, generate: &mut bool, interactive: bool) -> Opti
     }
 
     let mut time_saved: u32 = 0;
+
+    // rmoria extension: start from a clean painting registry; the level
+    // block below repopulates it for living characters.
+    paintings().clear();
 
     let ok = 'restore: {
         let mut uint_16_t_tmp = rd_short();
@@ -1264,6 +1286,52 @@ fn restore_from_file(file: File, generate: &mut bool, interactive: bool) -> Opti
 
         if eof_hit() {
             break 'restore false;
+        }
+
+        // rmoria extension: paintings. Older save files end at the monster
+        // data, so peek for more bytes the same way the dead/alive fork
+        // does; plain EOF here just means "no paintings".
+        paintings().clear();
+        if read_raw_byte().is_some() {
+            if !fileptr_seek(SeekFrom::Current(-1)) {
+                break 'restore false;
+            }
+
+            // The high bit of the count byte marks the current (v2) record
+            // layout; without it this is a legacy block from before monster
+            // paintings carried a creature id.
+            let header = rd_byte();
+            let current_format = (header & 0x80) != 0;
+            let painting_count = (header & 0x7F) as usize;
+            if painting_count > MAX_PAINTINGS {
+                break 'restore false;
+            }
+
+            for _ in 0..painting_count {
+                let y = rd_byte() as i32;
+                let x = rd_byte() as i32;
+                let kind_byte = rd_byte();
+                let desc_id = rd_byte();
+                let creature_id = if current_format { rd_short() } else { 0 };
+                let hp = rd_short() as i16;
+                let items = rd_byte();
+                let flags = rd_byte();
+
+                if y >= MAX_HEIGHT || x >= MAX_WIDTH || eof_hit() {
+                    break 'restore false;
+                }
+
+                let painting = if current_format {
+                    painting_from_save(Coord::new(y, x), kind_byte, desc_id, creature_id, hp, items, flags)
+                } else {
+                    painting_from_legacy_save(Coord::new(y, x), kind_byte, desc_id, hp, items, flags)
+                };
+
+                match painting {
+                    Some(painting) => paintings().push(painting),
+                    None => break 'restore false,
+                }
+            }
         }
 
         if dg().game_turn < 0 {

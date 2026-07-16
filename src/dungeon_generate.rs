@@ -1092,6 +1092,10 @@ fn dungeon_generate() {
     if dg().current_level >= config::monsters::MON_ENDGAME_LEVEL as i16 {
         crate::monster_manager::monster_place_winning();
     }
+
+    // rmoria extension: hang paintings on the walls. Must come after the
+    // character's position is set (see place_paintings on level 1).
+    crate::paintings::place_paintings();
 }
 
 // Builds a store at a row, column coordinate
@@ -1231,6 +1235,10 @@ pub fn generate_cave() {
     treasure_linker();
     monster_linker();
     dungeon_blank_entire_cave();
+
+    // rmoria extension: paintings are per-level; dungeon_generate() hangs
+    // new ones, the town has none.
+    crate::paintings::paintings().clear();
 
     // We're in the dungeon more than the town, so let's default to that -MRC-
     dg().height = MAX_HEIGHT as i16;
