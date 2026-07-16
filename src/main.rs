@@ -12,7 +12,7 @@ use jdbkmoria::game_run::start_moria;
 use jdbkmoria::helpers::string_to_number;
 use jdbkmoria::scores::show_scores_screen;
 use jdbkmoria::ui_io::{check_file_permissions, terminal_initialize, terminal_restore};
-use jdbkmoria::version::{CURRENT_VERSION_MAJOR, CURRENT_VERSION_MINOR, CURRENT_VERSION_PATCH};
+use jdbkmoria::version::{JDBK_VERSION_MAJOR, JDBK_VERSION_MINOR, JDBK_VERSION_PATCH};
 
 const USAGE_INSTRUCTIONS: &str = r#"
 Usage:
@@ -60,7 +60,7 @@ fn main() {
         match args[i].chars().nth(1) {
             Some('v') => {
                 terminal_restore();
-                println!("{}.{}.{}", CURRENT_VERSION_MAJOR, CURRENT_VERSION_MINOR, CURRENT_VERSION_PATCH);
+                println!("{}.{}.{}", JDBK_VERSION_MAJOR, JDBK_VERSION_MINOR, JDBK_VERSION_PATCH);
                 std::process::exit(0);
             }
             Some('n') => {
@@ -94,11 +94,8 @@ fn main() {
             _ => {
                 terminal_restore();
 
-                println!("Robert A. Koeneke's classic dungeon crawler.");
-                println!(
-                    "Umoria {}.{}.{} is released under a GPL-3.0-or-later license.",
-                    CURRENT_VERSION_MAJOR, CURRENT_VERSION_MINOR, CURRENT_VERSION_PATCH
-                );
+                println!("jdbkmoria {}.{}.{}: An expanded edition of Robert A. Koeneke's classic dungeon crawler.", JDBK_VERSION_MAJOR, JDBK_VERSION_MINOR, JDBK_VERSION_PATCH);
+                println!("Based on Umoria 5.7.15, released under a GPL-3.0-or-later license.");
                 print!("{}", USAGE_INSTRUCTIONS);
                 std::process::exit(0);
             }

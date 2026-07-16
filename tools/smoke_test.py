@@ -79,8 +79,8 @@ def main():
     try:
         v = subprocess.run([BIN, "-v"], capture_output=True, text=True, timeout=10)
         print(f"VERSION OUTPUT: {v.stdout.strip()}")
-        if "5.7.15" not in v.stdout:
-            print("FAIL: version check failed (expected 5.7.15)")
+        if "0.1.0" not in v.stdout:
+            print("FAIL: version check failed (expected 0.1.0)")
             failed = True
         else:
             print("PASS: version check")

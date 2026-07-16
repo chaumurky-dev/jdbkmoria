@@ -11,10 +11,13 @@
              ##     ##   ##     ##   ##    ##     ##    ##     ##
              ##     ##    #######    ##     ##   ####   ##     ##
 
-                                Umoria 5.7.15
+                              jdbkmoria 0.1.0
+                          based on Umoria 5.7.15
 
+          An expanded edition with new gameplay features found in
+          no other version of Moria -- paintings on dungeon walls.
 
-                Umoria is free software released under GPL-3.0
+         jdbkmoria is free software released under GPL-3.0-or-later
                     and comes with ABSOLUTELY NO WARRANTY
 
-      For more information: https://github.com/dungeons-of-moria/umoria
+      For more information: https://github.com/chaumurky-dev/jdbkmoria

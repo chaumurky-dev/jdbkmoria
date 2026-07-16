@@ -1,14 +1,15 @@
 # jdbkmoria
 
-A fork and expansion of [rmoria](https://github.com/chaumurky-dev/rmoria) — _The
-Dungeons of Moria_, the classic single-player dungeon simulation originally
-written by Robert Alan Koeneke (first public release 1983), ported to C by
-James E. Wilson in 1988 and released as _Umoria_.
+A fork and expansion of [rmoria](https://github.com/chaumurky-dev/rmoria),
+jdbkmoria adds new gameplay features not found in any other version of Moria
+(see "Extensions over Umoria" below).
 
-rmoria aims to be gameplay-identical to [Umoria](https://github.com/dungeons-of-moria/umoria)
-5.7.15, translated from the C++ sources into Rust. jdbkmoria builds on that
-port, adding new gameplay features on top of it (see "Extensions over Umoria"
-below).
+rmoria is a Rust translation of the
+[Umoria](https://github.com/dungeons-of-moria/umoria) 5.7.15 C++ sources,
+aiming to be gameplay-identical to the original. Umoria itself descends from
+_The Dungeons of Moria_, the classic single-player dungeon simulation written
+by Robert Alan Koeneke (first public release 1983) and ported to C by
+James E. Wilson in 1988.
 
 ## License
 
