@@ -99,23 +99,37 @@ and marked `jdbkmoria extension` at every hook site in shared code:
   new wall type). Monster paintings hold a real creature from
   `CREATURES_LIST` (level-appropriate, `Painting::creature_id`) that sets
   their hit points, armor class, and kill experience; they are dormant until
-  looked at up close or struck. Melee creatures then break out via
-  `place_monster_adjacent_to()` and fight as ordinary monsters; casters stay
-  in the canvas and bolt the player. A canvas whose monster died or escaped
-  re-rolls into loot / a trap / a harmless scene. Non-map, monster-free
-  paintings can all be reached into (at least half of reaches yield
+  looked at up close or struck. **Bashing a painting** (`player_bash_painting`)
+  is a stuck-door-style all-or-nothing smash (strength + body weight vs. the
+  painting's toughness): success rips the painting from the wall, destroying
+  everything inside—monster, swarm, loot, and traps alike—with no experience
+  and no treasure; failure rouses whatever lives there. **Fighting a creature
+  inside its canvas** (`player_attack_painting`), by walking into an awake
+  monster/swarm painting or striking it with a weapon, uses ordinary melee
+  combat math and awards experience on a kill. Bolts, balls, and thrown
+  missiles also strike the creature. A creature slain inside its canvas may
+  leave its treasure behind IN the painting, which becomes a loot scene you
+  reach into with `g`. **Swarms** are paintings crowded with 2–20 small vermin
+  (rats, bats, ants, spiders) appropriate to the depth; once roused they pour
+  out one at a time, turn by turn, until exhausted. You can fight them in the
+  canvas (killing members one by one) or bash the painting to destroy all
+  remaining members at once (forfeiting their experience and loot). Non-map,
+  monster-free paintings can be reached into (at least half of reaches yield
   nothing). Traps: teleport and sleep-gas fire on a look; fangs and poisoned
   spikes only on a reach. Hooks: `dungeon_generate()` (placement),
-  `look_see()` (describe/interact), `player_bash()` (destroy),
-  `update_paintings()` in the main loop (roused monster paintings act),
-  `spell_fire_bolt()` / `spell_fire_ball()` / `player_throw_item()`
-  (missiles strike paintings), `spell_detect_traps_within_vicinity()`
-  (reveal trapped ones), `player_tunnel_wall()` (wall gone → painting gone),
-  `cave_get_tile_symbol()` (`'0'` glyph). Save format: a painting block is
-  appended after the monster data; restore probes for it with the same raw
-  EOF peek the dead/alive fork uses, so pre-painting save files still load.
-  The block's count byte carries a version flag in its high bit; legacy
-  (pre-creature) records are converted on load
-  (`painting_from_legacy_save()`). Tests: `tests/paintings.rs` (placement on
-  a real generated level, legacy conversion) and `tests/save_roundtrip.rs`
-  (serialization).
+  `look_see()` (describe/interact), `player_bash()` (smash),
+  `player_move()` (walking into a roused canvas fights it instead of bumping
+  the wall), `update_paintings()` in the main loop (roused monster/swarm
+  paintings act), `spell_fire_bolt()` / `spell_fire_ball()` /
+  `player_throw_item()` (missiles strike paintings),
+  `spell_detect_traps_within_vicinity()` (reveal trapped ones),
+  `player_tunnel_wall()` (wall gone → painting gone), `cave_get_tile_symbol()`
+  (`'0'` glyph). Save format: a painting block is appended after the monster
+  data; restore probes for it with the same raw EOF peek the dead/alive fork
+  uses, so pre-painting save files still load. The block's count byte carries
+  a version flag in its top two bits (legacy: both clear; v1: creature id
+  added; v2: adds the loot byte); legacy (pre-creature) records are converted
+  on load (`painting_from_legacy_save()`). Tests: `tests/paintings.rs`
+  (placement on a real generated level, legacy conversion, Swarm placement
+  invariants, `painting_from_save()` validation) and
+  `tests/save_roundtrip.rs` (serialization).

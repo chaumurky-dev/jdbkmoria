@@ -1274,6 +1274,8 @@ fn original_commands(mut command: char) -> char {
         'u' => command = 'Z',
         'v' | 'w' => {}
         'x' => command = 'X',
+        // jdbkmoria extension: (g)rope at a painting -- same letter in both keysets
+        'g' => {}
 
         // wizard mode commands follow
         CTRL_A => {}                // ^A = cure all
@@ -1765,6 +1767,8 @@ fn do_command(command: char) {
         }
         'w' => inventory_execute_command('w'), // (w)ear or wield
         'X' => inventory_execute_command('x'), // e(X)change weapons  e(x)change
+        // jdbkmoria extension: (g)rope at a painting
+        'g' => crate::paintings::painting_reach_command(),
         _ => {
             // Wizard commands are free moves
             game().player_free_turn = true;

@@ -18,10 +18,15 @@
 // - Harmless: flavor only (roughly half of all paintings; a few secretly
 //   hold a single trinket).
 // - MeleeMonster: a real, level-appropriate creature dozes in the canvas.
-//   It stays dormant until the character looks at it up close (or strikes
-//   the painting), then tears free and fights as an ordinary monster.
+//   It stays dormant until the character looks at it up close, walks into
+//   it, or strikes the painting; once awake it either fights back from the
+//   canvas or tears free and fights as an ordinary monster.
 // - RangedMonster: a spell-casting creature that stays in its canvas and
-//   hurls bolts of force once roused by a look or a blow.
+//   hurls bolts of force once roused.
+// - Swarm: a canvas crowded with two to twenty small vermin (rats, bats,
+//   ants, and their kin) that pour out of the frame one at a time once
+//   roused, and that can also be fought member by member without ever
+//   leaving the wall.
 // - Loot: may be reached into for one to three items.
 // - FakeLoot: looks exactly like Loot but bites (fangs) or stabs (poisoned
 //   spikes, chosen by `items`); trap detection reveals it.
@@ -34,43 +39,60 @@
 // Any painting that is not the level map and holds no monster can be
 // reached into, but at least half of all reaches come away empty-handed.
 // Monster paintings take their toughness (hit points, armor class,
-// experience) from the creature inside; bolts, balls, and thrown missiles
-// can strike them, and a canvas whose monster has been defeated (or has
-// leapt out) settles into a new scene that may still hold treasure or a
-// trap.
+// experience) from the creature inside; bolts, balls, thrown missiles, and
+// (once the creature is awake) melee blows can all strike them.
+//
+// Bashing and fighting a monster painting are deliberately different
+// trades. A bash (player_bash_painting) is a stuck-door-style smash: one
+// all-or-nothing roll either tears the whole painting off the wall,
+// destroying everything inside -- monster, swarm, loot, trap -- with no
+// experience and no consolation prize, or it holds firm and merely rouses
+// whatever lives there. Fighting the creature where it hangs
+// (player_attack_painting), by walking into an awake canvas or striking it
+// with a weapon, uses the same math as an ordinary monster fight and pays
+// the same experience -- and whatever the creature carried is folded into
+// the canvas's own loot, waiting to be reached for with `g` just as it
+// would be from a Loot painting. A canvas whose monster has been defeated
+// (or has leapt out) settles into a new scene that may still hold that
+// loot, fresh treasure of its own, or a trap.
 
 use crate::config::monsters::{defense, move_flags, spells as monster_spells, MON_MAX_SIGHT};
 use crate::data_creatures::CREATURES_LIST;
 use crate::data_paintings::{
     HARMLESS_PAINTINGS, LOOT_PAINTINGS, MAP_PAINTING, MELEE_PAINTING_TEMPLATES,
-    RANGED_PAINTING_TEMPLATES, SLEEP_PAINTINGS, TELEPORT_PAINTINGS,
+    RANGED_PAINTING_TEMPLATES, SLEEP_PAINTINGS, SWARM_PAINTING_TEMPLATES, TELEPORT_PAINTINGS,
 };
 use crate::dice::{dice_roll, max_dice_roll, Dice};
 use crate::dungeon::{
     cave_tile_visible, coord_distance_between, coord_in_bounds, dg, dungeon_lite_spot,
 };
 use crate::dungeon_tile::{MAX_CAVE_FLOOR, MIN_CAVE_WALL, TILE_BOUNDARY_WALL};
-use crate::game::{game, random_number, sorted_objects};
+use crate::game::{game, get_direction_with_memory, random_number, sorted_objects};
 use crate::game_objects::{item_get_random_object_id, popt, pusht};
 use crate::globals::RacyCell;
 use crate::identification::item_description;
-use crate::inventory::{inventory_can_carry_item_count, inventory_carry_item, inventory_item_copy_to};
-use crate::monster::{monster_update_visibility, monsters, Creature};
+use crate::inventory::{
+    inventory_can_carry_item_count, inventory_carry_item, inventory_item_copy_to, PlayerEquipment,
+};
+use crate::monster::{monster_death_item_drop_count, monster_update_visibility, monsters, Creature};
 use crate::monster_manager::place_monster_adjacent_to;
 use crate::player::{
-    py, player_disturb, player_takes_hit, player_test_being_hit, player_weapon_critical_blow,
-    A_DEX, A_STR, CLASS_BTH,
+    py, player_calculate_base_to_hit, player_calculate_to_hit_blows, player_disturb, player_move_position,
+    player_takes_hit, player_test_being_hit, player_weapon_critical_blow, A_DEX, A_STR, CLASS_BTH,
 };
+use crate::player_magic::item_magic_ability_damage;
+use crate::treasure::TV_NOTHING;
 use crate::types::Coord;
 use crate::ui::{coord_inside_panel, display_character_experience, draw_dungeon_panel, ESCAPE};
 use crate::ui_io::{
-    get_input_confirmation, get_key_input, panel_move_cursor, print_message,
+    get_input_confirmation, get_key_input, panel_move_cursor, print_message, print_message_no_command_interrupt,
     put_string_clear_to_eol,
 };
 
 // Hard cap on the registry (the target count is 46-56 per level). Must stay
-// below 0x80: the save format packs a version flag into the count byte.
-pub const MAX_PAINTINGS: usize = 64;
+// below 0x40: the save format now packs two version flag bits into the top
+// of the count byte (see game_save.rs's painting write/read).
+pub const MAX_PAINTINGS: usize = 63;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PaintingKind {
@@ -82,6 +104,7 @@ pub enum PaintingKind {
     Teleport,
     LevelMap,
     SleepGas,
+    Swarm,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -90,10 +113,11 @@ pub struct Painting {
     pub kind: PaintingKind,
     pub desc_id: u8,      // index into the matching data_paintings table
     pub creature_id: u16, // monster paintings: index into CREATURES_LIST
-    pub hp: i16,          // durability; for monster paintings, the creature's hit points
-    pub items: u8,        // Loot/Harmless: remaining grabs; FakeLoot: 0 fangs, 1 spikes
+    pub hp: i16,          // durability; for monster paintings, the front creature's hit points
+    pub items: u8,        // Loot/Harmless: remaining grabs; FakeLoot: 0 fangs, 1 spikes; Swarm: members left
     pub awake: bool,      // monster paintings: roused and fighting
     pub found: bool,      // FakeLoot/Teleport/SleepGas: nature revealed
+    pub loot: u8,         // treasure grabs owed by monsters slain inside the canvas (see painting_take_hit)
 }
 
 // What became of a painting struck by a bash, bolt, or missile. Monster
@@ -127,6 +151,7 @@ pub fn painting_kind_to_u8(kind: PaintingKind) -> u8 {
         PaintingKind::Teleport => 5,
         PaintingKind::LevelMap => 6,
         PaintingKind::SleepGas => 7,
+        PaintingKind::Swarm => 8,
     }
 }
 
@@ -140,6 +165,7 @@ pub fn painting_kind_from_u8(value: u8) -> Option<PaintingKind> {
         5 => Some(PaintingKind::Teleport),
         6 => Some(PaintingKind::LevelMap),
         7 => Some(PaintingKind::SleepGas),
+        8 => Some(PaintingKind::Swarm),
         _ => None,
     }
 }
@@ -149,6 +175,7 @@ fn painting_kind_table_len(kind: PaintingKind) -> usize {
         PaintingKind::Harmless => HARMLESS_PAINTINGS.len(),
         PaintingKind::MeleeMonster => MELEE_PAINTING_TEMPLATES.len(),
         PaintingKind::RangedMonster => RANGED_PAINTING_TEMPLATES.len(),
+        PaintingKind::Swarm => SWARM_PAINTING_TEMPLATES.len(),
         PaintingKind::Loot | PaintingKind::FakeLoot => LOOT_PAINTINGS.len(),
         PaintingKind::Teleport => TELEPORT_PAINTINGS.len(),
         PaintingKind::SleepGas => SLEEP_PAINTINGS.len(),
@@ -156,18 +183,33 @@ fn painting_kind_table_len(kind: PaintingKind) -> usize {
     }
 }
 
+// A painting kind whose `creature_id`/`hp` describe a real creature living
+// (or hiding) in the canvas, as opposed to plain flavor or loot.
+fn painting_kind_is_monster(kind: PaintingKind) -> bool {
+    matches!(kind, PaintingKind::MeleeMonster | PaintingKind::RangedMonster | PaintingKind::Swarm)
+}
+
 // Rebuild one painting from its save-file fields, validating everything
 // that would otherwise be used as an array index. Returns None on any
 // out-of-range value so a corrupt save fails the restore cleanly.
-pub fn painting_from_save(pos: Coord, kind_byte: u8, desc_id: u8, creature_id: u16, hp: i16, items: u8, flags: u8) -> Option<Painting> {
+#[allow(clippy::too_many_arguments)]
+pub fn painting_from_save(
+    pos: Coord,
+    kind_byte: u8,
+    desc_id: u8,
+    creature_id: u16,
+    hp: i16,
+    items: u8,
+    flags: u8,
+    loot: u8,
+) -> Option<Painting> {
     let kind = painting_kind_from_u8(kind_byte)?;
 
     if desc_id as usize >= painting_kind_table_len(kind) {
         return None;
     }
 
-    let is_monster = kind == PaintingKind::MeleeMonster || kind == PaintingKind::RangedMonster;
-    if is_monster && creature_id as usize >= CREATURES_LIST.len() {
+    if painting_kind_is_monster(kind) && creature_id as usize >= CREATURES_LIST.len() {
         return None;
     }
 
@@ -180,12 +222,15 @@ pub fn painting_from_save(pos: Coord, kind_byte: u8, desc_id: u8, creature_id: u
         items,
         awake: (flags & 0x1) != 0,
         found: (flags & 0x2) != 0,
+        loot,
     })
 }
 
 // Rebuild one painting from the original (pre-creature) save-file record.
 // Monster paintings had no creature then, so pick one deterministically
 // from the fields at hand; the RNG must not be touched during a restore.
+// Swarm did not exist yet either, so a legacy record can never decode to
+// one; `loot` is likewise a v2 invention and is always zero here.
 pub fn painting_from_legacy_save(pos: Coord, kind_byte: u8, desc_id: u8, hp: i16, items: u8, flags: u8) -> Option<Painting> {
     let kind = painting_kind_from_u8(kind_byte)?;
 
@@ -198,6 +243,7 @@ pub fn painting_from_legacy_save(pos: Coord, kind_byte: u8, desc_id: u8, hp: i16
         items,
         awake: (flags & 0x1) != 0,
         found: (flags & 0x2) != 0,
+        loot: 0,
     };
 
     match kind {
@@ -263,6 +309,9 @@ fn painting_description(painting: &Painting) -> String {
         PaintingKind::RangedMonster => {
             RANGED_PAINTING_TEMPLATES[painting.desc_id as usize].replace("{}", &creature_indefinite_name(painting.creature_id))
         }
+        PaintingKind::Swarm => {
+            SWARM_PAINTING_TEMPLATES[painting.desc_id as usize].replace("{}", &creature_indefinite_name(painting.creature_id))
+        }
         PaintingKind::Loot | PaintingKind::FakeLoot => LOOT_PAINTINGS[painting.desc_id as usize].to_string(),
         PaintingKind::Teleport => TELEPORT_PAINTINGS[painting.desc_id as usize].to_string(),
         PaintingKind::SleepGas => SLEEP_PAINTINGS[painting.desc_id as usize].to_string(),
@@ -284,10 +333,11 @@ fn creature_fires_from_canvas(creature: &Creature) -> bool {
             != 0
 }
 
-// Creatures suitable for a monster painting near the given dungeon level,
-// widening the level band until something qualifies. Never the Balrog, and
-// never the level-0 town folk.
-fn painting_creature_candidates(level: i32, ranged: bool) -> Vec<u16> {
+// Creatures matching `suits` near the given dungeon level, widening the
+// level band until something qualifies. Never the Balrog, and never the
+// level-0 town folk. Shared by the melee/ranged monster picker and the
+// swarm picker below; each supplies its own notion of "suits".
+fn painting_creature_candidates_matching(level: i32, suits: impl Fn(&Creature) -> bool) -> Vec<u16> {
     let mut low = level - 3;
     let mut high = level + 2;
 
@@ -299,14 +349,8 @@ fn painting_creature_candidates(level: i32, ranged: bool) -> Vec<u16> {
                 continue;
             }
 
-            let suits = if ranged {
-                creature_fires_from_canvas(creature)
-            } else {
-                creature_can_leave_canvas(creature) && !creature_fires_from_canvas(creature)
-            };
-
             let creature_level = creature.level as i32;
-            if suits && creature_level >= low.max(1) && creature_level <= high {
+            if suits(creature) && creature_level >= low.max(1) && creature_level <= high {
                 candidates.push(id as u16);
             }
         }
@@ -320,8 +364,46 @@ fn painting_creature_candidates(level: i32, ranged: bool) -> Vec<u16> {
     }
 }
 
+// Creatures suitable for a MeleeMonster/RangedMonster painting.
+fn painting_creature_candidates(level: i32, ranged: bool) -> Vec<u16> {
+    painting_creature_candidates_matching(level, |creature| {
+        if ranged {
+            creature_fires_from_canvas(creature)
+        } else {
+            creature_can_leave_canvas(creature) && !creature_fires_from_canvas(creature)
+        }
+    })
+}
+
 fn painting_pick_creature(level: i32, ranged: bool) -> Option<u16> {
     let candidates = painting_creature_candidates(level, ranged);
+    if candidates.is_empty() {
+        return None;
+    }
+    Some(candidates[(random_number(candidates.len() as i32) - 1) as usize])
+}
+
+// The small vermin a Swarm painting is willing to hold: ants, bats,
+// centipedes, lice, rats, spiders, worms -- anything that scuttles or
+// scurries rather than something dignified enough to warrant its own solo
+// canvas.
+const SWARM_SPRITES: &[u8] = b"abclrSw";
+
+fn creature_is_swarm_animal(creature: &Creature) -> bool {
+    SWARM_SPRITES.contains(&creature.sprite)
+}
+
+// Creatures suitable for a Swarm painting: the same "can leave the canvas
+// and fights hand to hand" test as a MeleeMonster, further narrowed to the
+// vermin sprite set above.
+fn painting_swarm_candidates(level: i32) -> Vec<u16> {
+    painting_creature_candidates_matching(level, |creature| {
+        creature_is_swarm_animal(creature) && creature_can_leave_canvas(creature) && !creature_fires_from_canvas(creature)
+    })
+}
+
+fn painting_pick_swarm_creature(level: i32) -> Option<u16> {
+    let candidates = painting_swarm_candidates(level);
     if candidates.is_empty() {
         return None;
     }
@@ -341,7 +423,9 @@ fn painting_monster_hit_points(creature_id: u16) -> i16 {
 pub fn painting_armor_class(index: usize) -> i32 {
     let painting = &paintings()[index];
     match painting.kind {
-        PaintingKind::MeleeMonster | PaintingKind::RangedMonster => CREATURES_LIST[painting.creature_id as usize].ac as i32,
+        PaintingKind::MeleeMonster | PaintingKind::RangedMonster | PaintingKind::Swarm => {
+            CREATURES_LIST[painting.creature_id as usize].ac as i32
+        }
         _ => 4,
     }
 }
@@ -357,18 +441,19 @@ fn roll_new_painting(pos: Coord) -> Painting {
         items: 0,
         awake: false,
         found: false,
+        loot: 0,
     };
 
-    // Roughly half harmless; the rest split between monsters, loot,
-    // trapped loot, and the rare sleeper and teleporter.
+    // Just under half harmless; the rest split between monsters (solo or
+    // swarm), loot, trapped loot, and the rare sleeper and teleporter.
     let roll = random_number(100);
-    if roll <= 55 {
+    if roll <= 50 {
         painting.desc_id = (random_number(HARMLESS_PAINTINGS.len() as i32) - 1) as u8;
         // (g) a few harmless scenes secretly hold a single trinket.
         if random_number(7) == 1 {
             painting.items = 1;
         }
-    } else if roll <= 68 {
+    } else if roll <= 63 {
         match painting_pick_creature(level(), false) {
             Some(creature_id) => {
                 painting.kind = PaintingKind::MeleeMonster;
@@ -378,12 +463,23 @@ fn roll_new_painting(pos: Coord) -> Painting {
             }
             None => painting.desc_id = (random_number(HARMLESS_PAINTINGS.len() as i32) - 1) as u8,
         }
-    } else if roll <= 76 {
+    } else if roll <= 71 {
         match painting_pick_creature(level(), true) {
             Some(creature_id) => {
                 painting.kind = PaintingKind::RangedMonster;
                 painting.creature_id = creature_id;
                 painting.desc_id = (random_number(RANGED_PAINTING_TEMPLATES.len() as i32) - 1) as u8;
+                painting.hp = painting_monster_hit_points(creature_id);
+            }
+            None => painting.desc_id = (random_number(HARMLESS_PAINTINGS.len() as i32) - 1) as u8,
+        }
+    } else if roll <= 76 {
+        match painting_pick_swarm_creature(level()) {
+            Some(creature_id) => {
+                painting.kind = PaintingKind::Swarm;
+                painting.creature_id = creature_id;
+                painting.desc_id = (random_number(SWARM_PAINTING_TEMPLATES.len() as i32) - 1) as u8;
+                painting.items = (1 + random_number(19)) as u8; // 2..=20 members
                 painting.hp = painting_monster_hit_points(creature_id);
             }
             None => painting.desc_id = (random_number(HARMLESS_PAINTINGS.len() as i32) - 1) as u8,
@@ -572,6 +668,8 @@ fn painting_after_monster_leaves(index: usize) {
     };
     let hp = (4 + random_number(6)) as i16;
 
+    let pending_loot = paintings()[index].loot;
+
     let painting = &mut paintings()[index];
     painting.kind = kind;
     painting.desc_id = desc_id;
@@ -580,9 +678,34 @@ fn painting_after_monster_leaves(index: usize) {
     painting.items = items;
     painting.awake = false;
     painting.found = false;
+    painting.loot = 0;
+
+    // (i) Whatever the slain creature(s) carried outlives the scene
+    // re-roll: it forces a Loot painting regardless of what the dice
+    // above produced, so the drops are always reachable even if the re-roll
+    // had settled on FakeLoot or Harmless.
+    if pending_loot > 0 {
+        let painting = &mut paintings()[index];
+        painting.kind = PaintingKind::Loot;
+        painting.desc_id = (random_number(LOOT_PAINTINGS.len() as i32) - 1) as u8;
+        painting.items = painting.items.saturating_add(pending_loot).min(8);
+    }
 
     if cave_tile_visible(paintings()[index].pos) {
         print_message(Some("The paint swirls and settles into a new scene."));
+    }
+}
+
+// (h) Roll a slain in-canvas creature's drop and add it to the painting's
+// pending loot (folded in by painting_after_monster_leaves). The reach
+// command materializes generic level-appropriate items standing in for
+// whatever the creature actually carried; any gold it would have dropped
+// is folded into that same pool of item grabs, since a canvas has no purse
+// to jingle.
+fn painting_add_loot_drop(index: usize, creature: &Creature) {
+    if (creature.movement & (move_flags::CM_CARRY_OBJ | move_flags::CM_CARRY_GOLD)) != 0 {
+        let drop = monster_death_item_drop_count(creature.movement) as u8;
+        paintings()[index].loot = paintings()[index].loot.saturating_add(drop);
     }
 }
 
@@ -616,7 +739,8 @@ fn melee_monster_breaks_out(index: usize, announce_failure: bool) -> bool {
 }
 
 // (a) A monster painting acts only once roused -- by a close look, a bash,
-// or a missile. Melee creatures leap out; casters wake in the canvas.
+// a missile, or the character walking into it. Melee creatures leap out;
+// casters wake in the canvas; a swarm stirs and starts pouring out members.
 fn painting_monster_roused(index: usize, announce_failure: bool) {
     match paintings()[index].kind {
         PaintingKind::MeleeMonster => {
@@ -630,21 +754,60 @@ fn painting_monster_roused(index: usize, announce_failure: bool) {
                 player_disturb(1, 0);
             }
         }
+        PaintingKind::Swarm => {
+            if !paintings()[index].awake {
+                paintings()[index].awake = true;
+                print_message(Some("The canvas seethes -- a hundred painted eyes turn toward you!"));
+                player_disturb(1, 0);
+            }
+        }
         _ => {}
     }
 }
 
-// Apply damage from any source (bash, bolt, ball, thrown missile) to the
-// painting at `index`. Monster outcomes are narrated here (and rouse the
-// creature); Destroyed/Damaged messages are left to the caller, whose
-// flavor differs by weapon.
+// (j) One member of a Swarm painting dies to a blow. Unlike a solo monster
+// painting, the canvas itself survives as long as members remain: a fresh
+// front creature (and its hit points) steps up to take the last one's
+// place, and the painting only truly dies -- settling into a new scene --
+// once the whole swarm is spent.
+fn painting_swarm_member_dies(index: usize) -> PaintingHitResult {
+    let painting = paintings()[index];
+    let creature = &CREATURES_LIST[painting.creature_id as usize];
+
+    let msg = format!("A {} dissolves into dead pigment!", painted_name(&painting));
+    print_message(Some(&msg));
+
+    painting_gain_experience(creature.kill_exp_value as i32 * creature.level as i32);
+    display_character_experience();
+
+    painting_add_loot_drop(index, creature);
+
+    paintings()[index].items -= 1;
+
+    if paintings()[index].items > 0 {
+        paintings()[index].hp = painting_monster_hit_points(painting.creature_id);
+        PaintingHitResult::MonsterAlive
+    } else {
+        painting_after_monster_leaves(index);
+        PaintingHitResult::MonsterKilled
+    }
+}
+
+// Apply damage from any source (bash, bolt, ball, thrown missile, or melee
+// blow) to the painting at `index`. Monster outcomes are narrated here (and
+// rouse the creature); Destroyed/Damaged messages are left to the caller,
+// whose flavor differs by weapon.
 pub fn painting_take_hit(index: usize, damage: i32) -> PaintingHitResult {
     let kind = paintings()[index].kind;
-    let is_monster = kind == PaintingKind::MeleeMonster || kind == PaintingKind::RangedMonster;
+    let is_monster = painting_kind_is_monster(kind);
 
     paintings()[index].hp -= damage as i16;
 
     if paintings()[index].hp < 0 {
+        if kind == PaintingKind::Swarm {
+            return painting_swarm_member_dies(index);
+        }
+
         if is_monster {
             let painting = paintings()[index];
             let creature = &CREATURES_LIST[painting.creature_id as usize];
@@ -655,6 +818,7 @@ pub fn painting_take_hit(index: usize, damage: i32) -> PaintingHitResult {
             painting_gain_experience(creature.kill_exp_value as i32 * creature.level as i32);
             display_character_experience();
 
+            painting_add_loot_drop(index, creature);
             painting_after_monster_leaves(index);
             PaintingHitResult::MonsterKilled
         } else {
@@ -728,27 +892,30 @@ pub fn look_at_painting(coord: Coord, prefix: &str) -> (String, char) {
 
     match painting.kind {
         PaintingKind::Harmless | PaintingKind::Loot | PaintingKind::FakeLoot => {
-            reach_into_painting(index);
+            // jdbkmoria extension: reaching in is now the dedicated 'g' command;
+            // looking only hints at what a reach might find.
+            if painting.kind == PaintingKind::Loot && painting.items > 0 {
+                print_message(Some("Your fingertips tingle: something waits behind the paint."));
+            }
+            if painting.kind == PaintingKind::FakeLoot && painting.found {
+                print_message(Some("You sense a malevolent presence behind the paint!"));
+            }
         }
         PaintingKind::LevelMap => {
             reveal_level_map();
             print_message(Some("You suddenly know every hall and chamber of this level!"));
         }
-        PaintingKind::MeleeMonster | PaintingKind::RangedMonster => {
+        PaintingKind::MeleeMonster | PaintingKind::RangedMonster | PaintingKind::Swarm => {
             painting_monster_roused(index, true);
         }
         PaintingKind::Teleport => {
             if painting.found && !get_input_confirmation("It pulls at your gaze. Stare into the painting?") {
-                reach_into_painting(index);
                 return (msg, key);
             }
-            paintings()[index].found = true;
-            print_message(Some("The dungeon spins around you!"));
-            game().teleport_player = true;
+            painting_teleport_trap(index);
         }
         PaintingKind::SleepGas => {
             if painting.found && !get_input_confirmation("Its warmth invites sleep. Keep gazing?") {
-                reach_into_painting(index);
                 return (msg, key);
             }
             painting_sleep_trap(index);
@@ -774,6 +941,14 @@ fn painting_sleep_trap(index: usize) {
     player_disturb(1, 0);
 }
 
+// (f) A trap sprung by merely looking: the dungeon whirls the character away.
+fn painting_teleport_trap(index: usize) {
+    paintings()[index].found = true;
+
+    print_message(Some("The dungeon spins around you!"));
+    game().teleport_player = true;
+}
+
 // (f) A trap sprung only by reaching in: fangs or poisoned spikes,
 // selected by the painting's `items` field.
 fn fake_loot_trap(index: usize) {
@@ -791,95 +966,211 @@ fn fake_loot_trap(index: usize) {
     }
 }
 
-// (g) The reach-in interaction, offered by any painting that is not the
-// level map and holds no monster. At least half of all reaches come away
-// with nothing, so an empty canvas cannot be told from a spent one.
-fn reach_into_painting(index: usize) {
-    if paintings()[index].kind == PaintingKind::Loot && paintings()[index].items > 0 {
-        print_message(Some("Your fingertips tingle: something waits behind the paint."));
+// (g) A grope at a painting that is not (or is no longer) magical to the
+// touch: just paint on a wall. One line, chosen at random, so the flavor
+// doesn't repeat too predictably.
+const MUNDANE_REACH_MESSAGES: [&str; 8] = [
+    "You grope at the canvas. The canvas remains a canvas.",
+    "It's paint on a wall. You do know that, right?",
+    "You press your palm against the painting. It declines to become a portal.",
+    "The painting's subject watches you paw at it with something like pity.",
+    "Your fingers find only canvas. Somewhere, a museum guard shudders.",
+    "You reach dramatically into... plain, ordinary paint.",
+    "Nothing happens, as any child could have told you.",
+    "The wall behind the canvas is unmoved by your ambition.",
+];
+
+// (g) Reach into (grope at) a painting -- the dedicated 'g' command. Unlike
+// looking, this always attempts the interaction: at least half of all
+// Loot/Harmless reaches come away with nothing, so an empty canvas cannot be
+// told from a spent one.
+pub fn painting_reach_command() {
+    let mut dir = 0;
+    if !get_direction_with_memory(None, &mut dir) {
+        return;
     }
 
-    if paintings()[index].kind == PaintingKind::FakeLoot && paintings()[index].found {
-        print_message(Some("You sense a malevolent presence behind the paint!"));
-    }
+    let mut coord = py().pos;
+    player_move_position(dir, &mut coord);
 
-    while get_input_confirmation("Reach into the painting?") {
-        if paintings()[index].kind == PaintingKind::FakeLoot {
-            fake_loot_trap(index);
+    let tile = *dg().tile(coord);
+    let index = if tile.feature_id >= MIN_CAVE_WALL { painting_index_at(coord) } else { None };
+
+    let index = match index {
+        Some(index) => index,
+        None => {
+            print_message(Some("You see no painting there."));
+            game().player_free_turn = true;
             return;
         }
+    };
 
-        if paintings()[index].items == 0 || random_number(2) == 1 {
-            print_message(Some("You feel nothing but the rough back of the canvas."));
-            continue;
-        }
-
-        if painting_grab_item() {
-            paintings()[index].items -= 1;
-
-            if paintings()[index].items == 0 {
-                if paintings()[index].kind == PaintingKind::Loot {
-                    print_message(Some("The colors fade to a dull grey."));
-                }
+    match paintings()[index].kind {
+        PaintingKind::Loot | PaintingKind::Harmless if paintings()[index].items > 0 => {
+            if random_number(2) == 1 {
+                print_message(Some("You feel nothing but the rough back of the canvas."));
                 return;
             }
 
-            print_message(Some("The painting still shimmers invitingly."));
+            if painting_grab_item() {
+                paintings()[index].items -= 1;
+
+                if paintings()[index].items == 0 && paintings()[index].kind == PaintingKind::Loot {
+                    print_message(Some("The colors fade to a dull grey."));
+                }
+            }
+        }
+        PaintingKind::FakeLoot => {
+            fake_loot_trap(index);
+        }
+        PaintingKind::MeleeMonster | PaintingKind::RangedMonster | PaintingKind::Swarm => {
+            print_message(Some("Something inside the canvas snaps at your fingers!"));
+            painting_monster_roused(index, true);
+        }
+        PaintingKind::Teleport if !paintings()[index].found => {
+            painting_teleport_trap(index);
+        }
+        PaintingKind::SleepGas if !paintings()[index].found => {
+            painting_sleep_trap(index);
+        }
+        _ => {
+            let msg = MUNDANE_REACH_MESSAGES[(random_number(MUNDANE_REACH_MESSAGES.len() as i32) - 1) as usize];
+            print_message(Some(msg));
+            game().player_free_turn = true;
         }
     }
 }
 
-// Bash the painting at `coord`. Any painting can be battered from the wall;
-// the wall tile itself is unharmed. Called from player_bash() when the
-// target tile is a wall with a painting.
+// Bash the painting at `coord`, stuck-door style (see player_bash_closed_door
+// in player_bash.rs): one all-or-nothing roll, not a combat exchange. Success
+// tears the whole painting from the wall and destroys everything inside --
+// no experience, no loot, unlike besting the creature in a fight. Failure
+// just rouses whatever lives there. The wall tile itself is never touched.
+// Called from player_bash() when the target tile is a wall with a painting.
 pub fn player_bash_painting(coord: Coord) {
     let index = match painting_index_at(coord) {
         Some(index) => index,
         None => return,
     };
 
+    print_message_no_command_interrupt("You slam your shoulder into the painting!");
+
     let kind = paintings()[index].kind;
-    let is_monster = kind == PaintingKind::MeleeMonster || kind == PaintingKind::RangedMonster;
+    let is_monster = painting_kind_is_monster(kind);
 
-    // Same bash mechanics as bashing a creature (player_bash_attack).
-    let mut base_to_hit = py().stats.used[A_STR] as i32;
-    base_to_hit += py().inventory[crate::inventory::PlayerEquipment::Arm as usize].weight as i32 / 2;
-    base_to_hit += py().misc.weight as i32 / 10;
+    let chance = py().stats.used[A_STR] as i32 + py().misc.weight as i32 / 2;
+    let toughness = 5 + level() / 4;
 
-    let painting_ac = painting_armor_class(index);
+    // Same method as bashing a stuck/locked door, with the painting's
+    // toughness (scaled off dungeon depth) playing misc_use's role.
+    if random_number(chance * (20 + toughness)) < 10 * (chance - toughness) {
+        let painting = paintings()[index];
+        paintings().swap_remove(index);
+        dungeon_lite_spot(coord);
 
-    if player_test_being_hit(base_to_hit, py().misc.level as i32, py().stats.used[A_DEX] as i32, painting_ac, CLASS_BTH) {
-        let arm_item = py().inventory[crate::inventory::PlayerEquipment::Arm as usize];
-        let mut damage = dice_roll(arm_item.damage);
-        damage = player_weapon_critical_blow(arm_item.weight as i32 / 4 + py().stats.used[A_STR] as i32, 0, damage, CLASS_BTH);
-        damage += py().misc.weight as i32 / 60;
-        damage += 3;
+        print_message(Some("The painting rips from the wall and tears apart!"));
+        if is_monster {
+            let msg = format!("The {} is torn apart along with the canvas.", painted_name(&painting));
+            print_message(Some(&msg));
+        }
 
+        return;
+    }
+
+    // Even a failed smash rattles whatever lives in the canvas awake.
+    if is_monster {
+        painting_monster_roused(index, true);
+    }
+
+    if random_number(150) > py().stats.used[A_DEX] as i32 {
+        print_message(Some("You are off-balance."));
+        py().flags.paralysis = (1 + random_number(2)) as i16;
+        return;
+    }
+
+    if game().command_count == 0 {
+        print_message(Some("The painting holds firm on its hook."));
+    }
+}
+
+// (j) The player attacks the creature living in an awake monster or swarm
+// painting -- the same to-hit/damage math as an ordinary monster fight
+// (player_attack_monster in player.rs), but the target is a painting index
+// rather than a Creature record, and each landed blow goes through
+// painting_take_hit rather than monster_take_hit. Called instead of a wall
+// bump when the character walks into a roused canvas (see player_move.rs),
+// and could equally be wired up for a direct "fight the wall" command later.
+pub fn player_attack_painting(coord: Coord) {
+    if py().flags.afraid > 0 {
+        print_message(Some("You are too afraid to attack it!"));
+        return;
+    }
+
+    let index = match painting_index_at(coord) {
+        Some(index) => index,
+        None => return,
+    };
+
+    let item = py().inventory[PlayerEquipment::Wield as usize];
+
+    let mut blows = 0;
+    let mut total_to_hit = 0;
+    player_calculate_to_hit_blows(item.category_id, item.weight, &mut blows, &mut total_to_hit);
+
+    // A painting's creature is always in plain view: there is no "unlit
+    // monster in the dark" case for something hanging on a wall you're
+    // standing next to.
+    let base_to_hit = player_calculate_base_to_hit(true, total_to_hit);
+
+    let mut i = blows;
+    while i > 0 {
+        if painting_index_at(coord) != Some(index) {
+            // The painting died (or was otherwise removed) mid-flurry.
+            return;
+        }
+
+        if !painting_kind_is_monster(paintings()[index].kind) {
+            // A blow roused a stuck melee creature and it broke out between
+            // swings, re-rolling the canvas: nothing is left here to fight.
+            return;
+        }
+
+        let name = painted_name(&paintings()[index]);
+        let armor_class = painting_armor_class(index);
+
+        if !player_test_being_hit(base_to_hit, py().misc.level as i32, total_to_hit, armor_class, CLASS_BTH) {
+            let msg = format!("You miss the {}.", name);
+            print_message(Some(&msg));
+            i -= 1;
+            continue;
+        }
+
+        let msg = format!("You hit the {}.", name);
+        print_message(Some(&msg));
+
+        let item = py().inventory[PlayerEquipment::Wield as usize];
+        let creature_id = paintings()[index].creature_id as usize;
+        let mut damage;
+        if item.category_id != TV_NOTHING {
+            damage = dice_roll(item.damage);
+            damage = item_magic_ability_damage(&item, damage, creature_id);
+            damage = player_weapon_critical_blow(item.weight as i32, total_to_hit, damage, CLASS_BTH);
+        } else {
+            // Bare hands!?
+            damage = dice_roll(Dice::new(1, 1));
+            damage = player_weapon_critical_blow(1, 0, damage, CLASS_BTH);
+        }
+
+        damage += py().misc.plusses_to_damage as i32;
         if damage < 0 {
             damage = 0;
         }
 
-        if is_monster {
-            let msg = format!("You strike the {}!", painted_name(&paintings()[index]));
-            print_message(Some(&msg));
+        if painting_take_hit(index, damage) == PaintingHitResult::MonsterKilled {
+            return;
         }
 
-        match painting_take_hit(index, damage) {
-            PaintingHitResult::Destroyed => print_message(Some("You smash the painting to tatters!")),
-            PaintingHitResult::Damaged => print_message(Some("The painting shudders on its hook.")),
-            PaintingHitResult::MonsterKilled | PaintingHitResult::MonsterAlive => {}
-        }
-    } else {
-        print_message(Some("You bash at the painting and miss."));
-        // Even a glancing blow rouses whatever lives in the canvas.
-        if is_monster {
-            painting_monster_roused(index, true);
-        }
-    }
-
-    if random_number(150) > py().stats.used[A_DEX] as i32 {
-        print_message(Some("You are off balance."));
-        py().flags.paralysis = (1 + random_number(2)) as i16;
+        i -= 1;
     }
 }
 
@@ -970,6 +1261,28 @@ pub fn update_paintings() {
 
                     let damage = dice_roll(Dice::new(2 + creature.level / 10, 6));
                     player_takes_hit(damage, &format!("a {}", name));
+                }
+            }
+            PaintingKind::Swarm => {
+                // A 1-in-3 chance per turn to push one more member out;
+                // failure (no room adjacent to the canvas) just means it
+                // tries again next turn. The front member's `hp` is untouched
+                // -- monster_place_new rolls the emerging creature its own
+                // fresh hit points.
+                if awake && paintings()[i].items > 0 && random_number(3) == 1 {
+                    let creature_id = paintings()[i].creature_id as i32;
+                    let mut coord = pos;
+                    if place_monster_adjacent_to(creature_id, &mut coord, false) {
+                        paintings()[i].items -= 1;
+
+                        let msg = format!("A {} scrambles out of the canvas!", painted_name(&paintings()[i]));
+                        print_message(Some(&msg));
+                        player_disturb(1, 0);
+
+                        if paintings()[i].items == 0 {
+                            painting_after_monster_leaves(i);
+                        }
+                    }
                 }
             }
             _ => {}

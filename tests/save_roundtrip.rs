@@ -75,6 +75,7 @@ fn save_and_load_roundtrip() {
         items: 0,
         awake: true,
         found: false,
+        loot: 0,
     });
     paintings().push(Painting {
         pos: Coord::new(33, 150),
@@ -85,6 +86,28 @@ fn save_and_load_roundtrip() {
         items: 2,
         awake: false,
         found: true,
+        loot: 0,
+    });
+    // A Swarm painting (v2 kind byte 8) with nonzero pending loot -- treasure
+    // grabs owed by members already slain inside the canvas (see
+    // painting_add_loot_drop / painting_after_monster_leaves in
+    // src/paintings.rs). The v2 record format is the only one with a loot
+    // byte at all, so this value surviving the round trip is itself proof
+    // that the header byte written was 0xC0 | count: game_save.rs's restore
+    // path only reads a loot byte (and only accepts kind byte 8) when
+    // `header & 0xC0 == 0xC0`; for a v1 or legacy header, loot is forced to
+    // 0 regardless of what is on disk (see the `is_v2` gate around
+    // `painting_from_save`'s `loot` parameter).
+    paintings().push(Painting {
+        pos: Coord::new(44, 60),
+        kind: PaintingKind::Swarm,
+        desc_id: 2,
+        creature_id: 17,
+        hp: 12,
+        items: 9,
+        awake: true,
+        found: false,
+        loot: 5,
     });
 
     // Write the save file into a tempdir with a unique name.
@@ -151,7 +174,7 @@ fn save_and_load_roundtrip() {
     assert_eq!(creature_recall()[5].movement, 0x1234);
     assert_eq!(creature_recall()[5].wake, 7);
 
-    assert_eq!(paintings().len(), 2);
+    assert_eq!(paintings().len(), 3);
     assert_eq!(paintings()[0].pos.y, 10);
     assert_eq!(paintings()[0].pos.x, 20);
     assert_eq!(paintings()[0].kind, PaintingKind::RangedMonster);
@@ -170,4 +193,16 @@ fn save_and_load_roundtrip() {
     assert_eq!(paintings()[1].items, 2);
     assert!(!paintings()[1].awake);
     assert!(paintings()[1].found);
+    assert_eq!(paintings()[1].loot, 0);
+
+    assert_eq!(paintings()[2].pos.y, 44);
+    assert_eq!(paintings()[2].pos.x, 60);
+    assert_eq!(paintings()[2].kind, PaintingKind::Swarm);
+    assert_eq!(paintings()[2].desc_id, 2);
+    assert_eq!(paintings()[2].creature_id, 17);
+    assert_eq!(paintings()[2].hp, 12);
+    assert_eq!(paintings()[2].items, 9);
+    assert!(paintings()[2].awake);
+    assert!(!paintings()[2].found);
+    assert_eq!(paintings()[2].loot, 5, "nonzero loot must survive the v2 round trip");
 }

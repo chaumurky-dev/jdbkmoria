@@ -74,6 +74,19 @@ pub const RANGED_PAINTING_TEMPLATES: [&str; 5] = [
     "{} regarding you over a table of old bones",
 ];
 
+// Templates for a canvas that holds a whole teeming swarm rather than one
+// creature; the look command still splices in a single representative,
+// singular and indefinite, standing in for the mass behind it. Same
+// 42-character budget as the tables above.
+pub const SWARM_PAINTING_TEMPLATES: [&str; 6] = [
+    "a seething mass, {} clawing to the front",
+    "a canvas overrun, {} baring its teeth",
+    "a nest torn open, {} first out of it",
+    "a wainscot alive with motion, {} leads",
+    "a scuttling tide of small bodies, {} first",
+    "a swarm behind the paint, {} at its head",
+];
+
 // Magical paintings the player may reach into. Fake (trapped) paintings
 // use this same table so the two cannot be told apart by description.
 pub const LOOT_PAINTINGS: [&str; 8] = [

@@ -20,6 +20,7 @@ use crate::inventory::{
     inventory_can_carry_item, inventory_can_carry_item_count, inventory_carry_item, Inventory,
 };
 use crate::monster::monsters;
+use crate::paintings::{painting_index_at, paintings, player_attack_painting, PaintingKind};
 use crate::player::{
     py, player_attack_position, player_move_position, player_search, player_takes_hit,
     player_test_being_hit, A_CON, A_STR, CLASS_MISC_HIT,
@@ -462,6 +463,23 @@ pub fn player_move(direction: i32, do_pickup: bool) {
             }
         } else {
             // Can't move onto floor space
+
+            // jdbkmoria extension: an awake monster/swarm painting fights
+            // back when you walk into it, instead of just bumping the wall.
+            // Dormant ones (the ordinary case) fall through to the plain
+            // wall bump below -- rousing them takes a look, a reach, or a
+            // failed bash.
+            if let Some(index) = painting_index_at(coord) {
+                let painting = paintings()[index];
+                let roused = painting.awake
+                    && matches!(painting.kind, PaintingKind::MeleeMonster | PaintingKind::RangedMonster | PaintingKind::Swarm);
+
+                if roused {
+                    player_attack_painting(coord);
+                    game().player_free_turn = false;
+                    return;
+                }
+            }
 
             if py().running_tracker == 0 && tile.treasure_id != 0 {
                 if game().treasure.list[tile.treasure_id as usize].category_id == TV_RUBBLE {

@@ -21,6 +21,7 @@ Command Summary (@ is optional count, ~ is direction, ^R redraws, ESC aborts)
   x        Exchange weapon             | @ CTRL-P   Repeat the last message
   <        Go up an up-staircase       |   CTRL-X   Save character and quit
   >        Go down a down-staircase    | @ ~        For movement
+  g ~      Grope at a painting         |
 Directions:     7  8  9
                 4  5  6  [5 to rest]
                 1  2  3

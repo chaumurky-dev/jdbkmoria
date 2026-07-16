@@ -21,6 +21,7 @@ Command Summary (@ is optional count, ~ is direction, ^R redraws, ESC aborts)
 @ -  ~    Move without pickup       |   ?       View this page
 @ CTRL  ~ Tunnel in a direction     |   CTRL-X  Save character and quit
 @ SHIFT ~ Run in direction          | @ ~       For movement
+  g ~     Grope at a painting       |
 Directions:     y  k  u
                 h  .  l  [. to rest]
                 b  j  n

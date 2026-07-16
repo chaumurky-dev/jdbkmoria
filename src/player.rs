@@ -1215,7 +1215,9 @@ pub fn player_gain_kill_experience(creature_id: usize) {
     py().misc.exp += quotient;
 }
 
-fn player_calculate_to_hit_blows(weapon_id: u8, weapon_weight: u16, blows: &mut i32, total_to_hit: &mut i32) {
+// (pub for the jdbkmoria paintings extension: melee-attacking the creature
+// living in a monster/swarm painting uses the same blows-and-to-hit math.)
+pub fn player_calculate_to_hit_blows(weapon_id: u8, weapon_weight: u16, blows: &mut i32, total_to_hit: &mut i32) {
     if weapon_id != TV_NOTHING {
         // Proper weapon
         *blows = player_attack_blows(weapon_weight as i32, total_to_hit);
@@ -1233,7 +1235,8 @@ fn player_calculate_to_hit_blows(weapon_id: u8, weapon_weight: u16, blows: &mut 
     *total_to_hit += py().misc.plusses_to_hit as i32;
 }
 
-fn player_calculate_base_to_hit(creature_lit: bool, tot_tohit: i32) -> i32 {
+// (pub for the jdbkmoria paintings extension; see player_calculate_to_hit_blows.)
+pub fn player_calculate_base_to_hit(creature_lit: bool, tot_tohit: i32) -> i32 {
     if creature_lit {
         return py().misc.bth as i32;
     }

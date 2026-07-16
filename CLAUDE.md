@@ -62,3 +62,5 @@ pattern.
   are allowed crate-wide in `lib.rs` on purpose — don't "fix" them by rewriting loops or
   conditions near RNG/game-logic calls, as that risks reordering side effects.
 - Once the repo has a remote, use feature branches + PRs rather than pushing to `main`.
+- By default, commit and push to a PR unless otherwise instructed
+- Always delegate to cheaper models wherever feasible

@@ -1500,7 +1500,9 @@ fn monster_death_item_drop_type(flags: u32) -> i32 {
     object
 }
 
-fn monster_death_item_drop_count(flags: u32) -> i32 {
+// (pub for the jdbkmoria paintings extension: a creature slain inside a
+// canvas rolls its own drop, which is folded into the painting's loot.)
+pub fn monster_death_item_drop_count(flags: u32) -> i32 {
     let mut count = 0;
 
     if (flags & config::monsters::move_flags::CM_60_RANDOM) != 0 && random_number(100) < 60 {

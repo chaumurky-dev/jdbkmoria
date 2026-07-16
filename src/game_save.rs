@@ -712,12 +712,16 @@ fn write_save_data() -> bool {
         wr_monster(&monsters()[i]);
     }
 
-    // jdbkmoria extension: paintings, appended after all original umoria data.
-    // Restore probes for this block with a raw EOF peek (the same trick the
-    // dead/alive fork uses), so save files written without it still load.
-    // The high bit of the count byte marks the current (v2) record layout,
-    // which adds the creature id; MAX_PAINTINGS stays below 0x80.
-    wr_byte(0x80 | paintings().len() as u8);
+    // jdbkmoria extension: paintings, appended after all original umoria
+    // data. Restore probes for this block with a raw EOF peek (the same
+    // trick the dead/alive fork uses), so save files written without it
+    // still load. The top two bits of the count byte mark the record
+    // layout: legacy (both clear) predates the creature id, v1 (0x80 only)
+    // added the creature id, and v2 (0xC0, written here) further adds the
+    // loot byte for treasure a slain in-canvas creature leaves behind.
+    // MAX_PAINTINGS stays below 0x40 so both flag bits stay clear of the
+    // count itself.
+    wr_byte(0xC0 | paintings().len() as u8);
     for painting in paintings().iter() {
         wr_byte(painting.pos.y as u8);
         wr_byte(painting.pos.x as u8);
@@ -727,6 +731,7 @@ fn write_save_data() -> bool {
         wr_short(painting.hp as u16);
         wr_byte(painting.items);
         wr_byte((painting.awake as u8) | ((painting.found as u8) << 1));
+        wr_byte(painting.loot);
     }
 
     flush_and_check()
@@ -1297,12 +1302,16 @@ fn restore_from_file(file: File, generate: &mut bool, interactive: bool) -> Opti
                 break 'restore false;
             }
 
-            // The high bit of the count byte marks the current (v2) record
-            // layout; without it this is a legacy block from before monster
-            // paintings carried a creature id.
+            // The top two bits of the count byte mark the record layout:
+            // 0xC0 is the current (v2) layout, which adds a loot byte after
+            // the flags; 0x80 alone is v1 (creature id, no loot byte, and no
+            // Swarm kind -- it didn't exist yet); neither bit set is the
+            // original legacy layout from before monster paintings carried
+            // a creature id at all.
             let header = rd_byte();
-            let current_format = (header & 0x80) != 0;
-            let painting_count = (header & 0x7F) as usize;
+            let is_v2 = header & 0xC0 == 0xC0;
+            let is_v1 = !is_v2 && (header & 0x80) != 0;
+            let painting_count = if is_v2 { (header & 0x3F) as usize } else { (header & 0x7F) as usize };
             if painting_count > MAX_PAINTINGS {
                 break 'restore false;
             }
@@ -1312,17 +1321,18 @@ fn restore_from_file(file: File, generate: &mut bool, interactive: bool) -> Opti
                 let x = rd_byte() as i32;
                 let kind_byte = rd_byte();
                 let desc_id = rd_byte();
-                let creature_id = if current_format { rd_short() } else { 0 };
+                let creature_id = if is_v1 || is_v2 { rd_short() } else { 0 };
                 let hp = rd_short() as i16;
                 let items = rd_byte();
                 let flags = rd_byte();
+                let loot = if is_v2 { rd_byte() } else { 0 };
 
                 if y >= MAX_HEIGHT || x >= MAX_WIDTH || eof_hit() {
                     break 'restore false;
                 }
 
-                let painting = if current_format {
-                    painting_from_save(Coord::new(y, x), kind_byte, desc_id, creature_id, hp, items, flags)
+                let painting = if is_v1 || is_v2 {
+                    painting_from_save(Coord::new(y, x), kind_byte, desc_id, creature_id, hp, items, flags, loot)
                 } else {
                     painting_from_legacy_save(Coord::new(y, x), kind_byte, desc_id, hp, items, flags)
                 };
