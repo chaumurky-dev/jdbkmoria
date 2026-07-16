@@ -66,11 +66,11 @@ pub fn monster_place_new(coord: Coord, creature_id: i32, sleeping: bool) -> bool
     // the creatures_list[] speed value is 10 greater, so that it can be a uint8_t
     monster.speed = creature.speed as i16 - 10 + py().flags.speed;
     monster.stunned_amount = 0;
-    monster.distance_from_player = coord_distance_between(py().pos, coord) as u8;
+    monster.distance_from_player = coord_distance_between(py().pos, coord).min(255) as u8;
     monster.lit = false;
     monster.sleep_count = sleep_count;
 
-    dg().tile_mut(coord).creature_id = monster_id as u8;
+    dg().tile_mut(coord).creature_id = monster_id as u16;
 
     true
 }
@@ -125,9 +125,9 @@ pub fn monster_place_winning() {
     // the creatures_list speed value is 10 greater, so that it can be a uint8_t
     monster.speed = creature.speed as i16 - 10 + py().flags.speed;
     monster.stunned_amount = 0;
-    monster.distance_from_player = coord_distance_between(py().pos, coord) as u8;
+    monster.distance_from_player = coord_distance_between(py().pos, coord).min(255) as u8;
 
-    dg().tile_mut(coord).creature_id = monster_id as u8;
+    dg().tile_mut(coord).creature_id = monster_id as u16;
 
     monster.sleep_count = 0;
 }

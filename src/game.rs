@@ -31,7 +31,12 @@ pub const OBJECT_IDENT_SIZE: usize = 448; // 7*64, see object_offset() in desc.c
 
 // With LEVEL_MAX_OBJECTS set to 150, it's possible to get compacting
 // objects during level generation, although it is extremely rare.
-pub const LEVEL_MAX_OBJECTS: usize = 175; // Max objects per level
+// jdbkmoria extension: scaled x4 (175 -> 700) to match the level content
+// density increase that came with quadrupling the dungeon's area (see
+// MAX_HEIGHT/MAX_WIDTH in dungeon.rs). Save-format safe: the save file
+// stores an explicit object count, validated against this constant on load
+// (see game_save.rs).
+pub const LEVEL_MAX_OBJECTS: usize = 700; // Max objects per level
 
 // definitions for the pseudo-normal distribution generation
 pub const NORMAL_TABLE_SIZE: usize = 256;

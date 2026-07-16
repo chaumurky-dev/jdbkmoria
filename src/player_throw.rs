@@ -163,7 +163,7 @@ fn inventory_drop_or_throw_item(coord: crate::types::Coord, item: &Inventory) {
 
     if flag {
         let cur_pos = popt();
-        dg().tile_mut(position).treasure_id = cur_pos as u8;
+        dg().tile_mut(position).treasure_id = cur_pos as u16;
         game().treasure.list[cur_pos as usize] = *item;
         dungeon_lite_spot(position);
     } else {

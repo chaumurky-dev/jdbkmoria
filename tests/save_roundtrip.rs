@@ -78,7 +78,10 @@ fn save_and_load_roundtrip() {
         loot: 0,
     });
     paintings().push(Painting {
-        pos: Coord::new(33, 150),
+        // x = 300 exceeds u8::MAX (255): this exercises the save format's
+        // widened short coordinates, needed now that MAX_WIDTH (396) no
+        // longer fits a byte (see game_save.rs's wr_short/rd_short).
+        pos: Coord::new(33, 300),
         kind: PaintingKind::Loot,
         desc_id: 5,
         creature_id: 0,
@@ -185,7 +188,7 @@ fn save_and_load_roundtrip() {
     assert!(paintings()[0].awake);
     assert!(!paintings()[0].found);
     assert_eq!(paintings()[1].pos.y, 33);
-    assert_eq!(paintings()[1].pos.x, 150);
+    assert_eq!(paintings()[1].pos.x, 300);
     assert_eq!(paintings()[1].kind, PaintingKind::Loot);
     assert_eq!(paintings()[1].desc_id, 5);
     assert_eq!(paintings()[1].creature_id, 0);

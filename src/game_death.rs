@@ -20,8 +20,8 @@ use crate::types::Coord;
 use crate::ui::{print_character, ESCAPE};
 use crate::ui_inventory::{display_equipment, display_inventory_items};
 use crate::ui_io::{
-    clear_screen, clear_to_bottom, erase_line, flush_input_buffer, get_key_input, get_string_input, print_message,
-    put_string, wait_for_continue_key,
+    center_for_static_screen, clear_screen, clear_to_bottom, erase_line, flush_input_buffer, get_key_input,
+    get_string_input, print_message, put_string, wait_for_continue_key,
 };
 use crate::locale::format_number;
 use crate::{tr, tr_fmt};
@@ -140,6 +140,11 @@ fn kingly() {
 // What happens upon dying -RAK-
 // Handles the gravestone and top-twenty routines -RAK-
 pub fn end_game() -> ! {
+    // jdbkmoria extension: the tomb and high-score screens that follow are
+    // classic static screens; end_game() never returns (the process exits
+    // or restarts below), so there's no prior mode to restore.
+    center_for_static_screen();
+
     print_message(None);
 
     // flush all input

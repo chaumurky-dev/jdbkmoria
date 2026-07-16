@@ -104,14 +104,21 @@ pub mod dungeon {
     pub const DUN_RANDOM_DIR: u8 = 9; // 1/Chance of Random direction
     pub const DUN_DIR_CHANGE: u8 = 70; // Chance of changing direction (99 max)
     pub const DUN_TUNNELING: u8 = 15; // Chance of extra tunneling
-    pub const DUN_ROOMS_MEAN: u8 = 32; // Mean of # of rooms, standard dev2
+    // jdbkmoria extension: DUN_ROOMS_MEAN, DUN_MAGMA_STREAMER, and
+    // DUN_QUARTZ_STREAMER are scaled x4 (and objects::LEVEL_OBJECTS_PER_ROOM,
+    // LEVEL_OBJECTS_PER_CORRIDOR, LEVEL_TOTAL_GOLD_AND_GEMS below) to keep
+    // level content density constant now that the dungeon footprint is 4x
+    // larger (see MAX_HEIGHT/MAX_WIDTH in dungeon.rs). DUN_STREAMER_DENSITY
+    // (the per-streamer treasure-placement chance, unrelated to level area)
+    // is deliberately left unchanged.
+    pub const DUN_ROOMS_MEAN: u8 = 128; // Mean of # of rooms, standard dev2
     pub const DUN_ROOM_DOORS: u8 = 25; // % chance of room doors
     pub const DUN_TUNNEL_DOORS: u8 = 15; // % chance of doors at tunnel junctions
     pub const DUN_STREAMER_DENSITY: u8 = 5; // Density of streamers
     pub const DUN_STREAMER_WIDTH: u8 = 2; // Width of streamers
-    pub const DUN_MAGMA_STREAMER: u8 = 3; // Number of magma streamers
+    pub const DUN_MAGMA_STREAMER: u8 = 12; // Number of magma streamers
     pub const DUN_MAGMA_TREASURE: u8 = 90; // 1/x chance of treasure per magma
-    pub const DUN_QUARTZ_STREAMER: u8 = 2; // Number of quartz streamers
+    pub const DUN_QUARTZ_STREAMER: u8 = 8; // Number of quartz streamers
     pub const DUN_QUARTZ_TREASURE: u8 = 40; // 1/x chance of treasure per quartz
     pub const DUN_UNUSUAL_ROOMS: u16 = 300; // Level/x chance of unusual room
 
@@ -134,9 +141,10 @@ pub mod dungeon {
         pub const MAX_GOLD_TYPES: u8 = 18; // Number of different types of gold
         pub const MAX_TRAPS: u8 = 18; // Number of defined traps
 
-        pub const LEVEL_OBJECTS_PER_ROOM: u8 = 7; // Amount of objects for rooms
-        pub const LEVEL_OBJECTS_PER_CORRIDOR: u8 = 2; // Amount of objects for corridors
-        pub const LEVEL_TOTAL_GOLD_AND_GEMS: u8 = 2; // Amount of gold (and gems)
+        // jdbkmoria extension: scaled x4, see the comment above DUN_ROOMS_MEAN.
+        pub const LEVEL_OBJECTS_PER_ROOM: u8 = 28; // Amount of objects for rooms
+        pub const LEVEL_OBJECTS_PER_CORRIDOR: u8 = 8; // Amount of objects for corridors
+        pub const LEVEL_TOTAL_GOLD_AND_GEMS: u8 = 8; // Amount of gold (and gems)
     }
 }
 

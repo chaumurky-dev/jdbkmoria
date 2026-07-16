@@ -184,7 +184,7 @@ pub fn inventory_drop_item(item_id: usize, drop_all: bool) {
     let item = py().inventory[item_id];
     game().treasure.list[treasure_id] = item;
 
-    dg().tile_mut(py().pos).treasure_id = treasure_id as u8;
+    dg().tile_mut(py().pos).treasure_id = treasure_id as u16;
 
     if item_id >= WIELD {
         crate::player::player_take_off(item_id as i32, -1);

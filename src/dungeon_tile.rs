@@ -6,8 +6,13 @@
 // Tile holds data about a specific tile in the dungeon.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Tile {
-    pub creature_id: u8, // ID for any creature occupying the tile
-    pub treasure_id: u8, // ID for any treasure item occupying the tile
+    // jdbkmoria extension: widened from u8 to u16. LEVEL_MAX_OBJECTS (700)
+    // and MON_TOTAL_ALLOCATIONS (500) - the capacities these fields index
+    // into - were scaled x4 alongside the dungeon's area and both now
+    // exceed u8::MAX, so a u8 here would silently wrap. See game_save.rs
+    // for the matching save-format widening (wr_short/rd_short).
+    pub creature_id: u16, // ID for any creature occupying the tile
+    pub treasure_id: u16, // ID for any treasure item occupying the tile
     pub feature_id: u8,  // ID of cave feature; walls, floors, open space, etc.
 
     pub perma_lit_room: bool,  // Room should be lit with perm light, walls with this set should be perm lit after tunneled out.

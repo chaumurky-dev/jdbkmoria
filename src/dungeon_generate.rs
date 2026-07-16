@@ -147,14 +147,14 @@ fn dungeon_place_streamer_rock(rock_type: u8, chance_of_treasure: i32) {
 
 fn dungeon_place_open_door(coord: Coord) {
     let cur_pos = popt() as usize;
-    dg().tile_mut(coord).treasure_id = cur_pos as u8;
+    dg().tile_mut(coord).treasure_id = cur_pos as u16;
     inventory_item_copy_to(config::dungeon::objects::OBJ_OPEN_DOOR as usize, &mut game().treasure.list[cur_pos]);
     dg().tile_mut(coord).feature_id = TILE_CORR_FLOOR;
 }
 
 fn dungeon_place_broken_door(coord: Coord) {
     let cur_pos = popt() as usize;
-    dg().tile_mut(coord).treasure_id = cur_pos as u8;
+    dg().tile_mut(coord).treasure_id = cur_pos as u16;
     inventory_item_copy_to(config::dungeon::objects::OBJ_OPEN_DOOR as usize, &mut game().treasure.list[cur_pos]);
     dg().tile_mut(coord).feature_id = TILE_CORR_FLOOR;
     game().treasure.list[cur_pos].misc_use = 1;
@@ -162,14 +162,14 @@ fn dungeon_place_broken_door(coord: Coord) {
 
 fn dungeon_place_closed_door(coord: Coord) {
     let cur_pos = popt() as usize;
-    dg().tile_mut(coord).treasure_id = cur_pos as u8;
+    dg().tile_mut(coord).treasure_id = cur_pos as u16;
     inventory_item_copy_to(config::dungeon::objects::OBJ_CLOSED_DOOR as usize, &mut game().treasure.list[cur_pos]);
     dg().tile_mut(coord).feature_id = TILE_BLOCKED_FLOOR;
 }
 
 fn dungeon_place_locked_door(coord: Coord) {
     let cur_pos = popt() as usize;
-    dg().tile_mut(coord).treasure_id = cur_pos as u8;
+    dg().tile_mut(coord).treasure_id = cur_pos as u16;
     inventory_item_copy_to(config::dungeon::objects::OBJ_CLOSED_DOOR as usize, &mut game().treasure.list[cur_pos]);
     dg().tile_mut(coord).feature_id = TILE_BLOCKED_FLOOR;
     game().treasure.list[cur_pos].misc_use = (random_number(10) + 10) as i16;
@@ -177,7 +177,7 @@ fn dungeon_place_locked_door(coord: Coord) {
 
 fn dungeon_place_stuck_door(coord: Coord) {
     let cur_pos = popt() as usize;
-    dg().tile_mut(coord).treasure_id = cur_pos as u8;
+    dg().tile_mut(coord).treasure_id = cur_pos as u16;
     inventory_item_copy_to(config::dungeon::objects::OBJ_CLOSED_DOOR as usize, &mut game().treasure.list[cur_pos]);
     dg().tile_mut(coord).feature_id = TILE_BLOCKED_FLOOR;
     game().treasure.list[cur_pos].misc_use = (-random_number(10) - 10) as i16;
@@ -185,7 +185,7 @@ fn dungeon_place_stuck_door(coord: Coord) {
 
 fn dungeon_place_secret_door(coord: Coord) {
     let cur_pos = popt() as usize;
-    dg().tile_mut(coord).treasure_id = cur_pos as u8;
+    dg().tile_mut(coord).treasure_id = cur_pos as u16;
     inventory_item_copy_to(config::dungeon::objects::OBJ_SECRET_DOOR as usize, &mut game().treasure.list[cur_pos]);
     dg().tile_mut(coord).feature_id = TILE_BLOCKED_FLOOR;
 }
@@ -221,7 +221,7 @@ fn dungeon_place_up_stairs(coord: Coord) {
     }
 
     let cur_pos = popt() as usize;
-    dg().tile_mut(coord).treasure_id = cur_pos as u8;
+    dg().tile_mut(coord).treasure_id = cur_pos as u16;
     inventory_item_copy_to(config::dungeon::objects::OBJ_UP_STAIR as usize, &mut game().treasure.list[cur_pos]);
 }
 
@@ -232,7 +232,7 @@ fn dungeon_place_down_stairs(coord: Coord) {
     }
 
     let cur_pos = popt() as usize;
-    dg().tile_mut(coord).treasure_id = cur_pos as u8;
+    dg().tile_mut(coord).treasure_id = cur_pos as u16;
     inventory_item_copy_to(config::dungeon::objects::OBJ_DOWN_STAIR as usize, &mut game().treasure.list[cur_pos]);
 }
 
@@ -1003,7 +1003,9 @@ fn dungeon_generate() {
 
     let mut room_map = [[false; 20]; 20];
 
-    let random_room_count = random_number_normal_distribution(config::dungeon::DUN_ROOMS_MEAN as i32, 2);
+    // jdbkmoria extension: standard deviation scaled x4 (2 -> 8) alongside
+    // DUN_ROOMS_MEAN's x4 scaling, to preserve the distribution's shape.
+    let random_room_count = random_number_normal_distribution(config::dungeon::DUN_ROOMS_MEAN as i32, 8);
     for _ in 0..random_room_count {
         room_map[(random_number(row_rooms as i32) - 1) as usize][(random_number(col_rooms as i32) - 1) as usize] = true;
     }
@@ -1074,20 +1076,26 @@ fn dungeon_generate() {
 
     let alloc_level = (dg().current_level as i32 / 3).clamp(2, 10);
 
-    dungeon_place_stairs(2, random_number(2) + 2, 3);
-    dungeon_place_stairs(1, random_number(2), 3);
+    // jdbkmoria extension: stair counts scaled x4 to match the level's
+    // quadrupled area.
+    dungeon_place_stairs(2, (random_number(2) + 2) * 4, 3);
+    dungeon_place_stairs(1, random_number(2) * 4, 3);
 
     // Set up the character coords, used by monster_place_new_within_distance, monster_place_winning
     let mut coord = Coord::new(0, 0);
     dungeon_new_spot(&mut coord);
     py().pos = coord;
 
-    crate::monster_manager::monster_place_new_within_distance(random_number(8) + config::monsters::MON_MIN_PER_LEVEL as i32 + alloc_level, 0, true);
-    dungeon_allocate_and_place_object(set_corridors, 3, random_number(alloc_level));
-    dungeon_allocate_and_place_object(set_rooms, 5, random_number_normal_distribution(config::dungeon::objects::LEVEL_OBJECTS_PER_ROOM as i32, 3));
-    dungeon_allocate_and_place_object(set_floors, 5, random_number_normal_distribution(config::dungeon::objects::LEVEL_OBJECTS_PER_CORRIDOR as i32, 3));
-    dungeon_allocate_and_place_object(set_floors, 4, random_number_normal_distribution(config::dungeon::objects::LEVEL_TOTAL_GOLD_AND_GEMS as i32, 3));
-    dungeon_allocate_and_place_object(set_floors, 1, random_number(alloc_level));
+    // jdbkmoria extension: monster count, corridor object/gold count, and
+    // trap count all scaled x4 (see the comment above DUN_ROOMS_MEAN in
+    // config.rs); the normal-distribution std-devs below are scaled x4 in
+    // lockstep with their (already x4-scaled) means.
+    crate::monster_manager::monster_place_new_within_distance(4 * (random_number(8) + config::monsters::MON_MIN_PER_LEVEL as i32 + alloc_level), 0, true);
+    dungeon_allocate_and_place_object(set_corridors, 3, 4 * random_number(alloc_level));
+    dungeon_allocate_and_place_object(set_rooms, 5, random_number_normal_distribution(config::dungeon::objects::LEVEL_OBJECTS_PER_ROOM as i32, 12));
+    dungeon_allocate_and_place_object(set_floors, 5, random_number_normal_distribution(config::dungeon::objects::LEVEL_OBJECTS_PER_CORRIDOR as i32, 12));
+    dungeon_allocate_and_place_object(set_floors, 4, random_number_normal_distribution(config::dungeon::objects::LEVEL_TOTAL_GOLD_AND_GEMS as i32, 12));
+    dungeon_allocate_and_place_object(set_floors, 1, 4 * random_number(alloc_level));
 
     if dg().current_level >= config::monsters::MON_ENDGAME_LEVEL as i16 {
         crate::monster_manager::monster_place_winning();
@@ -1128,7 +1136,7 @@ fn dungeon_build_store(store_id: i32, coord: Coord) {
     dg().tile_mut(door_pos).feature_id = TILE_CORR_FLOOR;
 
     let cur_pos = popt() as usize;
-    dg().tile_mut(door_pos).treasure_id = cur_pos as u8;
+    dg().tile_mut(door_pos).treasure_id = cur_pos as u16;
 
     inventory_item_copy_to(config::dungeon::objects::OBJ_STORE_DOOR as usize + store_id as usize, &mut game().treasure.list[cur_pos]);
 }

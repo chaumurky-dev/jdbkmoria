@@ -386,5 +386,5 @@ fn store_item_create(store_id: usize, max_cost: i16) {
         }
     }
 
-    pusht(free_id as u8);
+    pusht(free_id as u16);
 }

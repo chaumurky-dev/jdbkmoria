@@ -165,3 +165,24 @@ and marked `jdbkmoria extension` at every hook site in shared code:
   no French elision), masculine-default gender, en-US-shaped plural rules
   in a few composed fragments, and fixed-width status fields that truncate
   long translations (`{:<N.N}`).
+
+- **Modern screen size** (`ui.rs`, `ui_io.rs`, `main.rs`, 2026-07): the
+  dungeon viewport auto-fits the terminal window (up to a full 132×396 level)
+  instead of always drawing into a fixed 80×24 corner, with a `-W
+  COLSxLINES` CLI override. `SCREEN_HEIGHT`/`SCREEN_WIDTH`/`MAX_HEIGHT`/
+  `MAX_WIDTH` (`dungeon.rs`) are untouched — those still drive dungeon
+  generation and the save format's implicit-length floor grid, both of
+  which must stay byte/gameplay-compatible with upstream. Instead a new,
+  independent viewport size (`ui::view_height()`/`view_width()`, defaulting
+  to the classic constants) governs only how much of the already-generated
+  level is shown at once. At the classic 80×24 size the panel-follow logic
+  in `coord_outside_panel()` is untouched (byte-identical discrete
+  half-screen jumps); at any larger size it switches to
+  `coord_outside_panel_enlarged()`, which centers the viewport on the
+  player and clamps to the level's real bounds, ignoring the
+  save-serialized `panel.max_rows`/`max_cols`/`row`/`col` fields so a save
+  written at a different terminal size can't produce an out-of-range
+  panel. The live status line (`ui.rs`, `status_line_row()`) moves with the
+  viewport height; other full-page screens (character sheet, store,
+  inventory, high scores, death) are unchanged and still render in the
+  classic top-left 80×24 area.

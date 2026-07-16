@@ -12,7 +12,7 @@ use std::path::Path;
 use crate::config;
 use crate::dungeon::{dg, MAX_HEIGHT, MAX_WIDTH};
 use crate::{tr, tr_fmt};
-use crate::game::{game, is_current_game_version, random_number, valid_game_version, LEVEL_MAX_OBJECTS};
+use crate::game::{game, random_number, LEVEL_MAX_OBJECTS};
 use crate::globals::RacyCell;
 use crate::helpers::get_current_unix_time;
 use crate::identification::objects_identified;
@@ -29,7 +29,7 @@ use crate::ui_io::{
     clear_screen, eof_flag, get_input_confirmation, get_string_input, last_message_id, messages, panic_save, print_message,
     put_qio, put_string, put_string_clear_to_eol,
 };
-use crate::version::{CURRENT_VERSION_MAJOR, CURRENT_VERSION_MINOR, CURRENT_VERSION_PATCH};
+use crate::version::{SAVE_FORMAT_MAJOR, SAVE_FORMAT_MINOR, SAVE_FORMAT_PATCH};
 
 // This save package was brought to by                -JWT-
 // and                                                -RAK-
@@ -85,6 +85,19 @@ pub fn fileptr_stream_position() -> u64 {
 
 pub fn eof_hit() -> bool {
     *EOF_HIT.get()
+}
+
+// jdbkmoria extension: validates the save-file format version (distinct
+// from `valid_game_version` in game.rs, which continues to gate the
+// unrelated, still-5.x high-score file format read/written by scores.rs).
+// The save file's binary layout is no longer that of any upstream umoria
+// release or earlier jdbkmoria save (coordinates widened from a byte to a
+// short to fit the doubled dungeon dimensions - see MAX_HEIGHT/MAX_WIDTH in
+// dungeon.rs), so only an exact major-version match is accepted; an old
+// save simply gets the existing friendly rejection message rather than
+// being misparsed.
+fn valid_save_format_version(major: u8, _minor: u8, _patch: u8) -> bool {
+    major == SAVE_FORMAT_MAJOR
 }
 
 // get_byte reads a single byte from a file, without any xor_byte encryption
@@ -198,8 +211,10 @@ fn wr_monster(monster: &Monster) {
     wr_short(monster.sleep_count as u16);
     wr_short(monster.speed as u16);
     wr_short(monster.creature_id);
-    wr_byte(monster.pos.y as u8);
-    wr_byte(monster.pos.x as u8);
+    // jdbkmoria extension: widened from a byte to a short - MAX_WIDTH (396)
+    // no longer fits a u8.
+    wr_short(monster.pos.y as u16);
+    wr_short(monster.pos.x as u16);
     wr_byte(monster.distance_from_player);
     wr_bool(monster.lit);
     wr_byte(monster.stunned_amount);
@@ -297,8 +312,8 @@ fn rd_monster(monster: &mut Monster) {
     monster.sleep_count = rd_short() as i16;
     monster.speed = rd_short() as i16;
     monster.creature_id = rd_short();
-    monster.pos.y = rd_byte() as i32;
-    monster.pos.x = rd_byte() as i32;
+    monster.pos.y = rd_short() as i32;
+    monster.pos.x = rd_short() as i32;
     monster.distance_from_player = rd_byte();
     monster.lit = rd_bool();
     monster.stunned_amount = rd_byte();
@@ -651,31 +666,37 @@ fn write_save_data() -> bool {
     wr_short(dg().panel.max_rows as u16);
     wr_short(dg().panel.max_cols as u16);
 
+    // jdbkmoria extension: sparse floor records widened from (y:u8, x:u8,
+    // value:u8) triples terminated by a lone 0xFF byte, to (y:u16, x:u16,
+    // value:u16) triples terminated by a lone 0xFFFF short read as y. Both
+    // MAX_HEIGHT (132) and MAX_WIDTH (396) - and creature/treasure indices,
+    // now that MON_TOTAL_ALLOCATIONS/LEVEL_MAX_OBJECTS are 500/700 - no
+    // longer fit a byte, but all stay well below the 0xFFFF sentinel.
     for i in 0..(MAX_HEIGHT as usize) {
         for j in 0..(MAX_WIDTH as usize) {
             if dg().floor[i][j].creature_id != 0 {
-                wr_byte(i as u8);
-                wr_byte(j as u8);
-                wr_byte(dg().floor[i][j].creature_id);
+                wr_short(i as u16);
+                wr_short(j as u16);
+                wr_short(dg().floor[i][j].creature_id);
             }
         }
     }
 
     // marks end of creature_id info
-    wr_byte(0xFF);
+    wr_short(0xFFFF);
 
     for i in 0..(MAX_HEIGHT as usize) {
         for j in 0..(MAX_WIDTH as usize) {
             if dg().floor[i][j].treasure_id != 0 {
-                wr_byte(i as u8);
-                wr_byte(j as u8);
-                wr_byte(dg().floor[i][j].treasure_id);
+                wr_short(i as u16);
+                wr_short(j as u16);
+                wr_short(dg().floor[i][j].treasure_id);
             }
         }
     }
 
     // marks end of treasure_id info
-    wr_byte(0xFF);
+    wr_short(0xFFFF);
 
     // must set counter to zero, note that code may write out two bytes unnecessarily
     let mut count: i32 = 0;
@@ -724,8 +745,10 @@ fn write_save_data() -> bool {
     // count itself.
     wr_byte(0xC0 | paintings().len() as u8);
     for painting in paintings().iter() {
-        wr_byte(painting.pos.y as u8);
-        wr_byte(painting.pos.x as u8);
+        // jdbkmoria extension: widened from a byte to a short - MAX_WIDTH
+        // (396) no longer fits a u8.
+        wr_short(painting.pos.y as u16);
+        wr_short(painting.pos.x as u16);
         wr_byte(painting_kind_to_u8(painting.kind));
         wr_byte(painting.desc_id);
         wr_short(painting.creature_id);
@@ -744,12 +767,14 @@ fn write_save_data() -> bool {
 // pure serialization core shared by `save_char()` (used by the interactive
 // `save_game()`) and `save_game_state_to_file()` below (used by tests).
 fn write_header_and_save_data() -> bool {
+    // jdbkmoria extension: the save file now stores the save-format version
+    // (see valid_save_format_version above), not the displayed game version.
     *XOR_BYTE.get() = 0;
-    wr_byte(CURRENT_VERSION_MAJOR);
+    wr_byte(SAVE_FORMAT_MAJOR);
     *XOR_BYTE.get() = 0;
-    wr_byte(CURRENT_VERSION_MINOR);
+    wr_byte(SAVE_FORMAT_MINOR);
     *XOR_BYTE.get() = 0;
-    wr_byte(CURRENT_VERSION_PATCH);
+    wr_byte(SAVE_FORMAT_PATCH);
     *XOR_BYTE.get() = 0;
 
     let char_tmp = (random_number(256) - 1) as u8;
@@ -942,9 +967,16 @@ fn restore_from_file(file: File, generate: &mut bool, interactive: bool) -> Opti
 
     *XOR_BYTE.get() = get_byte();
 
-    if !valid_game_version(version_maj, version_min, patch_level) {
+    if !valid_save_format_version(version_maj, version_min, patch_level) {
         if interactive {
-            put_string_clear_to_eol(tr!("Sorry. This save file is from a different version of umoria."), Coord::new(2, 0));
+            // jdbkmoria extension: this now gates the save-format version
+            // (see valid_save_format_version), not the umoria game version;
+            // the message is kept generic since a player has no reason to
+            // care about the distinction - an old save simply won't load.
+            put_string_clear_to_eol(
+                tr!("Sorry. This save file is from a different version of jdbkmoria, or another game altogether."),
+                Coord::new(2, 0),
+            );
         }
         close_fileptr();
         if interactive {
@@ -1225,30 +1257,36 @@ fn restore_from_file(file: File, generate: &mut bool, interactive: bool) -> Opti
         dg().panel.max_rows = rd_short() as i16;
         dg().panel.max_cols = rd_short() as i16;
 
+        // jdbkmoria extension: sparse floor records widened from (y:u8,
+        // x:u8, value:u8) triples terminated by a lone 0xFF byte, to (y:u16,
+        // x:u16, value:u16) triples terminated by a lone 0xFFFF short read
+        // as y (see the matching write side above). Also fixes a bounds
+        // check that used to accept an out-of-range coordinate equal to
+        // MAX_HEIGHT/MAX_WIDTH (`>` instead of `>=`); valid coordinates only
+        // go up to MAX_HEIGHT-1/MAX_WIDTH-1.
+
         // read in the creature ptr info
-        let mut char_tmp = rd_byte();
-        while char_tmp != 0xFF {
-            let ychar = char_tmp;
-            let xchar = rd_byte();
-            char_tmp = rd_byte();
-            if xchar as i32 > MAX_WIDTH || ychar as i32 > MAX_HEIGHT {
+        let mut y_short = rd_short();
+        while y_short != 0xFFFF {
+            let x_short = rd_short();
+            let value = rd_short();
+            if x_short as i32 >= MAX_WIDTH || y_short as i32 >= MAX_HEIGHT {
                 break 'restore false;
             }
-            dg().tile_mut(Coord::new(ychar as i32, xchar as i32)).creature_id = char_tmp;
-            char_tmp = rd_byte();
+            dg().tile_mut(Coord::new(y_short as i32, x_short as i32)).creature_id = value;
+            y_short = rd_short();
         }
 
         // read in the treasure ptr info
-        let mut char_tmp = rd_byte();
-        while char_tmp != 0xFF {
-            let ychar = char_tmp;
-            let xchar = rd_byte();
-            char_tmp = rd_byte();
-            if xchar as i32 > MAX_WIDTH || ychar as i32 > MAX_HEIGHT {
+        let mut y_short = rd_short();
+        while y_short != 0xFFFF {
+            let x_short = rd_short();
+            let value = rd_short();
+            if x_short as i32 >= MAX_WIDTH || y_short as i32 >= MAX_HEIGHT {
                 break 'restore false;
             }
-            dg().tile_mut(Coord::new(ychar as i32, xchar as i32)).treasure_id = char_tmp;
-            char_tmp = rd_byte();
+            dg().tile_mut(Coord::new(y_short as i32, x_short as i32)).treasure_id = value;
+            y_short = rd_short();
         }
 
         // read in the rest of the cave info
@@ -1318,8 +1356,11 @@ fn restore_from_file(file: File, generate: &mut bool, interactive: bool) -> Opti
             }
 
             for _ in 0..painting_count {
-                let y = rd_byte() as i32;
-                let x = rd_byte() as i32;
+                // jdbkmoria extension: widened from a byte to a short - see
+                // the matching write side and the monster/floor coordinate
+                // widenings above.
+                let y = rd_short() as i32;
+                let x = rd_short() as i32;
                 let kind_byte = rd_byte();
                 let desc_id = rd_byte();
                 let creature_id = if is_v1 || is_v2 { rd_short() } else { 0 };
@@ -1420,10 +1461,14 @@ fn restore_from_file(file: File, generate: &mut bool, interactive: bool) -> Opti
     if interactive && game().noscore != 0 {
         print_message(Some(tr!("This save file cannot be used to get on the score board.")));
     }
-    if interactive && valid_game_version(version_maj, version_min, patch_level) && !is_current_game_version(version_maj, version_min, patch_level) {
+    // jdbkmoria extension: compares the save-format version (not the
+    // displayed game version - see valid_save_format_version) against the
+    // current save format, so this only fires on a minor/patch difference;
+    // an outright major mismatch was already rejected above.
+    if interactive && (version_min, patch_level) != (SAVE_FORMAT_MINOR, SAVE_FORMAT_PATCH) {
         let msg = tr_fmt!(
-            "Save file version {}.{} accepted on game version {}.{}.",
-            version_maj, version_min, CURRENT_VERSION_MAJOR, CURRENT_VERSION_MINOR
+            "Save file format {}.{}.{} accepted on current save format {}.{}.{}.",
+            version_maj, version_min, patch_level, SAVE_FORMAT_MAJOR, SAVE_FORMAT_MINOR, SAVE_FORMAT_PATCH
         );
         print_message(Some(&msg));
     }

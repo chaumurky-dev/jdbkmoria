@@ -24,8 +24,9 @@ use crate::treasure_magic::magic_treasure_magical_ability;
 use crate::types::Coord;
 use crate::ui::{ctrl_key, stat_rating, stats_as_string, ESCAPE};
 use crate::ui_io::{
-    clear_screen, get_input_confirmation, get_key_input, get_string_input, put_qio, put_string,
-    put_string_clear_to_eol, terminal_restore_screen, terminal_save_screen, wait_for_continue_key,
+    center_for_dungeon_view, center_for_static_screen, clear_screen, get_input_confirmation, get_key_input,
+    get_string_input, is_static_centered, put_qio, put_string, put_string_clear_to_eol, terminal_restore_screen,
+    terminal_save_screen, wait_for_continue_key,
 };
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, Write};
@@ -57,6 +58,7 @@ pub fn initialize_score_file() -> bool {
 // Attempt to open and print the file containing the intro splash screen text -RAK-
 pub fn display_splash_screen() {
     if let Ok(file) = File::open(config::files::localized(config::files::SPLASH_SCREEN)) {
+        center_for_static_screen();
         clear_screen();
 
         for (i, line) in BufReader::new(file).lines().map_while(Result::ok).enumerate() {
@@ -79,6 +81,11 @@ pub fn display_text_help_file(filename: &str) {
     };
 
     terminal_save_screen();
+    // jdbkmoria extension: reachable both mid-game and during character
+    // creation (a static screen itself), so restore whichever centering
+    // was active before rather than assuming it's always the dungeon view.
+    let was_static = is_static_centered();
+    center_for_static_screen();
 
     let mut lines = BufReader::new(file).lines();
     let mut eof = false;
@@ -100,6 +107,9 @@ pub fn display_text_help_file(filename: &str) {
     }
 
     terminal_restore_screen();
+    if !was_static {
+        center_for_dungeon_view();
+    }
 }
 
 // Open and display a "death" text file
@@ -209,7 +219,7 @@ pub fn output_random_level_objects_to_file() {
         let _ = writeln!(file, "{} {}", item.depth_first_found, description);
     }
 
-    pusht(treasure_id as u8);
+    pusht(treasure_id as u16);
 
     put_string_clear_to_eol(tr!("Completed."), Coord::new(0, 0));
 }

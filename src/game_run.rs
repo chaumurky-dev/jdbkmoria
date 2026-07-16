@@ -218,6 +218,10 @@ pub fn start_moria(seed: u32, start_new_game: bool, roguelike_keys: bool) {
     //
     // Begin the game
     //
+    // jdbkmoria extension: character creation (and, before it, the splash
+    // screen) are classic-centered static screens; switch to the dungeon
+    // view's own centering now that gameplay is starting.
+    crate::ui_io::center_for_dungeon_view();
     clear_screen();
     put_string(tr!("Press ? for help"), Coord::new(0, 63));
     print_character_stats_block();
@@ -1510,7 +1514,12 @@ fn command_locate_on_map() {
             player_coord.x += ((dir_val - 1) % 3 - 1) * SCREEN_WIDTH / 2;
             player_coord.y -= ((dir_val - 1) / 3 - 1) * SCREEN_HEIGHT / 2;
 
-            if player_coord.x < 0 || player_coord.y < 0 || player_coord.x >= dg().width as i32 || player_coord.y >= dg().width as i32 {
+            // jdbkmoria extension: fixed a pre-existing bug (also present in
+            // the upstream C, which uses `width` for both the x and y
+            // checks) where the y-bounds check compared against `dg().width`
+            // instead of `dg().height`, letting the locate command scroll
+            // roughly 3x past the map's actual bottom before stopping.
+            if player_coord.x < 0 || player_coord.y < 0 || player_coord.x >= dg().width as i32 || player_coord.y >= dg().height as i32 {
                 print_message(Some(tr!("You've gone past the end of your map.")));
 
                 player_coord.x -= ((dir_val - 1) % 3 - 1) * SCREEN_WIDTH / 2;

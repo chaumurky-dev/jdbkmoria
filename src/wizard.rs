@@ -511,7 +511,7 @@ pub fn wizard_generate_object() {
 
             // place the object
             let free_treasure_id = popt();
-            dg().tile_mut(coord).treasure_id = free_treasure_id as u8;
+            dg().tile_mut(coord).treasure_id = free_treasure_id as u16;
             inventory_item_copy_to(id as usize, &mut game().treasure.list[free_treasure_id as usize]);
             magic_treasure_magical_ability(free_treasure_id, dg().current_level as i32);
 
@@ -681,7 +681,7 @@ pub fn wizard_create_objects() {
         let allocated_id = popt();
 
         game().treasure.list[allocated_id as usize] = item;
-        dg().tile_mut(pos).treasure_id = allocated_id as u8;
+        dg().tile_mut(pos).treasure_id = allocated_id as u16;
 
         print_message(Some(tr!("Allocated.")));
     } else {

@@ -33,8 +33,11 @@
 // - Teleport: looking at it flings the player across the level.
 // - SleepGas: looking at it lulls the player into an enchanted sleep.
 // - LevelMap: exactly one per level; looking at it reveals the level map.
-//   On dungeon level 1 it is the painting nearest the character's arrival
-//   position.
+//   On dungeon levels 1 and 2 it is always very close to hand: whichever
+//   lit-room hangable wall tile is nearest the character's arrival
+//   position gets the map, whether that means designating a painting
+//   already hanging there or hanging a fresh one on the spot. On other
+//   levels it is a random painting.
 //
 // Any painting that is not the level map and holds no monster can be
 // reached into, but at least half of all reaches come away empty-handed.
@@ -66,7 +69,7 @@ use crate::dice::{dice_roll, max_dice_roll, Dice};
 use crate::dungeon::{
     cave_tile_visible, coord_distance_between, coord_in_bounds, dg, dungeon_lite_spot,
 };
-use crate::dungeon_tile::{MAX_CAVE_FLOOR, MIN_CAVE_WALL, TILE_BOUNDARY_WALL};
+use crate::dungeon_tile::{MAX_CAVE_FLOOR, MIN_CAVE_WALL, TILE_BOUNDARY_WALL, TILE_LIGHT_FLOOR};
 use crate::game::{game, get_direction_with_memory, random_number, sorted_objects};
 use crate::game_objects::{item_get_random_object_id, popt, pusht};
 use crate::globals::RacyCell;
@@ -532,6 +535,67 @@ fn is_hangable_wall(coord: Coord) -> bool {
     false
 }
 
+// A wall tile is "in a lit room": like is_hangable_wall, but the adjacent
+// floor must specifically be a lit room floor, not a corridor (TILE_CORR_FLOOR)
+// or a dark room (TILE_DARK_FLOOR). Used to keep the level-map painting on
+// dungeon levels 1-2 always easy to find.
+fn is_lit_room_wall(coord: Coord) -> bool {
+    for (dy, dx) in [(-1, 0), (1, 0), (0, -1), (0, 1)] {
+        let neighbor = Coord::new(coord.y + dy, coord.x + dx);
+        if coord_in_bounds(neighbor) && dg().tile(neighbor).feature_id == TILE_LIGHT_FLOOR {
+            return true;
+        }
+    }
+
+    false
+}
+
+// The already-hung painting nearest `pos`, with no lit-room requirement.
+// This is the original (pre-lit-room) rule for the level-1 map painting,
+// and doubles as the deepest fallback if a level has no lit room at all.
+fn nearest_painting_index(pos: Coord) -> usize {
+    let mut nearest = 0;
+    let mut nearest_distance = i32::MAX;
+    for (i, painting) in paintings().iter().enumerate() {
+        let distance = coord_distance_between(pos, painting.pos);
+        if distance < nearest_distance {
+            nearest_distance = distance;
+            nearest = i;
+        }
+    }
+    nearest
+}
+
+// The lit-room hangable wall tile nearest `pos`, found by scanning the
+// whole level -- not just the walls that already happen to hold a
+// painting. A tile that already holds a painting is a perfectly good
+// answer (the caller designates that painting as the map rather than
+// hanging a new one); this is what keeps the level 1-2 map painting truly
+// nearest the character's start, rather than merely nearest among the
+// ~50 paintings already scattered across the level. None if the level has
+// no lit room at all.
+fn nearest_lit_hangable_wall(pos: Coord) -> Option<Coord> {
+    let mut nearest = None;
+    let mut nearest_distance = i32::MAX;
+
+    for y in 1..=(dg().height as i32 - 2) {
+        for x in 1..=(dg().width as i32 - 2) {
+            let coord = Coord::new(y, x);
+            if !is_hangable_wall(coord) || !is_lit_room_wall(coord) {
+                continue;
+            }
+
+            let distance = coord_distance_between(pos, coord);
+            if distance < nearest_distance {
+                nearest_distance = distance;
+                nearest = Some(coord);
+            }
+        }
+    }
+
+    nearest
+}
+
 // Hang paintings on the freshly generated level. Called at the end of
 // dungeon generation, after the character's starting position is set (the
 // level-map painting on dungeon level 1 must be the one nearest to it).
@@ -560,19 +624,30 @@ pub fn place_paintings() {
         return;
     }
 
-    // Exactly one painting per level is a map of the level. On the first
-    // dungeon level it is the painting nearest the character's start.
-    let map_id = if dg().current_level == 1 {
-        let mut nearest = 0;
-        let mut nearest_distance = i32::MAX;
-        for (i, painting) in paintings().iter().enumerate() {
-            let distance = coord_distance_between(py().pos, painting.pos);
-            if distance < nearest_distance {
-                nearest_distance = distance;
-                nearest = i;
-            }
+    // Exactly one painting per level is a map of the level. On dungeon
+    // levels 1-2 it must be VERY close to the character's start: scan the
+    // whole level for the lit-room hangable wall tile nearest `py().pos`
+    // (regardless of whether a painting already hangs there) and designate
+    // whatever ends up on that wall -- the painting already there, or a
+    // freshly hung one if the nearest such wall was still bare. This is
+    // deliberately not "nearest among the ~50 paintings already placed
+    // above": with paintings scattered across the whole (large) level, that
+    // painting can be many tiles away in another room. If the level has no
+    // lit room at all, fall back to the original rule: nearest painting
+    // overall on level 1, random elsewhere.
+    let map_id = if dg().current_level == 1 || dg().current_level == 2 {
+        match nearest_lit_hangable_wall(py().pos) {
+            Some(coord) => match painting_index_at(coord) {
+                Some(i) => i,
+                None => {
+                    let painting = roll_new_painting(coord);
+                    paintings().push(painting);
+                    paintings().len() - 1
+                }
+            },
+            None if dg().current_level == 1 => nearest_painting_index(py().pos),
+            None => (random_number(paintings().len() as i32) - 1) as usize,
         }
-        nearest
     } else {
         (random_number(paintings().len() as i32) - 1) as usize
     };
@@ -631,7 +706,7 @@ fn painting_grab_item() -> bool {
     inventory_item_copy_to(sorted_objects()[object_id as usize] as usize, &mut game().treasure.list[free_treasure_id]);
     crate::treasure_magic::magic_treasure_magical_ability(free_treasure_id as i32, level());
     let mut item = game().treasure.list[free_treasure_id];
-    pusht(free_treasure_id as u8);
+    pusht(free_treasure_id as u16);
 
     if !inventory_can_carry_item_count(&item) {
         // No room in the pack: set it down at the character's feet if the
@@ -639,7 +714,7 @@ fn painting_grab_item() -> bool {
         if dg().tile(py().pos).treasure_id == 0 {
             let floor_id = popt() as usize;
             game().treasure.list[floor_id] = item;
-            dg().tile_mut(py().pos).treasure_id = floor_id as u8;
+            dg().tile_mut(py().pos).treasure_id = floor_id as u16;
             print_message(Some(tr!("Your pack is full; it tumbles to the floor at your feet.")));
             return true;
         }

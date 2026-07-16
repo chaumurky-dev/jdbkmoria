@@ -27,6 +27,7 @@ Options:
     -s NUMBER    Game Seed, as a decimal number (max: 2147483647)
     -l LOCALE    Locale (en_US, en_GB, fr_CA); overrides JDBKMORIA_LOCALE
                  and the system locale (LC_ALL/LC_MESSAGES/LANG)
+    -W COLSxLINES Force a specific terminal window size (default: auto-fit to terminal, min 80x24)
 
     -v           Print version info and exit
     -h           Display this message
@@ -37,6 +38,8 @@ fn main() {
     let mut seed: u32 = 0;
     let mut new_game = false;
     let mut roguelike_keys = false;
+    let mut window_size: Option<(i32, i32)> = None;
+    let mut show_scores = false;
 
     // jdbkmoria extension: pick up the locale from JDBKMORIA_LOCALE or the
     // system environment before anything prints; `-l` below overrides it.
@@ -65,10 +68,6 @@ fn main() {
         std::process::exit(1);
     }
 
-    if !terminal_initialize() {
-        std::process::exit(1);
-    }
-
     // check for user interface option
     let args: Vec<String> = std::env::args().skip(1).collect();
     let mut i = 0;
@@ -87,8 +86,7 @@ fn main() {
                 roguelike_keys = true;
             }
             Some('d') => {
-                show_scores_screen();
-                exit_program();
+                show_scores = true;
             }
             Some('s') => {
                 // No NUMBER provided?
@@ -105,6 +103,20 @@ fn main() {
                         "{}",
                         jdbkmoria::tr!("Game seed must be a decimal number between 1 and 2147483647")
                     );
+                    std::process::exit(-1);
+                }
+            }
+            Some('W') => {
+                // No COLSxLINES provided?
+                if i + 1 >= args.len() {
+                    break;
+                }
+                i += 1;
+                if let Some((cols, lines)) = parse_window_size(&args[i]) {
+                    window_size = Some((cols, lines));
+                } else {
+                    terminal_restore();
+                    println!("{}", jdbkmoria::tr!("Window size must be COLSxLINES, e.g. -W 120x50"));
                     std::process::exit(-1);
                 }
             }
@@ -160,6 +172,15 @@ fn main() {
         config::files::set_save_game(&args[i]);
     }
 
+    if !terminal_initialize(window_size) {
+        std::process::exit(1);
+    }
+
+    if show_scores {
+        show_scores_screen();
+        exit_program();
+    }
+
     start_moria(seed, new_game, roguelike_keys);
 }
 
@@ -176,4 +197,20 @@ fn parse_game_seed(argv: &str, seed: &mut u32) -> bool {
     *seed = value as u32;
 
     true
+}
+
+// Parses a "COLSxLINES" window-size string, e.g. "120x50".
+fn parse_window_size(argv: &str) -> Option<(i32, i32)> {
+    let (cols_str, lines_str) = argv.split_once('x')?;
+
+    let mut cols = 0;
+    let mut lines = 0;
+    if !string_to_number(cols_str, &mut cols) || !string_to_number(lines_str, &mut lines) {
+        return None;
+    }
+    if cols <= 0 || lines <= 0 {
+        return None;
+    }
+
+    Some((cols, lines))
 }

@@ -11,10 +11,10 @@
 
 use jdbkmoria::data_creatures::CREATURES_LIST;
 use jdbkmoria::data_paintings::SWARM_PAINTING_TEMPLATES;
-use jdbkmoria::dungeon::{coord_distance_between, dg};
+use jdbkmoria::dungeon::{coord_distance_between, coord_in_bounds, dg};
 use jdbkmoria::dungeon_generate::generate_cave;
 use jdbkmoria::game_run::{initialize_monster_levels, initialize_treasure_levels};
-use jdbkmoria::dungeon_tile::{MAX_CAVE_FLOOR, MIN_CAVE_WALL, TILE_BOUNDARY_WALL};
+use jdbkmoria::dungeon_tile::{MAX_CAVE_FLOOR, MIN_CAVE_WALL, TILE_BOUNDARY_WALL, TILE_LIGHT_FLOOR};
 use jdbkmoria::paintings::{
     painting_from_legacy_save, painting_from_save, painting_index_at, painting_kind_from_u8, painting_kind_to_u8,
     paintings, remove_painting_at, PaintingKind,
@@ -100,15 +100,80 @@ fn painting_placement() {
     }
     assert_eq!(map_paintings, 1, "expected exactly one level-map painting");
 
-    // On dungeon level 1 the map painting is the one nearest the start.
+    // On dungeon levels 1-2 the map painting must always hang in a lit
+    // room, and it must be VERY close to the character's start: the
+    // nearest lit-room hangable wall tile on the whole level, not merely
+    // the nearest among the ~50 paintings that happened to get placed
+    // (which can be many tiles away in another room on a map this size).
+    let is_lit_room_wall = |coord: Coord| -> bool {
+        [(-1, 0), (1, 0), (0, -1), (0, 1)].iter().any(|&(dy, dx)| {
+            let neighbor = Coord::new(coord.y + dy, coord.x + dx);
+            coord_in_bounds(neighbor) && dg().tile(neighbor).feature_id == TILE_LIGHT_FLOOR
+        })
+    };
+
+    // Mirrors src/paintings.rs's is_hangable_wall: a non-boundary wall
+    // tile with at least one orthogonally adjacent floor tile.
+    let is_hangable_wall = |coord: Coord| -> bool {
+        let feature_id = dg().tile(coord).feature_id;
+        if feature_id < MIN_CAVE_WALL || feature_id == TILE_BOUNDARY_WALL {
+            return false;
+        }
+        [(-1, 0), (1, 0), (0, -1), (0, 1)].iter().any(|&(dy, dx)| {
+            let neighbor = Coord::new(coord.y + dy, coord.x + dx);
+            coord_in_bounds(neighbor) && dg().tile(neighbor).feature_id <= MAX_CAVE_FLOOR
+        })
+    };
+
+    // Scans the whole level for the lit-room hangable wall tile nearest
+    // `pos`, mirroring src/paintings.rs's nearest_lit_hangable_wall.
+    let nearest_lit_hangable_wall_distance = |pos: Coord| -> i32 {
+        let mut nearest_distance = i32::MAX;
+        for y in 1..=(dg().height as i32 - 2) {
+            for x in 1..=(dg().width as i32 - 2) {
+                let coord = Coord::new(y, x);
+                if !is_hangable_wall(coord) || !is_lit_room_wall(coord) {
+                    continue;
+                }
+                nearest_distance = nearest_distance.min(coord_distance_between(pos, coord));
+            }
+        }
+        nearest_distance
+    };
+
+    // A generous sanity bound on how far the level 1-2 map painting can
+    // land from the start. Observed distances across seeds 1..=30 on both
+    // levels: mostly single digits (median 2), with rare outliers up to 24
+    // when the character's randomly chosen start tile happens to land deep
+    // in a corridor far from any lit room (dungeon_new_spot picks any open
+    // floor tile on the level, not necessarily inside a room). 60 is
+    // comfortably above the observed max while still catching a regression
+    // to "nearest among the ~50 placed paintings", which routinely lands
+    // far further away on a map this size.
+    const MAP_PAINTING_MAX_DISTANCE: i32 = 60;
+
     let map_painting = *paintings().iter().find(|p| p.kind == PaintingKind::LevelMap).unwrap();
+    assert!(
+        is_lit_room_wall(map_painting.pos),
+        "the level-map painting at ({}, {}) does not hang in a lit room",
+        map_painting.pos.y,
+        map_painting.pos.x
+    );
+
     let map_distance = coord_distance_between(py().pos, map_painting.pos);
-    for painting in paintings().iter() {
-        assert!(
-            coord_distance_between(py().pos, painting.pos) >= map_distance,
-            "a painting is closer to the start than the level map"
-        );
-    }
+    assert_eq!(
+        map_distance,
+        nearest_lit_hangable_wall_distance(py().pos),
+        "the level-map painting at ({}, {}) is not on the lit-room hangable wall nearest the start",
+        map_painting.pos.y,
+        map_painting.pos.x
+    );
+    assert!(
+        map_distance <= MAP_PAINTING_MAX_DISTANCE,
+        "level-1 map painting distance {} exceeds the sanity bound of {}",
+        map_distance,
+        MAP_PAINTING_MAX_DISTANCE
+    );
 
     // Registry helpers.
     let pos = paintings()[0].pos;
@@ -200,6 +265,42 @@ fn painting_placement() {
         .expect("a v1-style MeleeMonster record should be accepted");
     assert_eq!(v1_style.kind, PaintingKind::MeleeMonster);
     assert_eq!(v1_style.loot, 0);
+
+    // On dungeon level 2 (each room lit with 24/25 probability, so this is
+    // not a certainty per room but should hold across a handful of seeds),
+    // the map painting must also hang in a lit room, on the lit-room
+    // hangable wall nearest the start, and within the same sanity bound.
+    for seed in [1u32, 2, 3, 4, 5] {
+        set_random_seed(seed);
+        dg().current_level = 2;
+        generate_cave();
+
+        let map_painting = *paintings().iter().find(|p| p.kind == PaintingKind::LevelMap).unwrap();
+        assert!(
+            is_lit_room_wall(map_painting.pos),
+            "seed {}: the level-2 map painting at ({}, {}) does not hang in a lit room",
+            seed,
+            map_painting.pos.y,
+            map_painting.pos.x
+        );
+
+        let map_distance = coord_distance_between(py().pos, map_painting.pos);
+        assert_eq!(
+            map_distance,
+            nearest_lit_hangable_wall_distance(py().pos),
+            "seed {}: the level-2 map painting at ({}, {}) is not on the lit-room hangable wall nearest the start",
+            seed,
+            map_painting.pos.y,
+            map_painting.pos.x
+        );
+        assert!(
+            map_distance <= MAP_PAINTING_MAX_DISTANCE,
+            "seed {}: level-2 map painting distance {} exceeds the sanity bound of {}",
+            seed,
+            map_distance,
+            MAP_PAINTING_MAX_DISTANCE
+        );
+    }
 
     // Swarm placement across several generated levels/seeds: a Swarm roll
     // is only ~5% per painting slot, so pool several regenerated levels

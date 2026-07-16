@@ -74,7 +74,7 @@ pub fn popt() -> i32 {
 // Pushes a record back onto free space list -RAK-
 // `dungeon_delete_object()` should always be called instead, unless the object
 // in question is not in the dungeon, e.g. in store1.c and files.c
-pub fn pusht(treasure_id: u8) {
+pub fn pusht(treasure_id: u16) {
     if treasure_id as i16 != game().treasure.current_id - 1 {
         let last = (game().treasure.current_id - 1) as usize;
         game().treasure.list[treasure_id as usize] = game().treasure.list[last];

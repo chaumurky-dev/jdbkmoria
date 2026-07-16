@@ -74,7 +74,12 @@ pub const MON_ATTACK_TYPES: usize = 215; // Number of monster attack types.
 
 // With MON_TOTAL_ALLOCATIONS set to 101, it is possible to get compacting
 // monsters messages while breeding/cloning monsters.
-pub const MON_TOTAL_ALLOCATIONS: usize = 125; // Max that can be allocated
+// jdbkmoria extension: scaled x4 (125 -> 500) to match the level content
+// density increase that came with quadrupling the dungeon's area (see
+// MAX_HEIGHT/MAX_WIDTH in dungeon.rs). Save-format safe: the save file
+// stores an explicit monster count, validated against this constant on load
+// (see game_save.rs).
+pub const MON_TOTAL_ALLOCATIONS: usize = 500; // Max that can be allocated
 pub const MON_MAX_LEVELS: usize = 40; // Maximum level of creatures
 pub const MON_MAX_ATTACKS: usize = 4; // Max num attacks (used in mons memory) -CJS-
 
@@ -609,7 +614,7 @@ fn glyph_of_warding_protection(creature_id: u16, move_bits: u32, do_move: &mut b
     }
 }
 
-fn monster_moves_on_player(monster_id: i32, creature_id: u8, move_bits: u32, do_move: &mut bool, do_turn: &mut bool, rcmove: &mut u32, coord: Coord) {
+fn monster_moves_on_player(monster_id: i32, creature_id: u16, move_bits: u32, do_move: &mut bool, do_turn: &mut bool, rcmove: &mut u32, coord: Coord) {
     let monster = monsters()[monster_id as usize];
 
     if creature_id == 1 {
@@ -669,7 +674,7 @@ fn monster_allowed_to_move(monster_id: i32, move_bits: u32, do_turn: &mut bool, 
     }
 
     monsters()[monster_id as usize].pos = coord;
-    monsters()[monster_id as usize].distance_from_player = coord_distance_between(py().pos, coord) as u8;
+    monsters()[monster_id as usize].distance_from_player = coord_distance_between(py().pos, coord).min(255) as u8;
 
     *do_turn = true;
 }
@@ -1410,7 +1415,7 @@ pub fn update_monsters(attack: bool) {
         }
 
         let pos = monsters()[id as usize].pos;
-        monsters()[id as usize].distance_from_player = coord_distance_between(py().pos, pos) as u8;
+        monsters()[id as usize].distance_from_player = coord_distance_between(py().pos, pos).min(255) as u8;
 
         // Attack is argument passed to CREATURE
         if attack {

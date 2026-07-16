@@ -10,9 +10,14 @@ use crate::tr;
 use crate::ui::Panel;
 
 // Dungeon size parameters
-pub const RATIO: i32 = 3; // Size ratio of the Map screen
-pub const MAX_HEIGHT: i32 = 66; // Multiple of 11; >= 22
-pub const MAX_WIDTH: i32 = 198; // Multiple of 33; >= 66
+// jdbkmoria extension: MAX_HEIGHT/MAX_WIDTH doubled in each dimension (4x
+// area) to keep level density from feeling sparse relative to the widened
+// terminal viewport (see src/ui.rs's view_height()/view_width()); level
+// content generation was scaled x4 to match (config.rs, dungeon_generate.rs).
+// The town (SCREEN_HEIGHT/SCREEN_WIDTH) is untouched, and remains save/format
+// compatible in shape - only the general dungeon footprint grew.
+pub const MAX_HEIGHT: i32 = 132; // Multiple of 11; >= 22
+pub const MAX_WIDTH: i32 = 396; // Multiple of 33; >= 66
 pub const SCREEN_HEIGHT: i32 = 22;
 pub const SCREEN_WIDTH: i32 = 66;
 pub const QUART_HEIGHT: i32 = SCREEN_HEIGHT / 4;
@@ -105,6 +110,23 @@ use crate::ui_io::{
     terminal_restore_screen, terminal_save_screen,
 };
 
+// jdbkmoria extension: the shrink ratio used to be a fixed `RATIO = 3`
+// constant (66x198 -> 22x66, fitting the classic 80x24 terminal). Now that
+// MAX_HEIGHT/MAX_WIDTH are doubled, a fixed ratio of 3 would produce a
+// 44x132 map that no longer fits a classic terminal. Pick the finest ratio
+// (smallest divisor, i.e. the least amount of shrinking) from {2, 3, 6} that
+// still fits the current viewport, falling back to 6 - which reproduces the
+// classic 22x66 footprint and is guaranteed to fit, since the viewport is
+// never smaller than that (see ui::set_view_size).
+fn map_display_ratio() -> i32 {
+    for r in [2, 3, 6] {
+        if MAX_HEIGHT / r <= crate::ui::view_height() && MAX_WIDTH / r <= crate::ui::view_width() {
+            return r;
+        }
+    }
+    6
+}
+
 // dungeon_display_map shrinks the dungeon to a single screen
 pub fn dungeon_display_map() {
     // Save the game screen
@@ -120,9 +142,10 @@ pub fn dungeon_display_map() {
     priority[92] = -3; // char '\'
     priority[32] = -15; // char ' '
 
-    // Display highest priority object in the RATIO, by RATIO area
-    let panel_width = (MAX_WIDTH / RATIO) as usize;
-    let panel_height = MAX_HEIGHT / RATIO;
+    // Display highest priority object in the ratio, by ratio area
+    let ratio = map_display_ratio();
+    let panel_width = (MAX_WIDTH / ratio) as usize;
+    let panel_height = MAX_HEIGHT / ratio;
 
     let mut map: Vec<u8> = vec![b' '; panel_width];
 
@@ -147,7 +170,7 @@ pub fn dungeon_display_map() {
 
     // Shrink the dungeon!
     for y in 0..MAX_HEIGHT {
-        let row = y / RATIO;
+        let row = y / ratio;
         if row != line {
             if line >= 0 {
                 let line_buffer = format!("|{}|", String::from_utf8_lossy(&map));
@@ -158,7 +181,7 @@ pub fn dungeon_display_map() {
         }
 
         for x in 0..MAX_WIDTH {
-            let col = (x / RATIO) as usize;
+            let col = (x / ratio) as usize;
             let cave_char = cave_get_tile_symbol(Coord::new(y, x));
             if priority[map[col] as usize] < priority[cave_char as u8 as usize] {
                 map[col] = cave_char as u8;
@@ -313,7 +336,7 @@ pub fn cave_tile_visible(coord: Coord) -> bool {
 // Places a particular trap at location y, x -RAK-
 pub fn dungeon_set_trap(coord: Coord, sub_type_id: i32) {
     let free_treasure_id = popt() as usize;
-    dg().tile_mut(coord).treasure_id = free_treasure_id as u8;
+    dg().tile_mut(coord).treasure_id = free_treasure_id as u16;
     inventory_item_copy_to(config::dungeon::objects::OBJ_TRAP_LIST as usize + sub_type_id as usize, &mut game().treasure.list[free_treasure_id]);
 }
 
@@ -342,7 +365,7 @@ pub fn trap_change_visibility(coord: Coord) {
 // Places rubble at location y, x -RAK-
 pub fn dungeon_place_rubble(coord: Coord) {
     let free_treasure_id = popt() as usize;
-    dg().tile_mut(coord).treasure_id = free_treasure_id as u8;
+    dg().tile_mut(coord).treasure_id = free_treasure_id as u16;
     dg().tile_mut(coord).feature_id = TILE_BLOCKED_FLOOR;
     inventory_item_copy_to(config::dungeon::objects::OBJ_RUBBLE as usize, &mut game().treasure.list[free_treasure_id]);
 }
@@ -361,7 +384,7 @@ pub fn dungeon_place_gold(coord: Coord) {
         gold_type_id = config::dungeon::objects::MAX_GOLD_TYPES as i32 - 1;
     }
 
-    dg().tile_mut(coord).treasure_id = free_treasure_id as u8;
+    dg().tile_mut(coord).treasure_id = free_treasure_id as u16;
     inventory_item_copy_to(config::dungeon::objects::OBJ_GOLD_LIST as usize + gold_type_id as usize, &mut game().treasure.list[free_treasure_id]);
     let cost = game().treasure.list[free_treasure_id].cost;
     game().treasure.list[free_treasure_id].cost += 8 * random_number(cost) + random_number(8);
@@ -375,7 +398,7 @@ pub fn dungeon_place_gold(coord: Coord) {
 pub fn dungeon_place_random_object_at(coord: Coord, must_be_small: bool) {
     let free_treasure_id = popt() as usize;
 
-    dg().tile_mut(coord).treasure_id = free_treasure_id as u8;
+    dg().tile_mut(coord).treasure_id = free_treasure_id as u16;
 
     let object_id = item_get_random_object_id(dg().current_level as i32, must_be_small);
     inventory_item_copy_to(sorted_objects()[object_id as usize] as usize, &mut game().treasure.list[free_treasure_id]);
@@ -629,7 +652,7 @@ pub fn dungeon_delete_monster_record(id: i32) {
     let monster = monsters()[last_id];
 
     if id as usize != last_id {
-        dg().tile_mut(monster.pos).creature_id = id as u8;
+        dg().tile_mut(monster.pos).creature_id = id as u16;
         monsters()[id as usize] = monsters()[last_id];
     }
 

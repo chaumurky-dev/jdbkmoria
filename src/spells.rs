@@ -607,7 +607,7 @@ pub fn spell_surround_player_with_doors() -> bool {
 
                 let free_id = popt();
                 dg().tile_mut(coord).feature_id = TILE_BLOCKED_FLOOR;
-                dg().tile_mut(coord).treasure_id = free_id as u8;
+                dg().tile_mut(coord).treasure_id = free_id as u16;
 
                 inventory_item_copy_to(config::dungeon::objects::OBJ_CLOSED_DOOR as usize, &mut game().treasure.list[free_id as usize]);
                 dungeon_lite_spot(coord);
@@ -1782,7 +1782,7 @@ pub fn spell_teleport_away_monster(monster_id: i32, distance_from_player: i32) {
     // this is necessary, because the creature is
     // not currently visible in its new position.
     monsters()[monster_id as usize].lit = false;
-    monsters()[monster_id as usize].distance_from_player = coord_distance_between(py().pos, coord) as u8;
+    monsters()[monster_id as usize].distance_from_player = coord_distance_between(py().pos, coord).min(255) as u8;
 
     monster_update_visibility(monster_id);
 }
@@ -2263,7 +2263,7 @@ pub fn spell_warding_glyph() {
     let pos = py().pos;
     if dg().tile(pos).treasure_id == 0 {
         let free_id = popt();
-        dg().tile_mut(pos).treasure_id = free_id as u8;
+        dg().tile_mut(pos).treasure_id = free_id as u16;
         inventory_item_copy_to(config::dungeon::objects::OBJ_SCARE_MON as usize, &mut game().treasure.list[free_id as usize]);
     }
 }

@@ -19,7 +19,10 @@ use crate::ui::{
     get_character_name, print_character_abilities, print_character_information, print_character_level_experience, print_character_stats,
     print_character_vital_statistics, ESCAPE,
 };
-use crate::ui_io::{clear_to_bottom, erase_line, get_key_input, move_cursor, put_string, put_string_clear_to_eol, terminal_bell_sound};
+use crate::ui_io::{
+    center_for_static_screen, clear_to_bottom, erase_line, get_key_input, move_cursor, put_string,
+    put_string_clear_to_eol, terminal_bell_sound,
+};
 use crate::tr;
 
 // Race type for the generated player character
@@ -594,6 +597,10 @@ fn player_calculate_start_gold() {
 
 // Main Character Creation Routine -JWT-
 pub fn character_create() {
+    // jdbkmoria extension: a classic static screen (the caller switches
+    // back to the dungeon view's own centering once gameplay starts).
+    center_for_static_screen();
+
     print_character_information();
     character_choose_race();
     character_set_gender();

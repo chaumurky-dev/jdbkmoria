@@ -21,7 +21,7 @@ use crate::ui_io::{print_message, print_message_no_command_interrupt};
 // Don't let the player tunnel somewhere illegal, this is necessary to
 // prevent the player from getting a free attack by trying to tunnel
 // somewhere where it has no effect.
-fn player_can_tunnel(treasure_id: u8, tile_id: u8) -> bool {
+fn player_can_tunnel(treasure_id: u16, tile_id: u8) -> bool {
     if tile_id < MIN_CAVE_WALL
         && (treasure_id == 0
             || (game().treasure.list[treasure_id as usize].category_id != TV_RUBBLE

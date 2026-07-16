@@ -27,7 +27,7 @@ use crate::types::Coord;
 use crate::ui::draw_cave_panel;
 use crate::ui_inventory::{inventory_execute_command, inventory_get_input_for_item_id};
 use crate::ui_io::{
-    clear_screen, erase_line, get_command, get_menu_item_id, get_string_input, message_line_clear, message_ready_to_print, move_cursor, print_message, put_string,
+    center_for_static_screen, clear_screen, erase_line, get_command, get_menu_item_id, get_string_input, message_line_clear, message_ready_to_print, move_cursor, print_message, put_string,
     put_string_clear_to_eol, terminal_bell_sound,
 };
 
@@ -1077,6 +1077,10 @@ pub fn store_enter(store_id: i32) {
         print_message(Some(crate::tr!("The doors are locked.")));
         return;
     }
+
+    // jdbkmoria extension: a classic static screen (store.rs's own exit
+    // path calls draw_cave_panel(), which switches back).
+    center_for_static_screen();
 
     let mut current_top_item_id: i32 = 0;
     display_store(store_id, crate::tr!(STORE_OWNERS[store.owner_id as usize].name), current_top_item_id);

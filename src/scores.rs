@@ -17,7 +17,7 @@ use crate::player::{player_is_male, py, PLAYER_NAME_SIZE};
 use crate::store_inventory::store_item_value;
 use crate::types::Coord;
 use crate::ui::ESCAPE;
-use crate::ui_io::{clear_screen, erase_line, get_key_input, panic_save, print_message, put_string_clear_to_eol};
+use crate::ui_io::{center_for_static_screen, clear_screen, erase_line, get_key_input, panic_save, print_message, put_string_clear_to_eol};
 use crate::version::{CURRENT_VERSION_MAJOR, CURRENT_VERSION_MINOR, CURRENT_VERSION_PATCH};
 use crate::{tr, tr_fmt};
 
@@ -277,6 +277,12 @@ pub fn record_new_high_score() {
 }
 
 pub fn show_scores_screen() {
+    // jdbkmoria extension: a classic static screen, reachable both at game
+    // end (already static, see end_game()) and directly via `-d` before any
+    // other screen has run — the default mode is already fine for that
+    // second case, but set it explicitly so this doesn't depend on order.
+    center_for_static_screen();
+
     let file = match File::open(config::files::SCORES) {
         Ok(f) => f,
         Err(_) => {
@@ -296,7 +302,9 @@ pub fn show_scores_screen() {
 
     // If score data present, check if a valid game version
     if !eof_hit() && !valid_game_version(version_maj, version_min, patch_level) {
-        print_message(Some(tr!("Sorry. This score file is from a different version of umoria.")));
+        print_message(Some(tr!(
+            "Sorry. This score file is from a different version of jdbkmoria, or another game altogether."
+        )));
         print_message(None);
         close_fileptr();
         return;

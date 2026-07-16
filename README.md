@@ -49,6 +49,7 @@ Options:
     -d           Display high scores and exit
     -s NUMBER    Game Seed, as a decimal number (max: 2147483647)
     -l LOCALE    Locale (en_US, en_GB, fr_CA)
+    -W COLSxLINES Force a specific terminal window size (default: auto-fit to terminal, min 80x24)
     -v           Print version info and exit
     -h           Display this message
 ```
@@ -99,6 +100,15 @@ Gameplay is otherwise unchanged, but the terminal input handling accepts a few e
   followed by the direction (or the shifted letter in roguelike-keys mode).
   This requires a terminal that sends xterm-style modified sequences for
   shifted keys (most modern terminal emulators do).
+
+### Screen size
+
+The dungeon view fills the whole terminal window by default (up to a full
+132×396 level), instead of always drawing into a fixed 80×24 corner. Use `-W
+COLSxLINES` (e.g. `-W 100x30`) to force a specific size instead; it's
+clamped between the classic 80×24 minimum and the full-level maximum.
+Dungeon generation, monster placement, and the save format are all unchanged
+by this — only how much of the generated level is visible at once.
 
 ### Locales
 

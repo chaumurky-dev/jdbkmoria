@@ -48,6 +48,36 @@ pub const MESSAGE_HISTORY_SIZE: usize = 22;
 // Column for stats
 pub const STAT_COLUMN: i32 = 0;
 
+// jdbkmoria extension: the on-screen dungeon viewport size, independent of
+// SCREEN_HEIGHT/SCREEN_WIDTH (which drive dungeon generation and must stay
+// untouched for save/gameplay compatibility, see PORTING.md). Defaults to
+// the classic size so anything that never calls `set_view_size` behaves
+// exactly as upstream; `terminal_initialize` grows it to fit the terminal.
+static VIEW_HEIGHT: RacyCell<i32> = RacyCell::new(SCREEN_HEIGHT);
+static VIEW_WIDTH: RacyCell<i32> = RacyCell::new(SCREEN_WIDTH);
+
+pub fn view_height() -> i32 {
+    *VIEW_HEIGHT.get()
+}
+
+pub fn view_width() -> i32 {
+    *VIEW_WIDTH.get()
+}
+
+// Clamps into [SCREEN_HEIGHT, MAX_HEIGHT] / [SCREEN_WIDTH, MAX_WIDTH]: never
+// smaller than the classic viewport, never bigger than a full dungeon level.
+pub fn set_view_size(height: i32, width: i32) {
+    *VIEW_HEIGHT.get() = height.clamp(SCREEN_HEIGHT, MAX_HEIGHT);
+    *VIEW_WIDTH.get() = width.clamp(SCREEN_WIDTH, MAX_WIDTH);
+}
+
+// Row of the live status line (hunger/blind/speed/depth/... fields), just
+// below the dungeon panel. Row 22 (the wizard/winner indicator line just
+// above it) is `status_line_row() - 1`.
+pub fn status_line_row() -> i32 {
+    view_height() + 1
+}
+
 pub const fn ctrl_key(x: char) -> char {
     ((x as u8) & 0x1F) as char
 }
@@ -58,9 +88,10 @@ pub const ESCAPE: char = '\x1b'; // ESCAPE character -CJS-
 
 use crate::config;
 use crate::data_player::{CLASSES, CLASS_LEVEL_ADJ, CHARACTER_RACES, MAGIC_SPELLS, SPELL_NAMES};
-use crate::dungeon::{dg, SCREEN_HEIGHT, SCREEN_WIDTH};
+use crate::dungeon::{dg, MAX_HEIGHT, MAX_WIDTH, SCREEN_HEIGHT, SCREEN_WIDTH};
 use crate::dungeon_tile::TILE_LIGHT_FLOOR;
 use crate::game::game;
+use crate::globals::RacyCell;
 use crate::mage_spells::spell_chance_of_success;
 use crate::player::{
     py, player_calculate_allowed_spells_count, player_calculate_hit_points,
@@ -99,6 +130,13 @@ fn panel_bounds() {
 // when a move off the screen has occurred and figures new borders.
 // `force` forces the panel bounds to be recalculated, useful for 'W'here.
 pub fn coord_outside_panel(coord: Coord, force: bool) -> bool {
+    // jdbkmoria extension: with an enlarged terminal, follow the player
+    // directly instead of stepping between the classic discrete half-screen
+    // panel positions (which only exist at SCREEN_HEIGHT/SCREEN_WIDTH size).
+    if view_height() != SCREEN_HEIGHT || view_width() != SCREEN_WIDTH {
+        return coord_outside_panel_enlarged(coord, force);
+    }
+
     let mut panel = Coord::new(dg().panel.row, dg().panel.col);
 
     if force || coord.y < dg().panel.top + 2 || coord.y > dg().panel.bottom - 2 {
@@ -137,6 +175,83 @@ pub fn coord_outside_panel(coord: Coord, force: bool) -> bool {
     false
 }
 
+// jdbkmoria extension: keeps the player at the exact center of the viewport
+// whenever the view (re)centers, with the map oriented around the player —
+// even when that leaves blank screen space past the map edges (a small
+// level, or the player near an edge of a big one). Only recalculates once
+// the player nears the edge of what's already shown (same margin the
+// classic path uses) to avoid re-centering on every single step.
+// Deliberately ignores `panel.max_rows`/`max_cols`/`row`/`col` (which stay
+// tied to SCREEN_HEIGHT/SCREEN_WIDTH for save-file wire compatibility, see
+// game_save.rs) so a stale value from a save written at a different
+// terminal size can't produce an out-of-range panel here.
+fn coord_outside_panel_enlarged(coord: Coord, force: bool) -> bool {
+    let panel = dg().panel;
+
+    // jdbkmoria extension: think in terms of a conceptual "window" —
+    // view_height() rows by view_width() cols, centered on the player —
+    // that is *not* clamped to the map. The stored panel.top/bottom/left/
+    // right must stay the intersection of that window with the map, so
+    // every existing consumer that iterates panel bounds and indexes
+    // dg().floor (draw_dungeon_panel, the detection spells in spells.rs,
+    // coord_inside_panel, etc.) keeps working unchanged. row_prt/col_prt
+    // place the *window* (not the clamped panel) on screen, which is what
+    // keeps the player centered even when part of the window falls off the
+    // map: screen line for tile row y is `y - row_prt`, so window row
+    // `wtop` lands on screen line 1 and the player lands on screen line
+    // `view_height() / 2 + 1`. The window itself isn't stored, but it's
+    // recoverable from row_prt/col_prt: `wtop = row_prt + 1`,
+    // `wleft = col_prt + 13`.
+    let wtop = panel.row_prt + 1;
+    let wleft = panel.col_prt + 13;
+
+    // A freshly generated level resets panel.top/bottom/left/right to 0
+    // (see generate_cave()) before this ever runs, but leaves row_prt/
+    // col_prt untouched from whatever level was previously displayed. So
+    // reconstructing the window from row_prt/col_prt and re-deriving what
+    // the panel bounds *should* be for that window will, in general, not
+    // match the freshly zeroed top/bottom/left/right — correctly reading as
+    // invalid and forcing a recompute. (In the corner case of the very
+    // first level of a fresh game, row_prt/col_prt are also still zero from
+    // Panel::empty(), giving wtop=1, wleft=13; panel.top==0 still doesn't
+    // equal max(wtop, 0)==1, so this still correctly reads invalid.)
+    let panel_valid = panel.top == wtop.max(0)
+        && panel.bottom == (wtop + view_height() - 1).min(dg().height as i32 - 1)
+        && panel.left == wleft.max(0)
+        && panel.right == (wleft + view_width() - 1).min(dg().width as i32 - 1);
+
+    if !force
+        && panel_valid
+        && coord.y >= wtop + 2
+        && coord.y <= wtop + view_height() - 3
+        && coord.x >= wleft + 3
+        && coord.x <= wleft + view_width() - 4
+    {
+        return false;
+    }
+
+    let new_wtop = coord.y - view_height() / 2;
+    let new_wleft = coord.x - view_width() / 2;
+
+    if !force && panel_valid && new_wtop == wtop && new_wleft == wleft {
+        return false;
+    }
+
+    let panel = &mut dg().panel;
+    panel.top = new_wtop.max(0);
+    panel.bottom = (new_wtop + view_height() - 1).min(dg().height as i32 - 1);
+    panel.row_prt = new_wtop - 1;
+    panel.left = new_wleft.max(0);
+    panel.right = (new_wleft + view_width() - 1).min(dg().width as i32 - 1);
+    panel.col_prt = new_wleft - 13;
+
+    if config::options::options().find_bound {
+        player_end_running();
+    }
+
+    true
+}
+
 // Is the given coordinate within the screen panel boundaries -RAK-
 pub fn coord_inside_panel(coord: Coord) -> bool {
     let valid_y = coord.y >= dg().panel.top && coord.y <= dg().panel.bottom;
@@ -146,18 +261,25 @@ pub fn coord_inside_panel(coord: Coord) -> bool {
 }
 
 // Prints the map of the dungeon -RAK-
-// `line` mirrors the C code's separate screen-row counter that increments
-// alongside the dungeon-row loop; kept as a manual counter for a direct
-// match with the original control flow rather than a zip/enumerate rewrite.
-#[allow(clippy::explicit_counter_loop)]
+// jdbkmoria extension: `line` used to be a manual counter starting at 1,
+// mirroring the C code's separate screen-row counter (a direct match with
+// the original control flow rather than a zip/enumerate rewrite) — that
+// only holds when panel.top always maps to screen row 1. With the window
+// centered on the player (see coord_outside_panel_enlarged) possibly
+// extending past the map's edges, panel.top no longer maps to screen row 1
+// in general, and the clamped panel.top..=panel.bottom range never visits
+// the screen rows the window has past the map edge, so every viewport row
+// (1..=view_height(), the same range panel_put_tile can address) is erased
+// up front instead, to clear stale content left over from a previous,
+// differently-positioned window; tiles are then drawn only for the clamped
+// panel range, same as before.
 pub fn draw_dungeon_panel() {
-    let mut line = 1;
+    for line in 1..=view_height() {
+        erase_line(Coord::new(line, 13));
+    }
 
     // Top to bottom
     for y in dg().panel.top..=dg().panel.bottom {
-        erase_line(Coord::new(line, 13));
-        line += 1;
-
         // Left to right
         for x in dg().panel.left..=dg().panel.right {
             let coord = Coord::new(y, x);
@@ -171,6 +293,11 @@ pub fn draw_dungeon_panel() {
 
 // Draws entire screen -RAK-
 pub fn draw_cave_panel() {
+    // jdbkmoria extension: this is the canonical "return to the live
+    // dungeon screen" redraw (from a store, a message screen, ...), so it's
+    // where centering switches back from whatever static screen was
+    // showing to the dungeon view's own centering (see ui_io.rs).
+    crate::ui_io::center_for_dungeon_view();
     clear_screen();
     print_character_stats_block();
     draw_dungeon_panel();
@@ -309,53 +436,53 @@ pub fn print_character_current_depth() {
         tr_fmt!("{} feet", depth)
     };
 
-    put_string_clear_to_eol(&depths, Coord::new(23, 65));
+    put_string_clear_to_eol(&depths, Coord::new(status_line_row(), 65));
 }
 
 // Prints status of hunger -RAK-
 pub fn print_character_hunger_status() {
     if (py().flags.status & config::player::status::PY_WEAK) != 0 {
-        put_string(&format!("{:<6.6}", tr!("Weak")), Coord::new(23, 0));
+        put_string(&format!("{:<6.6}", tr!("Weak")), Coord::new(status_line_row(), 0));
     } else if (py().flags.status & config::player::status::PY_HUNGRY) != 0 {
-        put_string(&format!("{:<6.6}", tr!("Hungry")), Coord::new(23, 0));
+        put_string(&format!("{:<6.6}", tr!("Hungry")), Coord::new(status_line_row(), 0));
     } else {
-        put_blanks(6, Coord::new(23, 0));
+        put_blanks(6, Coord::new(status_line_row(), 0));
     }
 }
 
 // Prints Blind status -RAK-
 pub fn print_character_blind_status() {
     if (py().flags.status & config::player::status::PY_BLIND) != 0 {
-        put_string(&format!("{:<5.5}", tr!("Blind")), Coord::new(23, 7));
+        put_string(&format!("{:<5.5}", tr!("Blind")), Coord::new(status_line_row(), 7));
     } else {
-        put_blanks(5, Coord::new(23, 7));
+        put_blanks(5, Coord::new(status_line_row(), 7));
     }
 }
 
 // Prints Confusion status -RAK-
 pub fn print_character_confused_state() {
     if (py().flags.status & config::player::status::PY_CONFUSED) != 0 {
-        put_string(&format!("{:<8.8}", tr!("Confused")), Coord::new(23, 13));
+        put_string(&format!("{:<8.8}", tr!("Confused")), Coord::new(status_line_row(), 13));
     } else {
-        put_blanks(8, Coord::new(23, 13));
+        put_blanks(8, Coord::new(status_line_row(), 13));
     }
 }
 
 // Prints Fear status -RAK-
 pub fn print_character_fear_state() {
     if (py().flags.status & config::player::status::PY_FEAR) != 0 {
-        put_string(&format!("{:<6.6}", tr!("Afraid")), Coord::new(23, 22));
+        put_string(&format!("{:<6.6}", tr!("Afraid")), Coord::new(status_line_row(), 22));
     } else {
-        put_blanks(6, Coord::new(23, 22));
+        put_blanks(6, Coord::new(status_line_row(), 22));
     }
 }
 
 // Prints Poisoned status -RAK-
 pub fn print_character_poisoned_state() {
     if (py().flags.status & config::player::status::PY_POISONED) != 0 {
-        put_string(&format!("{:<8.8}", tr!("Poisoned")), Coord::new(23, 29));
+        put_string(&format!("{:<8.8}", tr!("Poisoned")), Coord::new(status_line_row(), 29));
     } else {
-        put_blanks(8, Coord::new(23, 29));
+        put_blanks(8, Coord::new(status_line_row(), 29));
     }
 }
 
@@ -364,7 +491,7 @@ pub fn print_character_movement_state() {
     py().flags.status &= !config::player::status::PY_REPEAT;
 
     if py().flags.paralysis > 1 {
-        put_string(&format!("{:<9.9}", tr!("Paralysed")), Coord::new(23, 38));
+        put_string(&format!("{:<9.9}", tr!("Paralysed")), Coord::new(status_line_row(), 38));
         return;
     }
 
@@ -377,7 +504,7 @@ pub fn print_character_movement_state() {
             format!("{:<4.4}", tr!("Rest"))
         };
 
-        put_string(&rest_string, Coord::new(23, 38));
+        put_string(&rest_string, Coord::new(status_line_row(), 38));
 
         return;
     }
@@ -391,22 +518,22 @@ pub fn print_character_movement_state() {
 
         py().flags.status |= config::player::status::PY_REPEAT;
 
-        put_string(&repeat_string, Coord::new(23, 38));
+        put_string(&repeat_string, Coord::new(status_line_row(), 38));
 
         if (py().flags.status & config::player::status::PY_SEARCH) != 0 {
-            put_string(&format!("{:<6.6}", tr!("Search")), Coord::new(23, 38));
+            put_string(&format!("{:<6.6}", tr!("Search")), Coord::new(status_line_row(), 38));
         }
 
         return;
     }
 
     if (py().flags.status & config::player::status::PY_SEARCH) != 0 {
-        put_string(&format!("{:<9.9}", tr!("Searching")), Coord::new(23, 38));
+        put_string(&format!("{:<9.9}", tr!("Searching")), Coord::new(status_line_row(), 38));
         return;
     }
 
     // "repeat 999" is 10 characters
-    put_blanks(10, Coord::new(23, 38));
+    put_blanks(10, Coord::new(status_line_row(), 38));
 }
 
 // Prints the speed of a character. -CJS-
@@ -419,15 +546,15 @@ pub fn print_character_speed() {
     }
 
     if speed > 1 {
-        put_string(&format!("{:<9.9}", tr!("Very Slow")), Coord::new(23, 49));
+        put_string(&format!("{:<9.9}", tr!("Very Slow")), Coord::new(status_line_row(), 49));
     } else if speed == 1 {
-        put_string(&format!("{:<9.9}", tr!("Slow")), Coord::new(23, 49));
+        put_string(&format!("{:<9.9}", tr!("Slow")), Coord::new(status_line_row(), 49));
     } else if speed == 0 {
-        put_blanks(9, Coord::new(23, 49));
+        put_blanks(9, Coord::new(status_line_row(), 49));
     } else if speed == -1 {
-        put_string(&format!("{:<9.9}", tr!("Fast")), Coord::new(23, 49));
+        put_string(&format!("{:<9.9}", tr!("Fast")), Coord::new(status_line_row(), 49));
     } else {
-        put_string(&format!("{:<9.9}", tr!("Very Fast")), Coord::new(23, 49));
+        put_string(&format!("{:<9.9}", tr!("Very Fast")), Coord::new(status_line_row(), 49));
     }
 }
 
@@ -435,9 +562,9 @@ pub fn print_character_study_instruction() {
     py().flags.status &= !config::player::status::PY_STUDY;
 
     if py().flags.new_spells_to_learn == 0 {
-        put_blanks(5, Coord::new(23, 59));
+        put_blanks(5, Coord::new(status_line_row(), 59));
     } else {
-        put_string(&format!("{:<5.5}", tr!("Study")), Coord::new(23, 59));
+        put_string(&format!("{:<5.5}", tr!("Study")), Coord::new(status_line_row(), 59));
     }
 }
 
@@ -445,16 +572,16 @@ pub fn print_character_study_instruction() {
 pub fn print_character_winner() {
     if (game().noscore & 0x2) != 0 {
         if game().wizard_mode {
-            put_string(&format!("{:<11.11}", tr!("Is wizard")), Coord::new(22, 0));
+            put_string(&format!("{:<11.11}", tr!("Is wizard")), Coord::new(status_line_row() - 1, 0));
         } else {
-            put_string(&format!("{:<11.11}", tr!("Was wizard")), Coord::new(22, 0));
+            put_string(&format!("{:<11.11}", tr!("Was wizard")), Coord::new(status_line_row() - 1, 0));
         }
     } else if (game().noscore & 0x1) != 0 {
-        put_string(&format!("{:<11.11}", tr!("Resurrected")), Coord::new(22, 0));
+        put_string(&format!("{:<11.11}", tr!("Resurrected")), Coord::new(status_line_row() - 1, 0));
     } else if (game().noscore & 0x4) != 0 {
-        put_string(&format!("{:<9.9}", tr!("Duplicate")), Coord::new(22, 0));
+        put_string(&format!("{:<9.9}", tr!("Duplicate")), Coord::new(status_line_row() - 1, 0));
     } else if game().total_winner {
-        put_string(&format!("{:<11.11}", tr!("*Winner*")), Coord::new(22, 0));
+        put_string(&format!("{:<11.11}", tr!("*Winner*")), Coord::new(status_line_row() - 1, 0));
     }
 }
 

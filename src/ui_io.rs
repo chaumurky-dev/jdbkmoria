@@ -29,6 +29,56 @@ static MESSAGES: RacyCell<[String; MESSAGE_HISTORY_SIZE]> =
     RacyCell::new([const { String::new() }; MESSAGE_HISTORY_SIZE]);
 static LAST_MESSAGE_ID: RacyCell<i16> = RacyCell::new(0);
 
+// jdbkmoria extension: everything drawn on screen is laid out in "local"
+// coordinates (the sidebar/panel/status block, or a classic 80x24 static
+// screen), and every primitive below adds one of two fixed offsets before
+// the actual curses call, centering that local content within the real
+// terminal. Both offsets are computed once in `terminal_initialize` from
+// the real terminal size and never change afterward — only which one is
+// active does, via `center_for_dungeon_view`/`center_for_static_screen`.
+//
+// The default is the dungeon-view offset (usually (0, 0), since the live
+// game screen already auto-fits the terminal — see `terminal_initialize`)
+// rather than the static offset, so a screen transition nobody remembered
+// to mark as "static" just renders un-centered instead of mis-centered:
+// the dungeon panel's own coordinates (already carrying their own
+// per-level centering via `ui::coord_outside_panel_enlarged`'s
+// row_prt/col_prt) must never be shifted by the smaller static offset, or
+// the sidebar and panel — each only correct under their own offset — go
+// visibly out of alignment with each other.
+static DUNGEON_OFFSET: RacyCell<(i32, i32)> = RacyCell::new((0, 0));
+static STATIC_OFFSET: RacyCell<(i32, i32)> = RacyCell::new((0, 0));
+static USE_STATIC_OFFSET: RacyCell<bool> = RacyCell::new(false);
+
+fn row_offset() -> i32 {
+    if *USE_STATIC_OFFSET.get() { STATIC_OFFSET.get().0 } else { DUNGEON_OFFSET.get().0 }
+}
+
+fn col_offset() -> i32 {
+    if *USE_STATIC_OFFSET.get() { STATIC_OFFSET.get().1 } else { DUNGEON_OFFSET.get().1 }
+}
+
+// Whether static-screen centering is currently active. A screen that can be
+// entered from either context (e.g. help, reachable both mid-game and
+// during character creation) should save this before switching to static
+// centering and restore it afterward, rather than assuming which one to
+// return to.
+pub fn is_static_centered() -> bool {
+    *USE_STATIC_OFFSET.get()
+}
+
+// Switches to centering a classic 80x24 screen (splash, character sheet,
+// store, help, death, high scores, ...) within the terminal.
+pub fn center_for_static_screen() {
+    *USE_STATIC_OFFSET.get() = true;
+}
+
+// Switches back to the live dungeon screen's own centering (the default —
+// see the comment on DUNGEON_OFFSET above for why).
+pub fn center_for_dungeon_view() {
+    *USE_STATIC_OFFSET.get() = false;
+}
+
 pub fn eof_flag() -> &'static mut i32 {
     EOF_FLAG.get()
 }
@@ -71,7 +121,14 @@ fn moria_terminal_initialize() {
 }
 
 // initializes the terminal / curses routines
-pub fn terminal_initialize() -> bool {
+//
+// jdbkmoria extension: `size_override` is an optional (cols, lines) pair
+// from the `-W` CLI flag. When absent, the dungeon viewport auto-fits the
+// actual terminal size. Either way it's clamped into
+// [SCREEN_HEIGHT/WIDTH, MAX_HEIGHT/WIDTH] by `ui::set_view_size` — see
+// PORTING.md's "Extensions beyond upstream" for why SCREEN_HEIGHT/WIDTH
+// themselves are never touched.
+pub fn terminal_initialize(size_override: Option<(i32, i32)>) -> bool {
     // the default ESC delay can be a second on some systems,
     // let's do something about that! (must be set before initscr)
     std::env::set_var("ESCDELAY", "50");
@@ -100,6 +157,28 @@ pub fn terminal_initialize() -> bool {
         println!("{}", tr!("Screen too small for moria."));
         return false;
     }
+
+    // sidebar (13 cols) + a 1-col right margin (put_string/etc. never write
+    // to the last column, see ui_io.rs's put_string) + message/status lines
+    // (2 rows) are fixed chrome around the dungeon viewport; the rest of
+    // the terminal is available. An override is clamped to what the
+    // terminal actually has, so `-W` can only shrink from the auto-fit
+    // size, never draw off-screen. At exactly 80x24 this yields the
+    // classic 66x22 viewport, so the default 80x24 terminal is unaffected.
+    let (req_cols, req_lines) = size_override.unwrap_or((window.get_max_x(), window.get_max_y()));
+    let cols = req_cols.min(window.get_max_x());
+    let lines = req_lines.min(window.get_max_y());
+    crate::ui::set_view_size(lines - 2, cols - 14);
+
+    // jdbkmoria extension: center both the live game screen's own footprint
+    // (only visibly different from (0, 0) when `-W` or the MAX_HEIGHT/WIDTH
+    // ceiling makes it smaller than the real terminal) and, separately, a
+    // classic 80x24 static screen, within the real terminal. See the
+    // DUNGEON_OFFSET/STATIC_OFFSET comment above for how these are used.
+    let dungeon_footprint_h = crate::ui::view_height() + 2;
+    let dungeon_footprint_w = crate::ui::view_width() + 14;
+    *DUNGEON_OFFSET.get() = ((window.get_max_y() - dungeon_footprint_h) / 2, (window.get_max_x() - dungeon_footprint_w) / 2);
+    *STATIC_OFFSET.get() = ((window.get_max_y() - 24) / 2, (window.get_max_x() - 80) / 2);
 
     let save_screen = pancurses::newwin(0, 0, 0, 0);
 
@@ -182,17 +261,17 @@ pub fn clear_screen() {
 }
 
 pub fn clear_to_bottom(row: i32) {
-    stdscr().mv(row, 0);
+    stdscr().mv(row + row_offset(), col_offset());
     stdscr().clrtobot();
 }
 
 // move cursor to a given y, x position
 pub fn move_cursor(coord: Coord) {
-    stdscr().mv(coord.y, coord.x);
+    stdscr().mv(coord.y + row_offset(), coord.x + col_offset());
 }
 
 pub fn add_char(ch: char, coord: Coord) {
-    stdscr().mvaddch(coord.y, coord.x, ch);
+    stdscr().mvaddch(coord.y + row_offset(), coord.x + col_offset(), ch);
 }
 
 // Dump IO to buffer -RAK-
@@ -207,7 +286,7 @@ pub fn put_string(out_str: &str, coord: Coord) {
     let max_len = (79 - coord.x) as usize;
     let truncated: String = out_str.chars().take(max_len).collect();
 
-    stdscr().mvaddstr(coord.y, coord.x, &truncated);
+    stdscr().mvaddstr(coord.y + row_offset(), coord.x + col_offset(), &truncated);
 }
 
 // Outputs a line to a given y, x position -RAK-
@@ -216,7 +295,7 @@ pub fn put_string_clear_to_eol(str: &str, coord: Coord) {
         print_message(None);
     }
 
-    stdscr().mv(coord.y, coord.x);
+    stdscr().mv(coord.y + row_offset(), coord.x + col_offset());
     stdscr().clrtoeol();
     put_string(str, coord);
 }
@@ -227,7 +306,7 @@ pub fn erase_line(coord: Coord) {
         print_message(None);
     }
 
-    stdscr().mv(coord.y, coord.x);
+    stdscr().mv(coord.y + row_offset(), coord.x + col_offset());
     stdscr().clrtoeol();
 }
 
@@ -237,7 +316,7 @@ pub fn panel_move_cursor(coord: Coord) {
     let y = coord.y - dg().panel.row_prt;
     let x = coord.x - dg().panel.col_prt;
 
-    stdscr().mv(y, x);
+    stdscr().mv(y + row_offset(), x + col_offset());
 }
 
 // Outputs a char to a given interpolated y, x position -RAK-
@@ -247,7 +326,7 @@ pub fn panel_put_tile(ch: char, coord: Coord) {
     let y = coord.y - dg().panel.row_prt;
     let x = coord.x - dg().panel.col_prt;
 
-    stdscr().mvaddch(y, x, ch);
+    stdscr().mvaddch(y + row_offset(), x + col_offset(), ch);
 }
 
 fn current_cursor_position() -> Coord {
@@ -257,11 +336,13 @@ fn current_cursor_position() -> Coord {
 // message_line_print_message will print a line of text to the message line (0,0).
 // first clearing the line of any text!
 pub fn message_line_print_message(message: &str) {
-    // save current cursor position
+    // save current cursor position (already offset-inclusive, see
+    // current_cursor_position — restoring it further below needs no
+    // additional offset)
     let coord = current_cursor_position();
 
     // move to beginning of message line, and clear it
-    stdscr().mv(0, 0);
+    stdscr().mv(row_offset(), col_offset());
     stdscr().clrtoeol();
 
     // truncate message if it's too long!
@@ -276,11 +357,13 @@ pub fn message_line_print_message(message: &str) {
 // message_line_clear will delete all text from the message line (0,0).
 // The current cursor position will be maintained.
 pub fn message_line_clear() {
-    // save current cursor position
+    // save current cursor position (already offset-inclusive, see
+    // current_cursor_position — restoring it further below needs no
+    // additional offset)
     let coord = current_cursor_position();
 
     // move to beginning of message line, and clear it
-    stdscr().mv(0, 0);
+    stdscr().mv(row_offset(), col_offset());
     stdscr().clrtoeol();
 
     // restore cursor to old position
@@ -325,7 +408,7 @@ pub fn print_message(msg: Option<&str>) {
     }
 
     if !combine_messages {
-        stdscr().mv(MSG_LINE, 0);
+        stdscr().mv(MSG_LINE + row_offset(), col_offset());
         stdscr().clrtoeol();
     }
 
@@ -584,13 +667,13 @@ pub fn get_menu_item_id(prompt: &str, command: &mut char) -> bool {
 pub fn get_string_input(in_str: &mut String, coord: Coord, slen: i32) -> bool {
     let mut coord = coord;
 
-    stdscr().mv(coord.y, coord.x);
+    stdscr().mv(coord.y + row_offset(), coord.x + col_offset());
 
     for _ in 0..slen {
         stdscr().addch(' ');
     }
 
-    stdscr().mv(coord.y, coord.x);
+    stdscr().mv(coord.y + row_offset(), coord.x + col_offset());
 
     let start_col = coord.x;
     let mut end_col = coord.x + slen - 1;
@@ -621,7 +704,7 @@ pub fn get_string_input(in_str: &mut String, coord: Coord, slen: i32) -> bool {
                 if !key.is_ascii_graphic() && key != ' ' || coord.x > end_col {
                     terminal_bell_sound();
                 } else {
-                    stdscr().mvaddch(coord.y, coord.x, key);
+                    stdscr().mvaddch(coord.y + row_offset(), coord.x + col_offset(), key);
                     buffer.push(key);
                     coord.x += 1;
                 }
@@ -655,8 +738,8 @@ pub fn get_input_confirmation_with_abort(column: i32, prompt: &str) -> i32 {
 
     let x = stdscr().get_cur_x();
 
-    if x > 73 {
-        stdscr().mv(0, 73);
+    if x > 73 + col_offset() {
+        stdscr().mv(row_offset(), 73 + col_offset());
     }
 
     stdscr().addstr(format!(" {}", tr!("[y/n]")));

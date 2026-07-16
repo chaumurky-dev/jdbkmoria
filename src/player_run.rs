@@ -184,6 +184,13 @@ fn area_affect_stop_looking_at_squares(i: i32, dir: i32, new_dir: i32, coord: Co
             }
         }
 
+        // jdbkmoria extension: a painting hanging on this wall causes a stop,
+        // just like a visible door -- it's a landmark, not part of the corridor.
+        if crate::paintings::painting_index_at(coord).is_some() {
+            player_end_running();
+            return true;
+        }
+
         // Also Creatures
         // The monster should be visible since monster_update_visibility() checks
         // for the special case of being in find mode
