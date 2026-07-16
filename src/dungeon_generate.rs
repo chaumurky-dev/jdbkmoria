@@ -1093,7 +1093,7 @@ fn dungeon_generate() {
         crate::monster_manager::monster_place_winning();
     }
 
-    // rmoria extension: hang paintings on the walls. Must come after the
+    // jdbkmoria extension: hang paintings on the walls. Must come after the
     // character's position is set (see place_paintings on level 1).
     crate::paintings::place_paintings();
 }
@@ -1236,7 +1236,7 @@ pub fn generate_cave() {
     monster_linker();
     dungeon_blank_entire_cave();
 
-    // rmoria extension: paintings are per-level; dungeon_generate() hangs
+    // jdbkmoria extension: paintings are per-level; dungeon_generate() hangs
     // new ones, the town has none.
     crate::paintings::paintings().clear();
 

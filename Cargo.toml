@@ -1,5 +1,5 @@
 [package]
-name = "rmoria"
+name = "jdbkmoria"
 version = "5.7.15"
 edition = "2021"
 description = "Rust port of Umoria - Robert A. Koeneke's classic dungeon crawler, The Dungeons of Moria"

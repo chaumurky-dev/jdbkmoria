@@ -4,7 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-`rmoria` is a Rust port of **Umoria 5.7.15**, translated from the upstream C++ sources at
+`jdbkmoria` is a fork and expansion of [rmoria](https://github.com/chaumurky-dev/rmoria),
+which is itself a Rust port of **Umoria 5.7.15**, translated from the upstream C++ sources at
 <https://github.com/dungeons-of-moria/umoria>. Those sources are read-only reference —
 consult them to verify behavior, never a build target.
 
@@ -28,7 +29,7 @@ This is a **faithful, gameplay-identical translation** of the C++ sources — th
 drives every structural decision. See `PORTING.md` for the full file-by-file mapping and
 conventions. Deliberate gameplay additions (see "Extensions beyond upstream" in
 `PORTING.md`, e.g. `paintings.rs`) live in their own modules, and every hook they need in
-ported code is marked with an `rmoria extension` comment — keep new extensions to that
+ported code is marked with an `jdbkmoria extension` comment — keep new extensions to that
 pattern.
 
 - **One Rust module per C++ source file** (roughly), same names, C++ `camelCase`

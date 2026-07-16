@@ -510,7 +510,7 @@ fn look_see(coord: Coord, transparent: &mut bool) -> bool {
             }
         }
 
-        // rmoria extension: a painting hanging on this wall tile. Described
+        // jdbkmoria extension: a painting hanging on this wall tile. Described
         // on the first (objects) pass, like monsters and items.
         let mut painting_described = false;
         if *LOS_ROCKS_AND_OBJECTS.get() == 0 && tile.feature_id >= MIN_CAVE_WALL && crate::paintings::painting_index_at(coord).is_some() {

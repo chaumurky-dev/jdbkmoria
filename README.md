@@ -1,18 +1,21 @@
-# rmoria
+# jdbkmoria
 
-A Rust port of [Umoria](https://github.com/dungeons-of-moria/umoria) — _The
+A fork and expansion of [rmoria](https://github.com/chaumurky-dev/rmoria) — _The
 Dungeons of Moria_, the classic single-player dungeon simulation originally
 written by Robert Alan Koeneke (first public release 1983), ported to C by
 James E. Wilson in 1988 and released as _Umoria_.
 
-This port aims to be gameplay-identical to Umoria 5.7.15, translated from the
-C++ sources into Rust.
+rmoria aims to be gameplay-identical to [Umoria](https://github.com/dungeons-of-moria/umoria)
+5.7.15, translated from the C++ sources into Rust. jdbkmoria builds on that
+port, adding new gameplay features on top of it (see "Extensions over Umoria"
+below).
 
 ## License
 
-rmoria is a derivative work of Umoria and is released under the same license:
-the **GNU General Public License, version 3.0 or later** (GPL-3.0-or-later).
-See [LICENSE](LICENSE) for the full license text.
+jdbkmoria is a derivative work of rmoria (itself a derivative work of Umoria)
+and is released under the same license: the **GNU General Public License,
+version 3.0 or later** (GPL-3.0-or-later). See [LICENSE](LICENSE) for the full
+license text.
 
 Original copyrights:
 
@@ -21,8 +24,10 @@ Original copyrights:
 - Umoria 5.7.x restoration by Michael R. Cook and contributors
 
 The complete corresponding source code of this program is contained in this
-repository. The original Umoria source from which it was ported is available
-at <https://github.com/dungeons-of-moria/umoria>.
+repository. The rmoria port this project forks from is available at
+<https://github.com/chaumurky-dev/rmoria>, and the original Umoria source from
+which rmoria was ported is available at
+<https://github.com/dungeons-of-moria/umoria>.
 
 ## Building
 
@@ -33,7 +38,7 @@ cargo build --release
 ## Running
 
 ```sh
-rmoria [OPTIONS] SAVEGAME
+jdbkmoria [OPTIONS] SAVEGAME
 
 SAVEGAME is an optional save game filename (default: game.sav)
 

@@ -294,7 +294,7 @@ pub fn player_throw_item() {
         } else {
             flag = true;
 
-            // rmoria extension: a missile that stops against a painted wall
+            // jdbkmoria extension: a missile that stops against a painted wall
             // may strike the painting (and whatever lives in it).
             if current_distance <= tdis {
                 if let Some(index) = crate::paintings::painting_index_at(coord) {

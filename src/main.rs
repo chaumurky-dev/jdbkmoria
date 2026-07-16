@@ -5,18 +5,18 @@
 
 // Initialization, main() function and main loop
 
-use rmoria::config;
-use rmoria::game::{exit_program, game};
-use rmoria::game_files::initialize_score_file;
-use rmoria::game_run::start_moria;
-use rmoria::helpers::string_to_number;
-use rmoria::scores::show_scores_screen;
-use rmoria::ui_io::{check_file_permissions, terminal_initialize, terminal_restore};
-use rmoria::version::{CURRENT_VERSION_MAJOR, CURRENT_VERSION_MINOR, CURRENT_VERSION_PATCH};
+use jdbkmoria::config;
+use jdbkmoria::game::{exit_program, game};
+use jdbkmoria::game_files::initialize_score_file;
+use jdbkmoria::game_run::start_moria;
+use jdbkmoria::helpers::string_to_number;
+use jdbkmoria::scores::show_scores_screen;
+use jdbkmoria::ui_io::{check_file_permissions, terminal_initialize, terminal_restore};
+use jdbkmoria::version::{CURRENT_VERSION_MAJOR, CURRENT_VERSION_MINOR, CURRENT_VERSION_PATCH};
 
 const USAGE_INSTRUCTIONS: &str = r#"
 Usage:
-    rmoria [OPTIONS] SAVEGAME
+    jdbkmoria [OPTIONS] SAVEGAME
 
 SAVEGAME is an optional save game filename (default: game.sav)
 

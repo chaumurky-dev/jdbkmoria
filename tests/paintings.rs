@@ -3,24 +3,24 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-// Integration test for painting placement (an rmoria extension, see
+// Integration test for painting placement (an jdbkmoria extension, see
 // src/paintings.rs), exercised on a real generated dungeon level; the
 // generation path performs no curses calls, so this runs without a
 // terminal. As with save_roundtrip.rs, the game state is process-wide, so
 // everything runs in a single #[test] fn.
 
-use rmoria::data_creatures::CREATURES_LIST;
-use rmoria::dungeon::{coord_distance_between, dg};
-use rmoria::dungeon_generate::generate_cave;
-use rmoria::game_run::{initialize_monster_levels, initialize_treasure_levels};
-use rmoria::dungeon_tile::{MAX_CAVE_FLOOR, MIN_CAVE_WALL, TILE_BOUNDARY_WALL};
-use rmoria::paintings::{
+use jdbkmoria::data_creatures::CREATURES_LIST;
+use jdbkmoria::dungeon::{coord_distance_between, dg};
+use jdbkmoria::dungeon_generate::generate_cave;
+use jdbkmoria::game_run::{initialize_monster_levels, initialize_treasure_levels};
+use jdbkmoria::dungeon_tile::{MAX_CAVE_FLOOR, MIN_CAVE_WALL, TILE_BOUNDARY_WALL};
+use jdbkmoria::paintings::{
     painting_from_legacy_save, painting_index_at, painting_kind_from_u8, painting_kind_to_u8,
     paintings, remove_painting_at, PaintingKind,
 };
-use rmoria::player::py;
-use rmoria::rng::set_random_seed;
-use rmoria::types::Coord;
+use jdbkmoria::player::py;
+use jdbkmoria::rng::set_random_seed;
+use jdbkmoria::types::Coord;
 
 #[test]
 fn painting_placement() {

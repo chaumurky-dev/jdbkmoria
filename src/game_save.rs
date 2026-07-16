@@ -712,7 +712,7 @@ fn write_save_data() -> bool {
         wr_monster(&monsters()[i]);
     }
 
-    // rmoria extension: paintings, appended after all original umoria data.
+    // jdbkmoria extension: paintings, appended after all original umoria data.
     // Restore probes for this block with a raw EOF peek (the same trick the
     // dead/alive fork uses), so save files written without it still load.
     // The high bit of the count byte marks the current (v2) record layout,
@@ -949,7 +949,7 @@ fn restore_from_file(file: File, generate: &mut bool, interactive: bool) -> Opti
 
     let mut time_saved: u32 = 0;
 
-    // rmoria extension: start from a clean painting registry; the level
+    // jdbkmoria extension: start from a clean painting registry; the level
     // block below repopulates it for living characters.
     paintings().clear();
 
@@ -1288,7 +1288,7 @@ fn restore_from_file(file: File, generate: &mut bool, interactive: bool) -> Opti
             break 'restore false;
         }
 
-        // rmoria extension: paintings. Older save files end at the monster
+        // jdbkmoria extension: paintings. Older save files end at the monster
         // data, so peek for more bytes the same way the dead/alive fork
         // does; plain EOF here just means "no paintings".
         paintings().clear();

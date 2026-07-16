@@ -1,6 +1,11 @@
-# Porting status: umoria (C++) → rmoria (Rust)
+# Porting status: umoria (C++) → jdbkmoria (Rust)
 
 Source: `../umoria/src` at version 5.7.15. Goal: gameplay-identical port, GPL-3.0-or-later.
+
+Note: the port described in this document is rmoria (<https://github.com/chaumurky-dev/rmoria>);
+jdbkmoria is a downstream fork that extends rmoria with new gameplay features
+(see "Extensions beyond upstream" below). The porting status and file-by-file
+mapping that follow describe the rmoria layer that jdbkmoria is built on.
 
 ## Conventions
 
@@ -86,7 +91,7 @@ Save files use the umoria 5.2.2+ compatible xor-encrypted format.
 ## Extensions beyond upstream
 
 Deliberate gameplay additions, kept out of the ported modules where possible
-and marked `rmoria extension` at every hook site in shared code:
+and marked `jdbkmoria extension` at every hook site in shared code:
 
 - **Paintings** (`paintings.rs` + `data_paintings.rs`, 2026-07): ~50 paintings
   per dungeon level on wall tiles. Registry is a per-level `Vec<Painting>`

@@ -3,7 +3,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-// Paintings on dungeon walls: an rmoria extension, not present in the
+// Paintings on dungeon walls: an jdbkmoria extension, not present in the
 // original umoria sources.
 //
 // Each dungeon level hangs around fifty paintings on its wall tiles. They

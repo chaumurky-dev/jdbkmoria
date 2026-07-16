@@ -1569,7 +1569,7 @@ pub fn player_tunnel_wall(coord: Coord, digging_ability: i32, digging_chance: i3
 
     dg().tile_mut(coord).field_mark = false;
 
-    // rmoria extension: a painting cannot outlive its wall
+    // jdbkmoria extension: a painting cannot outlive its wall
     if crate::paintings::remove_painting_at(coord) {
         print_message(Some("A painting falls and is destroyed!"));
     }

@@ -64,7 +64,7 @@ pub fn player_bash() {
         return;
     }
 
-    // rmoria extension: bashing a wall-mounted painting can destroy it
+    // jdbkmoria extension: bashing a wall-mounted painting can destroy it
     if tile.feature_id >= MIN_CAVE_WALL && crate::paintings::painting_index_at(coord).is_some() {
         crate::paintings::player_bash_painting(coord);
         return;

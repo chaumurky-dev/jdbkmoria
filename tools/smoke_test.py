@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PTY smoke test for rmoria: version check, character creation, movement, quit."""
+"""PTY smoke test for jdbkmoria: version check, character creation, movement, quit."""
 import os
 import pty
 import select
@@ -13,8 +13,8 @@ import shutil
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.dirname(SCRIPT_DIR)
 
-# Allow override via RMORIA_BIN env var
-BIN = os.environ.get("RMORIA_BIN", os.path.join(REPO_ROOT, "target/debug/rmoria"))
+# Allow override via JDBKMORIA_BIN env var
+BIN = os.environ.get("JDBKMORIA_BIN", os.path.join(REPO_ROOT, "target/debug/jdbkmoria"))
 
 def check_binary_exists():
     """Check if binary exists; if not, print hint and exit."""
@@ -93,7 +93,7 @@ def main():
     temp_dir = None
     try:
         # Create temp working directory
-        temp_dir = tempfile.mkdtemp(prefix="rmoria_test_")
+        temp_dir = tempfile.mkdtemp(prefix="jdbkmoria_test_")
         print(f"Created temp dir: {temp_dir}")
 
         # Copy scores.dat

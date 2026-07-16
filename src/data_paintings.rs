@@ -3,7 +3,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-// Description tables for dungeon paintings (an rmoria extension, see paintings.rs).
+// Description tables for dungeon paintings (an jdbkmoria extension, see paintings.rs).
 //
 // Descriptions are flavor text shown by the look command. Harmless paintings
 // draw on the classical oil-painting tradition; monster and loot paintings

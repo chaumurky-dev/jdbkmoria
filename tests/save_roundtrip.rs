@@ -12,15 +12,15 @@
 // execution. The `rng.rs` unit test runs in its own `cargo test` process and
 // so cannot interfere with this one either.
 
-use rmoria::dungeon::dg;
-use rmoria::game::game;
-use rmoria::game_save::{load_game_state_from_file, save_game_state_to_file};
-use rmoria::inventory::inventory_item_copy_to;
-use rmoria::paintings::{paintings, Painting, PaintingKind};
-use rmoria::player::py;
-use rmoria::recall_data::creature_recall;
-use rmoria::rng::set_random_seed;
-use rmoria::types::Coord;
+use jdbkmoria::dungeon::dg;
+use jdbkmoria::game::game;
+use jdbkmoria::game_save::{load_game_state_from_file, save_game_state_to_file};
+use jdbkmoria::inventory::inventory_item_copy_to;
+use jdbkmoria::paintings::{paintings, Painting, PaintingKind};
+use jdbkmoria::player::py;
+use jdbkmoria::recall_data::creature_recall;
+use jdbkmoria::rng::set_random_seed;
+use jdbkmoria::types::Coord;
 
 #[test]
 fn save_and_load_roundtrip() {
@@ -64,7 +64,7 @@ fn save_and_load_roundtrip() {
     creature_recall()[5].movement = 0x1234;
     creature_recall()[5].wake = 7;
 
-    // Two paintings (rmoria extension block appended to the save format).
+    // Two paintings (jdbkmoria extension block appended to the save format).
     paintings().clear();
     paintings().push(Painting {
         pos: Coord::new(10, 20),
@@ -89,7 +89,7 @@ fn save_and_load_roundtrip() {
 
     // Write the save file into a tempdir with a unique name.
     let mut path = std::env::temp_dir();
-    path.push(format!("rmoria_save_roundtrip_{}.sav", std::process::id()));
+    path.push(format!("jdbkmoria_save_roundtrip_{}.sav", std::process::id()));
     let path_str = path.to_str().expect("temp path should be valid UTF-8");
 
     // (c) save.
