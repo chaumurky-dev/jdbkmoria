@@ -7,6 +7,7 @@
 
 use crate::config;
 use crate::dungeon::{coord_in_bounds, dg, dungeon_delete_object, dungeon_place_random_object_near};
+use crate::{tr, tr_fmt};
 use crate::dungeon_tile::MAX_CAVE_FLOOR;
 use crate::game::{game, random_number};
 use crate::game_objects::popt;
@@ -32,8 +33,8 @@ pub fn enter_wizard_mode() -> bool {
     let mut answer = false;
 
     if game().noscore == 0 {
-        print_message(Some("Wizard mode is for debugging and experimenting."));
-        answer = get_input_confirmation("The game will not be scored if you enter wizard mode. Are you sure?");
+        print_message(Some(tr!("Wizard mode is for debugging and experimenting.")));
+        answer = get_input_confirmation(tr!("The game will not be scored if you enter wizard mode. Are you sure?"));
     }
 
     if game().noscore != 0 || answer {
@@ -96,7 +97,7 @@ pub fn wizard_jump_level() {
         i = -1;
         let mut input = String::new();
 
-        put_string_clear_to_eol("Go to which level (0-99) ? ", Coord::new(0, 0));
+        put_string_clear_to_eol(tr!("Go to which level (0-99) ? "), Coord::new(0, 0));
 
         if get_string_input(&mut input, Coord::new(0, 27), 10) {
             let _ = string_to_number(&input, &mut i);
@@ -266,8 +267,11 @@ pub fn wizard_character_adjustment() {
         return;
     }
 
-    let prompt = format!("Current={}  Gold = ", py().misc.au);
-    number = prompt.len() as i32;
+    let prompt = tr_fmt!("Current={}  Gold = ", py().misc.au);
+    // jdbkmoria extension: count chars, not bytes, so a translated prompt
+    // with multi-byte UTF-8 (accented French) lands the input column at the
+    // right display width; identical to `.len()` for ASCII text.
+    number = prompt.chars().count() as i32;
     put_string_clear_to_eol(&prompt, Coord::new(0, 0));
     if get_string_input(&mut input, Coord::new(0, number), 7) {
         let mut new_gold: i32 = 0;
@@ -280,8 +284,15 @@ pub fn wizard_character_adjustment() {
         return;
     }
 
+    // jdbkmoria extension note: this prompt is deliberately left
+    // untranslated. The quirk below (faithfully ported from the original
+    // wizardCharacterAdjustment) stores the prompt STRING'S LENGTH -- not
+    // the parsed input -- into chance_in_search; translating the label
+    // would silently change that stat to a different value depending on
+    // locale. Flagged as grammar/logic machinery in the report rather than
+    // wrapped.
     let prompt = format!("Current={}  (0-200) Searching = ", py().misc.chance_in_search);
-    number = prompt.len() as i32;
+    number = prompt.chars().count() as i32;
     put_string_clear_to_eol(&prompt, Coord::new(0, 0));
     if get_string_input(&mut input, Coord::new(0, number), 3) {
         let mut new_gold: i32 = 0;
@@ -297,8 +308,8 @@ pub fn wizard_character_adjustment() {
         return;
     }
 
-    let prompt = format!("Current={}  (-1-18) Stealth = ", py().misc.stealth_factor);
-    number = prompt.len() as i32;
+    let prompt = tr_fmt!("Current={}  (-1-18) Stealth = ", py().misc.stealth_factor);
+    number = prompt.chars().count() as i32;
     put_string_clear_to_eol(&prompt, Coord::new(0, 0));
     if get_string_input(&mut input, Coord::new(0, number), 3) {
         let valid_number = string_to_number(&input, &mut number);
@@ -309,8 +320,8 @@ pub fn wizard_character_adjustment() {
         return;
     }
 
-    let prompt = format!("Current={}  (0-200) Disarming = ", py().misc.disarm);
-    number = prompt.len() as i32;
+    let prompt = tr_fmt!("Current={}  (0-200) Disarming = ", py().misc.disarm);
+    number = prompt.chars().count() as i32;
     put_string_clear_to_eol(&prompt, Coord::new(0, 0));
     if get_string_input(&mut input, Coord::new(0, number), 3) {
         let valid_number = string_to_number(&input, &mut number);
@@ -321,8 +332,8 @@ pub fn wizard_character_adjustment() {
         return;
     }
 
-    let prompt = format!("Current={}  (0-100) Save = ", py().misc.saving_throw);
-    number = prompt.len() as i32;
+    let prompt = tr_fmt!("Current={}  (0-100) Save = ", py().misc.saving_throw);
+    number = prompt.chars().count() as i32;
     put_string_clear_to_eol(&prompt, Coord::new(0, 0));
     if get_string_input(&mut input, Coord::new(0, number), 3) {
         let valid_number = string_to_number(&input, &mut number);
@@ -333,8 +344,8 @@ pub fn wizard_character_adjustment() {
         return;
     }
 
-    let prompt = format!("Current={}  (0-200) Base to hit = ", py().misc.bth);
-    number = prompt.len() as i32;
+    let prompt = tr_fmt!("Current={}  (0-200) Base to hit = ", py().misc.bth);
+    number = prompt.chars().count() as i32;
     put_string_clear_to_eol(&prompt, Coord::new(0, 0));
     if get_string_input(&mut input, Coord::new(0, number), 3) {
         let valid_number = string_to_number(&input, &mut number);
@@ -345,8 +356,8 @@ pub fn wizard_character_adjustment() {
         return;
     }
 
-    let prompt = format!("Current={}  (0-200) Bows/Throwing = ", py().misc.bth_with_bows);
-    number = prompt.len() as i32;
+    let prompt = tr_fmt!("Current={}  (0-200) Bows/Throwing = ", py().misc.bth_with_bows);
+    number = prompt.chars().count() as i32;
     put_string_clear_to_eol(&prompt, Coord::new(0, 0));
     if get_string_input(&mut input, Coord::new(0, number), 3) {
         let valid_number = string_to_number(&input, &mut number);
@@ -357,8 +368,8 @@ pub fn wizard_character_adjustment() {
         return;
     }
 
-    let prompt = format!("Current={}  Weight = ", py().misc.weight);
-    number = prompt.len() as i32;
+    let prompt = tr_fmt!("Current={}  Weight = ", py().misc.weight);
+    number = prompt.chars().count() as i32;
     put_string_clear_to_eol(&prompt, Coord::new(0, 0));
     if get_string_input(&mut input, Coord::new(0, number), 3) {
         let valid_number = string_to_number(&input, &mut number);
@@ -370,7 +381,7 @@ pub fn wizard_character_adjustment() {
     }
 
     let mut command = ' ';
-    while get_command("Alter speed? (+/-)", &mut command) {
+    while get_command(tr!("Alter speed? (+/-)"), &mut command) {
         if command == '+' {
             player_change_speed(-1);
         } else if command == '-' {
@@ -386,11 +397,14 @@ pub fn wizard_character_adjustment() {
 fn wizard_request_object_id(id: &mut i32, label: &str, start_id: i32, end_id: i32) -> bool {
     let id_str = format!("{}-{}", start_id, end_id);
 
-    let msg = format!("{} ID ({}): ", label, id_str);
+    let msg = tr_fmt!("{} ID ({}): ", label, id_str);
     put_string_clear_to_eol(&msg, Coord::new(0, 0));
 
     let mut input = String::new();
-    if !get_string_input(&mut input, Coord::new(0, msg.len() as i32), 3) {
+    // jdbkmoria extension: count chars, not bytes, so a translated `label`
+    // with multi-byte UTF-8 lands the input column at the right display
+    // width; identical to `.len()` for ASCII text.
+    if !get_string_input(&mut input, Coord::new(0, msg.chars().count() as i32), 3) {
         return false;
     }
 
@@ -400,7 +414,7 @@ fn wizard_request_object_id(id: &mut i32, label: &str, start_id: i32, end_id: i3
     }
 
     if given_id < start_id || given_id > end_id {
-        put_string_clear_to_eol(&format!("Invalid ID. Must be {}", id_str), Coord::new(0, 0));
+        put_string_clear_to_eol(&tr_fmt!("Invalid ID. Must be {}", id_str), Coord::new(0, 0));
         return false;
     }
     *id = given_id;
@@ -450,7 +464,7 @@ fn wizard_item_identify(treasure_id: &mut usize) {
                 std::mem::swap(treasure_id, &mut i_mut);
             }
 
-            print_message(Some("You combine similar objects from the shop and dungeon."));
+            print_message(Some(tr!("You combine similar objects from the shop and dungeon.")));
 
             py().inventory[*treasure_id].items_count += py().inventory[i_mut].items_count;
             py().pack.unique_items -= 1;
@@ -475,7 +489,7 @@ fn wizard_item_identify(treasure_id: &mut usize) {
 // Simplified wizard routine for creating an object
 pub fn wizard_generate_object() {
     let mut id: i32 = 0;
-    if !wizard_request_object_id(&mut id, "Dungeon/Store object", 0, 366) {
+    if !wizard_request_object_id(&mut id, tr!("Dungeon/Store object"), 0, 366) {
         return;
     }
 
@@ -512,19 +526,19 @@ pub fn wizard_generate_object() {
 
 // Wizard routine for creating objects -RAK-
 pub fn wizard_create_objects() {
-    print_message(Some("Warning: This routine can cause a fatal error."));
+    print_message(Some(tr!("Warning: This routine can cause a fatal error.")));
 
     let mut item = Inventory::empty();
 
     item.id = config::dungeon::objects::OBJ_WIZARD;
     item.special_name_id = 0;
-    item_replace_inscription(&mut item, "wizard item");
+    item_replace_inscription(&mut item, tr!("wizard item"));
     item.identification = config::identification::ID_KNOWN2 | config::identification::ID_STORE_BOUGHT;
 
     let mut input = String::new();
     let mut number: i32;
 
-    put_string_clear_to_eol("Tval   : ", Coord::new(0, 0));
+    put_string_clear_to_eol(tr!("Tval   : "), Coord::new(0, 0));
     if !get_string_input(&mut input, Coord::new(0, 9), 3) {
         return;
     }
@@ -533,13 +547,13 @@ pub fn wizard_create_objects() {
         item.category_id = number as u8;
     }
 
-    put_string_clear_to_eol("Tchar  : ", Coord::new(0, 0));
+    put_string_clear_to_eol(tr!("Tchar  : "), Coord::new(0, 0));
     if !get_string_input(&mut input, Coord::new(0, 9), 1) {
         return;
     }
     item.sprite = input.as_bytes().first().copied().unwrap_or(0);
 
-    put_string_clear_to_eol("Subval : ", Coord::new(0, 0));
+    put_string_clear_to_eol(tr!("Subval : "), Coord::new(0, 0));
     if !get_string_input(&mut input, Coord::new(0, 9), 5) {
         return;
     }
@@ -548,7 +562,7 @@ pub fn wizard_create_objects() {
         item.sub_category_id = number as u8;
     }
 
-    put_string_clear_to_eol("Weight : ", Coord::new(0, 0));
+    put_string_clear_to_eol(tr!("Weight : "), Coord::new(0, 0));
     if !get_string_input(&mut input, Coord::new(0, 9), 5) {
         return;
     }
@@ -557,7 +571,7 @@ pub fn wizard_create_objects() {
         item.weight = number as u16;
     }
 
-    put_string_clear_to_eol("Number : ", Coord::new(0, 0));
+    put_string_clear_to_eol(tr!("Number : "), Coord::new(0, 0));
     if !get_string_input(&mut input, Coord::new(0, 9), 5) {
         return;
     }
@@ -566,7 +580,7 @@ pub fn wizard_create_objects() {
         item.items_count = number as u8;
     }
 
-    put_string_clear_to_eol("Damage (dice): ", Coord::new(0, 0));
+    put_string_clear_to_eol(tr!("Damage (dice): "), Coord::new(0, 0));
     if !get_string_input(&mut input, Coord::new(0, 15), 3) {
         return;
     }
@@ -575,7 +589,7 @@ pub fn wizard_create_objects() {
         item.damage.dice = number as u8;
     }
 
-    put_string_clear_to_eol("Damage (sides): ", Coord::new(0, 0));
+    put_string_clear_to_eol(tr!("Damage (sides): "), Coord::new(0, 0));
     if !get_string_input(&mut input, Coord::new(0, 16), 3) {
         return;
     }
@@ -584,7 +598,7 @@ pub fn wizard_create_objects() {
         item.damage.sides = number as u8;
     }
 
-    put_string_clear_to_eol("+To hit: ", Coord::new(0, 0));
+    put_string_clear_to_eol(tr!("+To hit: "), Coord::new(0, 0));
     if !get_string_input(&mut input, Coord::new(0, 9), 3) {
         return;
     }
@@ -593,7 +607,7 @@ pub fn wizard_create_objects() {
         item.to_hit = number as i16;
     }
 
-    put_string_clear_to_eol("+To dam: ", Coord::new(0, 0));
+    put_string_clear_to_eol(tr!("+To dam: "), Coord::new(0, 0));
     if !get_string_input(&mut input, Coord::new(0, 9), 3) {
         return;
     }
@@ -602,7 +616,7 @@ pub fn wizard_create_objects() {
         item.to_damage = number as i16;
     }
 
-    put_string_clear_to_eol("AC     : ", Coord::new(0, 0));
+    put_string_clear_to_eol(tr!("AC     : "), Coord::new(0, 0));
     if !get_string_input(&mut input, Coord::new(0, 9), 3) {
         return;
     }
@@ -611,7 +625,7 @@ pub fn wizard_create_objects() {
         item.ac = number as i16;
     }
 
-    put_string_clear_to_eol("+To AC : ", Coord::new(0, 0));
+    put_string_clear_to_eol(tr!("+To AC : "), Coord::new(0, 0));
     if !get_string_input(&mut input, Coord::new(0, 9), 3) {
         return;
     }
@@ -620,7 +634,7 @@ pub fn wizard_create_objects() {
         item.to_ac = number as i16;
     }
 
-    put_string_clear_to_eol("P1     : ", Coord::new(0, 0));
+    put_string_clear_to_eol(tr!("P1     : "), Coord::new(0, 0));
     if !get_string_input(&mut input, Coord::new(0, 9), 5) {
         return;
     }
@@ -629,7 +643,7 @@ pub fn wizard_create_objects() {
         item.misc_use = number as i16;
     }
 
-    put_string_clear_to_eol("Flags (In HEX): ", Coord::new(0, 0));
+    put_string_clear_to_eol(tr!("Flags (In HEX): "), Coord::new(0, 0));
     if !get_string_input(&mut input, Coord::new(0, 16), 8) {
         return;
     }
@@ -638,7 +652,7 @@ pub fn wizard_create_objects() {
     // original comment; in Rust we just parse the hex string directly)
     item.flags = u32::from_str_radix(input.trim(), 16).unwrap_or(0);
 
-    put_string_clear_to_eol("Cost : ", Coord::new(0, 0));
+    put_string_clear_to_eol(tr!("Cost : "), Coord::new(0, 0));
     if !get_string_input(&mut input, Coord::new(0, 9), 8) {
         return;
     }
@@ -647,7 +661,7 @@ pub fn wizard_create_objects() {
         item.cost = cost;
     }
 
-    put_string_clear_to_eol("Level : ", Coord::new(0, 0));
+    put_string_clear_to_eol(tr!("Level : "), Coord::new(0, 0));
     if !get_string_input(&mut input, Coord::new(0, 10), 3) {
         return;
     }
@@ -656,7 +670,7 @@ pub fn wizard_create_objects() {
         item.depth_first_found = number as u8;
     }
 
-    if get_input_confirmation("Allocate?") {
+    if get_input_confirmation(tr!("Allocate?")) {
         // delete object first if any, before call popt()
         let pos = py().pos;
 
@@ -669,8 +683,8 @@ pub fn wizard_create_objects() {
         game().treasure.list[allocated_id as usize] = item;
         dg().tile_mut(pos).treasure_id = allocated_id as u8;
 
-        print_message(Some("Allocated."));
+        print_message(Some(tr!("Allocated.")));
     } else {
-        print_message(Some("Aborted."));
+        print_message(Some(tr!("Aborted.")));
     }
 }

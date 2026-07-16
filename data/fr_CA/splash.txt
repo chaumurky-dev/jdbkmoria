@@ -1,0 +1,23 @@
+
+        JDBK Moria, d'après le roguelike classique de Robert A. Koeneke
+
+                              D O N J O N S   D E
+
+             ##     ##    #######    ########    ####      ###
+             ###   ###   ##     ##   ##     ##    ##      ## ##
+             #### ####   ##     ##   ##     ##    ##     ##   ##
+             ## ### ##   ##     ##   ########     ##    ##     ##
+             ##     ##   ##     ##   ##   ##      ##    #########
+             ##     ##   ##     ##   ##    ##     ##    ##     ##
+             ##     ##    #######    ##     ##   ####   ##     ##
+
+                              jdbkmoria 0.1.0
+                           d'après Umoria 5.7.15
+
+      Une édition enrichie de Moria, avec des nouveautés qu'on ne trouve
+          nulle part ailleurs -- des tableaux sur les murs du donjon.
+
+    jdbkmoria est un logiciel libre distribué sous licence GPL-3.0-or-later
+                     et fourni SANS AUCUNE GARANTIE
+
+       Pour en savoir plus : https://github.com/chaumurky-dev/jdbkmoria

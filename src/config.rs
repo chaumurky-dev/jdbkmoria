@@ -43,6 +43,22 @@ pub mod files {
     pub fn set_save_game(filename: &str) {
         *SAVE_GAME.get() = filename.to_string();
     }
+
+    // jdbkmoria extension: resolve a data file to its localized variant
+    // (data/<locale-tag>/<name>) when one exists, falling back to the
+    // original (en_US) file.
+    pub fn localized(path: &str) -> String {
+        let tag = crate::locale::locale().tag;
+        if tag != "en_US" {
+            if let Some((dir, name)) = path.rsplit_once('/') {
+                let candidate = format!("{}/{}/{}", dir, tag, name);
+                if std::path::Path::new(&candidate).exists() {
+                    return candidate;
+                }
+            }
+        }
+        path.to_string()
+    }
 }
 
 // Game options as set on startup and with `=` set options command -CJS-

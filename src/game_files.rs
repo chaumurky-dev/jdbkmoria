@@ -6,6 +6,7 @@
 // Misc code to access files used by Moria
 
 use crate::config;
+use crate::{tr, tr_fmt};
 use crate::data_player::{CHARACTER_RACES, CLASS_LEVEL_ADJ, CLASSES};
 use crate::game::{game, sorted_objects};
 use crate::game_objects::{item_get_random_object_id, popt, pusht};
@@ -55,7 +56,7 @@ pub fn initialize_score_file() -> bool {
 
 // Attempt to open and print the file containing the intro splash screen text -RAK-
 pub fn display_splash_screen() {
-    if let Ok(file) = File::open(config::files::SPLASH_SCREEN) {
+    if let Ok(file) = File::open(config::files::localized(config::files::SPLASH_SCREEN)) {
         clear_screen();
 
         for (i, line) in BufReader::new(file).lines().map_while(Result::ok).enumerate() {
@@ -72,7 +73,7 @@ pub fn display_text_help_file(filename: &str) {
     let file = match File::open(filename) {
         Ok(file) => file,
         Err(_) => {
-            put_string_clear_to_eol(&format!("Can not find help file '{}'.", filename), Coord::new(0, 0));
+            put_string_clear_to_eol(&tr_fmt!("Can not find help file '{}'.", filename), Coord::new(0, 0));
             return;
         }
     };
@@ -92,7 +93,7 @@ pub fn display_text_help_file(filename: &str) {
             }
         }
 
-        put_string_clear_to_eol("[ press any key to continue ]", Coord::new(23, 23));
+        put_string_clear_to_eol(tr!("[ press any key to continue ]"), Coord::new(23, 23));
         if get_key_input() == ESCAPE {
             break;
         }
@@ -106,7 +107,7 @@ pub fn display_death_file(filename: &str) {
     let file = match File::open(filename) {
         Ok(file) => file,
         Err(_) => {
-            put_string_clear_to_eol(&format!("Can not find help file '{}'.", filename), Coord::new(0, 0));
+            put_string_clear_to_eol(&tr_fmt!("Can not find help file '{}'.", filename), Coord::new(0, 0));
             return;
         }
     };
@@ -127,7 +128,7 @@ pub fn display_death_file(filename: &str) {
 // Note that the objects produced is a sampling of objects
 // which be expected to appear on that level.
 pub fn output_random_level_objects_to_file() {
-    put_string_clear_to_eol("Produce objects on what level?: ", Coord::new(0, 0));
+    put_string_clear_to_eol(tr!("Produce objects on what level?: "), Coord::new(0, 0));
 
     let mut input = String::new();
     if !get_string_input(&mut input, Coord::new(0, 32), 10) {
@@ -139,7 +140,7 @@ pub fn output_random_level_objects_to_file() {
         return;
     }
 
-    put_string_clear_to_eol("Produce how many objects?: ", Coord::new(0, 0));
+    put_string_clear_to_eol(tr!("Produce how many objects?: "), Coord::new(0, 0));
     if !get_string_input(&mut input, Coord::new(0, 27), 10) {
         return;
     }
@@ -150,7 +151,7 @@ pub fn output_random_level_objects_to_file() {
     }
 
     if count < 1 || level < 0 || level > 1200 {
-        put_string_clear_to_eol("Parameters no good.", Coord::new(0, 0));
+        put_string_clear_to_eol(tr!("Parameters no good."), Coord::new(0, 0));
         return;
     }
 
@@ -158,9 +159,9 @@ pub fn output_random_level_objects_to_file() {
         count = 10000;
     }
 
-    let small_objects = get_input_confirmation("Small objects only?");
+    let small_objects = get_input_confirmation(tr!("Small objects only?"));
 
-    put_string_clear_to_eol("File name: ", Coord::new(0, 0));
+    put_string_clear_to_eol(tr!("File name: "), Coord::new(0, 0));
 
     let mut filename = String::new();
     if !get_string_input(&mut filename, Coord::new(0, 11), 64) {
@@ -173,12 +174,12 @@ pub fn output_random_level_objects_to_file() {
     let mut file = match File::create(&filename) {
         Ok(file) => file,
         Err(_) => {
-            put_string_clear_to_eol("File could not be opened.", Coord::new(0, 0));
+            put_string_clear_to_eol(tr!("File could not be opened."), Coord::new(0, 0));
             return;
         }
     };
 
-    put_string_clear_to_eol(&format!("{} random objects being produced...", count), Coord::new(0, 0));
+    put_string_clear_to_eol(&tr_fmt!("{} random objects being produced...", count), Coord::new(0, 0));
 
     put_qio();
 
@@ -210,66 +211,79 @@ pub fn output_random_level_objects_to_file() {
 
     pusht(treasure_id as u8);
 
-    put_string_clear_to_eol("Completed.", Coord::new(0, 0));
+    put_string_clear_to_eol(tr!("Completed."), Coord::new(0, 0));
 }
 
 // Write character sheet to the file
 fn write_character_sheet_to_file(char_file: &mut File) -> io::Result<()> {
-    put_string_clear_to_eol("Writing character sheet...", Coord::new(0, 0));
+    put_string_clear_to_eol(tr!("Writing character sheet..."), Coord::new(0, 0));
     put_qio();
 
-    let colon = ":";
     let blank = " ";
 
     write!(char_file, "{}\n\n", ctrl_key('L'))?;
 
-    write!(char_file, " Name{:>9} {:<23}", colon, py().misc.name)?;
-    write!(char_file, " Age{:>11} {:>6}", colon, py().misc.age)?;
-    writeln!(char_file, "   STR : {}", stats_as_string(py().stats.used[A_STR]))?;
+    // Column widths are clamped to the English field widths ({:<W.W}, char-safe)
+    // so translated labels can never shift or overwrite columns; en_US output
+    // stays byte-identical -- jdbkmoria extension (see commit "Fix fixed-column
+    // screens under translated labels" for the same pattern in ui.rs/scores.rs).
+    write!(char_file, " {:<13.13} {:<23}", tr!("Name        :"), py().misc.name)?;
+    write!(char_file, " {:<13.13}: {:>6}", tr!("Age          "), py().misc.age)?;
+    writeln!(char_file, "   {:<6.6}{}", tr!("STR : "), stats_as_string(py().stats.used[A_STR]))?;
 
-    write!(char_file, " Race{:>9} {:<23}", colon, CHARACTER_RACES[py().misc.race_id as usize].name)?;
-    write!(char_file, " Height{:>8} {:>6}", colon, py().misc.height)?;
-    writeln!(char_file, "   INT : {}", stats_as_string(py().stats.used[A_INT]))?;
+    write!(
+        char_file,
+        " {:<13.13} {:<23}",
+        tr!("Race        :"),
+        tr!(CHARACTER_RACES[py().misc.race_id as usize].name)
+    )?;
+    write!(char_file, " {:<13.13}: {:>6}", tr!("Height       "), py().misc.height)?;
+    writeln!(char_file, "   {:<6.6}{}", tr!("INT : "), stats_as_string(py().stats.used[A_INT]))?;
 
-    write!(char_file, " Sex{:>10} {:<23}", colon, player_get_gender_label())?;
-    write!(char_file, " Weight{:>8} {:>6}", colon, py().misc.weight)?;
-    writeln!(char_file, "   WIS : {}", stats_as_string(py().stats.used[A_WIS]))?;
+    write!(char_file, " {:<13.13} {:<23}", tr!("Sex         :"), player_get_gender_label())?;
+    write!(char_file, " {:<13.13}: {:>6}", tr!("Weight       "), py().misc.weight)?;
+    writeln!(char_file, "   {:<6.6}{}", tr!("WIS : "), stats_as_string(py().stats.used[A_WIS]))?;
 
-    write!(char_file, " Class{:>8} {:<23}", colon, CLASSES[py().misc.class_id as usize].title)?;
-    write!(char_file, " Social Class : {:>6}", py().misc.social_class)?;
-    writeln!(char_file, "   DEX : {}", stats_as_string(py().stats.used[A_DEX]))?;
+    write!(
+        char_file,
+        " {:<13.13} {:<23}",
+        tr!("Class       :"),
+        tr!(CLASSES[py().misc.class_id as usize].title)
+    )?;
+    write!(char_file, " {:<13.13}: {:>6}", tr!("Social Class "), py().misc.social_class)?;
+    writeln!(char_file, "   {:<6.6}{}", tr!("DEX : "), stats_as_string(py().stats.used[A_DEX]))?;
 
-    write!(char_file, " Title{:>8} {:<23}", colon, player_rank_title())?;
+    write!(char_file, " {:<13.13} {:<23}", tr!("Title       :"), player_rank_title())?;
     write!(char_file, "{:>22}", blank)?;
-    writeln!(char_file, "   CON : {}", stats_as_string(py().stats.used[A_CON]))?;
+    writeln!(char_file, "   {:<6.6}{}", tr!("CON : "), stats_as_string(py().stats.used[A_CON]))?;
 
     write!(char_file, "{:>34}", blank)?;
     write!(char_file, "{:>26}", blank)?;
-    write!(char_file, "   CHR : {}\n\n", stats_as_string(py().stats.used[A_CHR]))?;
+    write!(char_file, "   {:<6.6}{}\n\n", tr!("CHR : "), stats_as_string(py().stats.used[A_CHR]))?;
 
-    write!(char_file, " + To Hit    : {:>6}", py().misc.display_to_hit)?;
-    write!(char_file, "{:>7}Level      : {:>7}", blank, py().misc.level)?;
-    writeln!(char_file, "    Max Hit Points : {:>6}", py().misc.max_hp)?;
+    write!(char_file, " {:<12.12}: {:>6}", tr!("+ To Hit    "), py().misc.display_to_hit)?;
+    write!(char_file, "{:>7}{:<11.11}: {:>7}", blank, tr!("Level      "), py().misc.level)?;
+    writeln!(char_file, "    {:<15.15}: {:>6}", tr!("Max Hit Points "), py().misc.max_hp)?;
 
-    write!(char_file, " + To Damage : {:>6}", py().misc.display_to_damage)?;
-    write!(char_file, "{:>7}Experience : {:>7}", blank, py().misc.exp)?;
-    writeln!(char_file, "    Cur Hit Points : {:>6}", py().misc.current_hp)?;
+    write!(char_file, " {:<12.12}: {:>6}", tr!("+ To Damage "), py().misc.display_to_damage)?;
+    write!(char_file, "{:>7}{:<11.11}: {:>7}", blank, tr!("Experience "), py().misc.exp)?;
+    writeln!(char_file, "    {:<15.15}: {:>6}", tr!("Cur Hit Points "), py().misc.current_hp)?;
 
-    write!(char_file, " + To AC     : {:>6}", py().misc.display_to_ac)?;
-    write!(char_file, "{:>7}Max Exp    : {:>7}", blank, py().misc.max_exp)?;
-    writeln!(char_file, "    Max Mana{:>8} {:>6}", colon, py().misc.mana)?;
+    write!(char_file, " {:<12.12}: {:>6}", tr!("+ To AC     "), py().misc.display_to_ac)?;
+    write!(char_file, "{:>7}{:<11.11}: {:>7}", blank, tr!("Max Exp    "), py().misc.max_exp)?;
+    writeln!(char_file, "    {:<15.15}: {:>6}", tr!("Max Mana       "), py().misc.mana)?;
 
-    write!(char_file, "   Total AC  : {:>6}", py().misc.display_ac)?;
+    write!(char_file, " {:<12.12}: {:>6}", tr!("  Total AC  "), py().misc.display_ac)?;
     if py().misc.level as usize >= PLAYER_MAX_LEVEL {
-        write!(char_file, "{:>7}Exp to Adv : *******", blank)?;
+        write!(char_file, "{:>7}{:<11.11}: {:>7}", blank, tr!("Exp to Adv."), "*******")?;
     } else {
         let exp_to_adv =
             (py().base_exp_levels[py().misc.level as usize - 1] as i64 * py().misc.experience_factor as i64 / 100) as i32;
-        write!(char_file, "{:>7}Exp to Adv : {:>7}", blank, exp_to_adv)?;
+        write!(char_file, "{:>7}{:<11.11}: {:>7}", blank, tr!("Exp to Adv."), exp_to_adv)?;
     }
-    writeln!(char_file, "    Cur Mana{:>8} {:>6}", colon, py().misc.current_mana)?;
+    writeln!(char_file, "    {:<15.15}: {:>6}", tr!("Cur Mana       "), py().misc.current_mana)?;
 
-    write!(char_file, "{:>28}Gold{:>8} {:>7}\n\n", blank, colon, py().misc.au)?;
+    write!(char_file, "{:>28}{:<11.11}: {:>7}\n\n", blank, tr!("Gold       "), py().misc.au)?;
 
     let misc = &py().misc;
     let class_id = misc.class_id as usize;
@@ -296,21 +310,21 @@ fn write_character_sheet_to_file(char_file: &mut File) -> io::Result<()> {
     let xdev = misc.saving_throw as i32 + player_stat_adjustment_wisdom_intelligence(A_INT)
         + (CLASS_LEVEL_ADJ[class_id][CLASS_DEVICE] as i32 * level / 3);
 
-    let xinfra = format!("{} feet", py().flags.see_infra * 10);
+    let xinfra = tr_fmt!("{} feet", py().flags.see_infra * 10);
 
-    write!(char_file, "(Miscellaneous Abilities)\n\n")?;
-    write!(char_file, " Fighting    : {:<10}", stat_rating(Coord::new(12, xbth)))?;
-    write!(char_file, "   Stealth     : {:<10}", stat_rating(Coord::new(1, xstl)))?;
-    writeln!(char_file, "   Perception  : {}", stat_rating(Coord::new(3, xfos)))?;
-    write!(char_file, " Bows/Throw  : {:<10}", stat_rating(Coord::new(12, xbthb)))?;
-    write!(char_file, "   Disarming   : {:<10}", stat_rating(Coord::new(8, xdis)))?;
-    writeln!(char_file, "   Searching   : {}", stat_rating(Coord::new(6, xsrh)))?;
-    write!(char_file, " Saving Throw: {:<10}", stat_rating(Coord::new(6, xsave)))?;
-    write!(char_file, "   Magic Device: {:<10}", stat_rating(Coord::new(6, xdev)))?;
-    write!(char_file, "   Infra-Vision: {}\n\n", xinfra)?;
+    write!(char_file, "{}\n\n", tr!("(Miscellaneous Abilities)"))?;
+    write!(char_file, " {:<13.13} {:<10}", tr!("Fighting    :"), stat_rating(Coord::new(12, xbth)))?;
+    write!(char_file, "   {:<13.13} {:<10}", tr!("Stealth     :"), stat_rating(Coord::new(1, xstl)))?;
+    writeln!(char_file, "   {:<13.13} {}", tr!("Perception  :"), stat_rating(Coord::new(3, xfos)))?;
+    write!(char_file, " {:<13.13} {:<10}", tr!("Bows/Throw  :"), stat_rating(Coord::new(12, xbthb)))?;
+    write!(char_file, "   {:<13.13} {:<10}", tr!("Disarming   :"), stat_rating(Coord::new(8, xdis)))?;
+    writeln!(char_file, "   {:<13.13} {}", tr!("Searching   :"), stat_rating(Coord::new(6, xsrh)))?;
+    write!(char_file, " {:<13.13} {:<10}", tr!("Saving Throw:"), stat_rating(Coord::new(6, xsave)))?;
+    write!(char_file, "   {:<13.13} {:<10}", tr!("Magic Device:"), stat_rating(Coord::new(6, xdev)))?;
+    write!(char_file, "   {:<13.13} {}\n\n", tr!("Infra-Vision:"), xinfra)?;
 
     // Write out the character's history
-    writeln!(char_file, "Character Background")?;
+    writeln!(char_file, "{}", tr!("Character Background"))?;
     for entry in &py().misc.history {
         writeln!(char_file, " {}", entry)?;
     }
@@ -319,29 +333,31 @@ fn write_character_sheet_to_file(char_file: &mut File) -> io::Result<()> {
 }
 
 fn equipment_placement_description(item_id: usize) -> &'static str {
+    // tr! sits on each literal (not on the returned value at the call site)
+    // so tools/locale_catalog.py extract can see the keys.
     match item_id {
-        x if x == PlayerEquipment::Wield as usize => "You are wielding",
-        x if x == PlayerEquipment::Head as usize => "Worn on head",
-        x if x == PlayerEquipment::Neck as usize => "Worn around neck",
-        x if x == PlayerEquipment::Body as usize => "Worn on body",
-        x if x == PlayerEquipment::Arm as usize => "Worn on shield arm",
-        x if x == PlayerEquipment::Hands as usize => "Worn on hands",
-        x if x == PlayerEquipment::Right as usize => "Right ring finger",
-        x if x == PlayerEquipment::Left as usize => "Left  ring finger",
-        x if x == PlayerEquipment::Feet as usize => "Worn on feet",
-        x if x == PlayerEquipment::Outer as usize => "Worn about body",
-        x if x == PlayerEquipment::Light as usize => "Light source is",
-        x if x == PlayerEquipment::Auxiliary as usize => "Secondary weapon",
-        _ => "*Unknown value*",
+        x if x == PlayerEquipment::Wield as usize => tr!("You are wielding"),
+        x if x == PlayerEquipment::Head as usize => tr!("Worn on head"),
+        x if x == PlayerEquipment::Neck as usize => tr!("Worn around neck"),
+        x if x == PlayerEquipment::Body as usize => tr!("Worn on body"),
+        x if x == PlayerEquipment::Arm as usize => tr!("Worn on shield arm"),
+        x if x == PlayerEquipment::Hands as usize => tr!("Worn on hands"),
+        x if x == PlayerEquipment::Right as usize => tr!("Right ring finger"),
+        x if x == PlayerEquipment::Left as usize => tr!("Left  ring finger"),
+        x if x == PlayerEquipment::Feet as usize => tr!("Worn on feet"),
+        x if x == PlayerEquipment::Outer as usize => tr!("Worn about body"),
+        x if x == PlayerEquipment::Light as usize => tr!("Light source is"),
+        x if x == PlayerEquipment::Auxiliary as usize => tr!("Secondary weapon"),
+        _ => tr!("*Unknown value*"),
     }
 }
 
 // Write out the equipment list.
 fn write_equipment_list_to_file(equip_file: &mut File) -> io::Result<()> {
-    write!(equip_file, "\n  [Character's Equipment List]\n\n")?;
+    write!(equip_file, "\n  {}\n\n", tr!("[Character's Equipment List]"))?;
 
     if py().equipment_count == 0 {
-        writeln!(equip_file, "  Character has no equipment in use.")?;
+        writeln!(equip_file, "  {}", tr!("Character has no equipment in use."))?;
         return Ok(());
     }
 
@@ -353,7 +369,13 @@ fn write_equipment_list_to_file(equip_file: &mut File) -> io::Result<()> {
         }
 
         let description = item_description(&py().inventory[i], true);
-        writeln!(equip_file, "  {}) {:<19}: {}", (b'a' + item_slot_id) as char, equipment_placement_description(i), description)?;
+        writeln!(
+            equip_file,
+            "  {}) {:<19.19}: {}",
+            (b'a' + item_slot_id) as char,
+            equipment_placement_description(i),
+            description
+        )?;
 
         item_slot_id += 1;
     }
@@ -365,10 +387,10 @@ fn write_equipment_list_to_file(equip_file: &mut File) -> io::Result<()> {
 
 // Write out the character's inventory.
 fn write_inventory_to_file(inv_file: &mut File) -> io::Result<()> {
-    write!(inv_file, "  [General Inventory List]\n\n")?;
+    write!(inv_file, "  {}\n\n", tr!("[General Inventory List]"))?;
 
     if py().pack.unique_items == 0 {
-        writeln!(inv_file, "  Character has no objects in inventory.")?;
+        writeln!(inv_file, "  {}", tr!("Character has no objects in inventory."))?;
         return Ok(());
     }
 
@@ -391,7 +413,7 @@ pub fn output_player_character_to_file(filename: &str) -> bool {
     let file = match std::fs::OpenOptions::new().write(true).create_new(true).open(filename) {
         Ok(file) => Some(file),
         Err(e) if e.kind() == io::ErrorKind::AlreadyExists => {
-            if get_input_confirmation(&format!("Replace existing file {}?", filename)) {
+            if get_input_confirmation(&tr_fmt!("Replace existing file {}?", filename)) {
                 File::create(filename).ok()
             } else {
                 None
@@ -403,7 +425,7 @@ pub fn output_player_character_to_file(filename: &str) -> bool {
     let mut file = match file {
         Some(file) => file,
         None => {
-            crate::ui_io::print_message(Some(&format!("Can't open file {}:", filename)));
+            crate::ui_io::print_message(Some(&tr_fmt!("Can't open file {}:", filename)));
             return false;
         }
     };
@@ -412,7 +434,7 @@ pub fn output_player_character_to_file(filename: &str) -> bool {
     let _ = write_equipment_list_to_file(&mut file);
     let _ = write_inventory_to_file(&mut file);
 
-    put_string_clear_to_eol("Completed.", Coord::new(0, 0));
+    put_string_clear_to_eol(tr!("Completed."), Coord::new(0, 0));
 
     true
 }

@@ -19,6 +19,7 @@ use crate::types::Coord;
 use crate::ui::ESCAPE;
 use crate::ui_io::{clear_screen, erase_line, get_key_input, panic_save, print_message, put_string_clear_to_eol};
 use crate::version::{CURRENT_VERSION_MAJOR, CURRENT_VERSION_MINOR, CURRENT_VERSION_PATCH};
+use crate::{tr, tr_fmt};
 
 // High score file pointer -- modeled as the shared module-internal fileptr
 // state in `game_save.rs`, matching the C code's `setFileptr(highscore_fp)`
@@ -85,13 +86,22 @@ fn high_score_gender_label() -> u8 {
 
 // Copies a string into a fixed-size, zero-padded byte buffer, mirroring the
 // C code's `strcpy()` into a zero-initialized `HighScore_t` struct member.
+//
+// jdbkmoria extension: translated died_from/name text may contain multi-byte
+// UTF-8 sequences, so the byte count that fits the buffer is walked back to
+// the nearest char boundary before copying — a plain byte-index truncation
+// could split a multi-byte character, leaving an invalid UTF-8 tail that
+// `cstr()` would then discard entirely via `from_utf8().unwrap_or("")`.
 fn copy_bytes_zero_padded(dest: &mut [u8], src: &str) {
     for b in dest.iter_mut() {
         *b = 0;
     }
-    for (i, b) in src.bytes().take(dest.len().saturating_sub(1)).enumerate() {
-        dest[i] = b;
+    let max_len = dest.len().saturating_sub(1);
+    let mut end = src.len().min(max_len);
+    while end > 0 && !src.is_char_boundary(end) {
+        end -= 1;
     }
+    dest[..end].copy_from_slice(&src.as_bytes()[..end]);
 }
 
 // Reads a NUL-terminated string out of a fixed-size byte buffer.
@@ -146,7 +156,7 @@ pub fn record_new_high_score() {
     }
 
     if *panic_save() {
-        print_message(Some("Sorry, scores for games restored from panic save files are not saved."));
+        print_message(Some(tr!("Sorry, scores for games restored from panic save files are not saved.")));
         return;
     }
 
@@ -173,7 +183,7 @@ pub fn record_new_high_score() {
     let file = match OpenOptions::new().read(true).write(true).open(config::files::SCORES) {
         Ok(f) => f,
         Err(_) => {
-            print_message(Some(&format!("Error opening score file '{}'.", config::files::SCORES)));
+            print_message(Some(&tr_fmt!("Error opening score file '{}'.", config::files::SCORES)));
             print_message(None);
             return;
         }
@@ -270,7 +280,7 @@ pub fn show_scores_screen() {
     let file = match File::open(config::files::SCORES) {
         Ok(f) => f,
         Err(_) => {
-            print_message(Some(&format!("Error opening score file '{}'.", config::files::SCORES)));
+            print_message(Some(&tr_fmt!("Error opening score file '{}'.", config::files::SCORES)));
             print_message(None);
             return;
         }
@@ -286,7 +296,7 @@ pub fn show_scores_screen() {
 
     // If score data present, check if a valid game version
     if !eof_hit() && !valid_game_version(version_maj, version_min, patch_level) {
-        print_message(Some("Sorry. This score file is from a different version of umoria."));
+        print_message(Some(tr!("Sorry. This score file is from a different version of umoria.")));
         print_message(None);
         close_fileptr();
         return;
@@ -303,8 +313,8 @@ pub fn show_scores_screen() {
 
         // Put twenty scores on each page, on lines 2 through 21.
         while !eof_hit() && i < 21 {
-            let race_name = CHARACTER_RACES[score.race as usize].name;
-            let class_title = CLASSES[score.character_class as usize].title;
+            let race_name = tr!(CHARACTER_RACES[score.race as usize].name);
+            let class_title = tr!(CLASSES[score.character_class as usize].title);
 
             let msg = format!(
                 "{:<4}{:>8} {:<19.19} {} {:<10.10} {:<7.7}{:>3} {:<22.22}",
@@ -323,9 +333,24 @@ pub fn show_scores_screen() {
             rank += 1;
             read_high_score(&mut score);
         }
-        put_string_clear_to_eol("Rank  Points Name              Sex Race       Class  Lvl Killed By", Coord::new(0, 0));
+        // Header is built field-by-field (rather than as one translated
+        // line) so that each column label stays clamped to the same
+        // printed width as the data row's format spec above, regardless of
+        // how long the translated word is -- jdbkmoria extension.
+        let header = format!(
+            "{:<4.4}{:>8.8} {:<16.16}{:>5.5} {:<10.10} {:<7.7}{:>3.3} {}",
+            tr!("Rank"),
+            tr!("Points"),
+            tr!("Name"),
+            tr!("Sex"),
+            tr!("Race"),
+            tr!("Class"),
+            tr!("Lvl"),
+            tr!("Killed By"),
+        );
+        put_string_clear_to_eol(&header, Coord::new(0, 0));
         erase_line(Coord::new(1, 0));
-        put_string_clear_to_eol("[ press any key to continue ]", Coord::new(23, 23));
+        put_string_clear_to_eol(tr!("[ press any key to continue ]"), Coord::new(23, 23));
         if get_key_input() == ESCAPE {
             break;
         }

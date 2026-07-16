@@ -1,5 +1,5 @@
 
-                    Robert A. Koeneke's classic roguelike
+           JDBK Moria, based on Robert A. Koeneke's classic roguelike
 
                             D U N G E O N S   O F
 

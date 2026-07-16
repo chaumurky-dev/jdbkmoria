@@ -1,0 +1,16 @@
+\  - Aide du magicien
+:  - Voir la zone (panneau)
+*  - Éclairage du magicien
+^A - Guérir tous les maux et lever les malédictions
+^D - Aller directement au niveau #
+^E - Modifier les statistiques du personnage
+^F - Vaincre les monstres à portée de vue
+^G - Générer des objets aléatoires
+^I - Identifier un objet
+^O - Imprimer un échantillon d'objets aléatoires dans un fichier
+^T - Téléporter le joueur au hasard
+^W - Mode magicien on/off
++  - Gagner de l'expérience
+&  - Invoquer un monstre aléatoire
+%  - Générer un objet de donjon
+@  - Créer un objet *PEUT CAUSER UNE ERREUR FATALE*

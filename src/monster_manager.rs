@@ -13,6 +13,7 @@ use crate::dungeon_tile::{MAX_OPEN_SPACE, MIN_CLOSED_SPACE};
 use crate::game::{game, random_number, random_number_normal_distribution};
 use crate::monster::{hack_monptr, monster_levels, monsters, next_free_monster_id, MON_MAX_LEVELS, MON_TOTAL_ALLOCATIONS};
 use crate::player::py;
+use crate::tr;
 use crate::types::Coord;
 use crate::ui_io::print_message;
 
@@ -264,7 +265,7 @@ pub fn monster_summon_undead(coord: &mut Coord) -> bool {
 // Compact monsters -RAK-
 // Return true if any monsters were deleted, false if could not delete any monsters.
 pub fn compact_monsters() -> bool {
-    print_message(Some("Compacting monsters..."));
+    print_message(Some(tr!("Compacting monsters...")));
 
     let mut cur_dis = 66;
     let mut delete_any = false;

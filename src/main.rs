@@ -25,6 +25,8 @@ Options:
     -r           Enable classic roguelike keys on startup (default: disabled, or save game settings)
     -d           Display high scores and exit
     -s NUMBER    Game Seed, as a decimal number (max: 2147483647)
+    -l LOCALE    Locale (en_US, en_GB, fr_CA); overrides JDBKMORIA_LOCALE
+                 and the system locale (LC_ALL/LC_MESSAGES/LANG)
 
     -v           Print version info and exit
     -h           Display this message
@@ -36,10 +38,25 @@ fn main() {
     let mut new_game = false;
     let mut roguelike_keys = false;
 
+    // jdbkmoria extension: pick up the locale from JDBKMORIA_LOCALE or the
+    // system environment before anything prints; `-l` below overrides it.
+    if let Err(bad_tag) = jdbkmoria::locale::initialize_locale(None) {
+        eprintln!(
+            "{}",
+            jdbkmoria::tr_fmt!(
+                "Unsupported JDBKMORIA_LOCALE '{}' (supported: en_US, en_GB, fr_CA); using en_US",
+                bad_tag
+            )
+        );
+    }
+
     // call this routine to grab a file pointer to the high score file
     // and prepare things to relinquish setuid privileges
     if !initialize_score_file() {
-        eprintln!("Can't open score file '{}'", config::files::SCORES);
+        eprintln!(
+            "{}",
+            jdbkmoria::tr_fmt!("Can't open score file '{}'", config::files::SCORES)
+        );
         std::process::exit(1);
     }
 
@@ -84,19 +101,54 @@ fn main() {
 
                 if !parse_game_seed(&args[i], &mut seed) {
                     terminal_restore();
-                    println!("Game seed must be a decimal number between 1 and 2147483647");
+                    println!(
+                        "{}",
+                        jdbkmoria::tr!("Game seed must be a decimal number between 1 and 2147483647")
+                    );
                     std::process::exit(-1);
                 }
             }
             Some('w') => {
                 game().to_be_wizard = true;
             }
+            Some('l') => {
+                // No LOCALE provided?
+                if i + 1 >= args.len() {
+                    break;
+                }
+
+                // Move onto the LOCALE value
+                i += 1;
+
+                if jdbkmoria::locale::initialize_locale(Some(&args[i])).is_err() {
+                    terminal_restore();
+                    println!(
+                        "{}",
+                        jdbkmoria::tr_fmt!(
+                            "Unsupported locale '{}' (supported: en_US, en_GB, fr_CA)",
+                            args[i]
+                        )
+                    );
+                    std::process::exit(-1);
+                }
+            }
             _ => {
                 terminal_restore();
 
-                println!("jdbkmoria {}.{}.{}: An expanded edition of Robert A. Koeneke's classic dungeon crawler.", JDBK_VERSION_MAJOR, JDBK_VERSION_MINOR, JDBK_VERSION_PATCH);
-                println!("Based on Umoria 5.7.15, released under a GPL-3.0-or-later license.");
-                print!("{}", USAGE_INSTRUCTIONS);
+                println!(
+                    "{}",
+                    jdbkmoria::tr_fmt!(
+                        "jdbkmoria {}.{}.{}: An expanded edition of Robert A. Koeneke's classic dungeon crawler.",
+                        JDBK_VERSION_MAJOR,
+                        JDBK_VERSION_MINOR,
+                        JDBK_VERSION_PATCH
+                    )
+                );
+                println!(
+                    "{}",
+                    jdbkmoria::tr!("Based on Umoria 5.7.15, released under a GPL-3.0-or-later license.")
+                );
+                print!("{}", jdbkmoria::tr!(USAGE_INSTRUCTIONS));
                 std::process::exit(0);
             }
         }

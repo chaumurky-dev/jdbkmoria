@@ -7,6 +7,7 @@
 
 use crate::config;
 use crate::globals::RacyCell;
+use crate::tr;
 use crate::helpers::get_current_unix_time;
 use crate::inventory::Inventory;
 use crate::player::py;
@@ -316,11 +317,14 @@ const GAME_OPTIONS: [GameOption; 11] = [
 
 // Set or unset various boolean config::options -CJS-
 pub fn set_game_options() {
-    put_string_clear_to_eol("  ESC when finished, y/n to set options, <return> or - to move cursor", Coord::new(0, 0));
+    put_string_clear_to_eol(
+        tr!("  ESC when finished, y/n to set options, <return> or - to move cursor"),
+        Coord::new(0, 0),
+    );
 
     let max = GAME_OPTIONS.len();
     for (i, option) in GAME_OPTIONS.iter().enumerate() {
-        let msg = format!("{:<38}: {}", option.prompt, if (option.get)() { "yes" } else { "no " });
+        let msg = format!("{:<38}: {}", tr!(option.prompt), if (option.get)() { tr!("yes") } else { tr!("no ") });
         put_string_clear_to_eol(&msg, Coord::new(i as i32 + 1, 0));
     }
     erase_line(Coord::new(max as i32 + 1, 0));
@@ -346,7 +350,7 @@ pub fn set_game_options() {
                 }
             }
             'y' | 'Y' => {
-                put_string("yes", Coord::new(option_id as i32 + 1, 40));
+                put_string(tr!("yes"), Coord::new(option_id as i32 + 1, 40));
 
                 (GAME_OPTIONS[option_id].set)(true);
 
@@ -357,7 +361,7 @@ pub fn set_game_options() {
                 }
             }
             'n' | 'N' => {
-                put_string("no ", Coord::new(option_id as i32 + 1, 40));
+                put_string(tr!("no "), Coord::new(option_id as i32 + 1, 40));
 
                 (GAME_OPTIONS[option_id].set)(false);
 
@@ -430,7 +434,7 @@ pub fn get_direction_with_memory(prompt: Option<&str>, direction: &mut i32) -> b
         return true;
     }
 
-    let prompt = prompt.unwrap_or("Which direction?");
+    let prompt = prompt.unwrap_or(tr!("Which direction?"));
 
     let mut command = '\0';
 

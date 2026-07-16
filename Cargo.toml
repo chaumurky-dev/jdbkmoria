@@ -12,7 +12,8 @@ authors = [
 ]
 
 [dependencies]
-pancurses = "0.17"
+libc = "0.2.186"
+pancurses = { version = "0.17", features = ["wide"] }
 
 [profile.release]
 opt-level = 3

@@ -54,7 +54,7 @@ fn player_drink_potion(flags: u32, item_type: u8) -> bool {
             1 => {
                 // Strength
                 if player_stat_random_increase(A_STR) {
-                    print_message(Some("Wow!  What bulging muscles!"));
+                    print_message(Some(crate::tr!("Wow!  What bulging muscles!")));
                     identified = true;
                 }
             }
@@ -66,14 +66,14 @@ fn player_drink_potion(flags: u32, item_type: u8) -> bool {
             3 => {
                 // Restore Strength
                 if player_stat_restore(A_STR) {
-                    print_message(Some("You feel warm all over."));
+                    print_message(Some(crate::tr!("You feel warm all over.")));
                     identified = true;
                 }
             }
             4 => {
                 // Intelligence
                 if player_stat_random_increase(A_INT) {
-                    print_message(Some("Aren't you brilliant!"));
+                    print_message(Some(crate::tr!("Aren't you brilliant!")));
                     identified = true;
                 }
             }
@@ -85,14 +85,14 @@ fn player_drink_potion(flags: u32, item_type: u8) -> bool {
             6 => {
                 // Restore Intelligence
                 if player_stat_restore(A_INT) {
-                    print_message(Some("You have have a warm feeling."));
+                    print_message(Some(crate::tr!("You have have a warm feeling.")));
                     identified = true;
                 }
             }
             7 => {
                 // Wisdom
                 if player_stat_random_increase(A_WIS) {
-                    print_message(Some("You suddenly have a profound thought!"));
+                    print_message(Some(crate::tr!("You suddenly have a profound thought!")));
                     identified = true;
                 }
             }
@@ -104,14 +104,14 @@ fn player_drink_potion(flags: u32, item_type: u8) -> bool {
             9 => {
                 // Restore Wisdom
                 if player_stat_restore(A_WIS) {
-                    print_message(Some("You feel your wisdom returning."));
+                    print_message(Some(crate::tr!("You feel your wisdom returning.")));
                     identified = true;
                 }
             }
             10 => {
                 // Charisma
                 if player_stat_random_increase(A_CHR) {
-                    print_message(Some("Gee, ain't you cute!"));
+                    print_message(Some(crate::tr!("Gee, ain't you cute!")));
                     identified = true;
                 }
             }
@@ -123,7 +123,7 @@ fn player_drink_potion(flags: u32, item_type: u8) -> bool {
             12 => {
                 // Restore Charisma
                 if player_stat_restore(A_CHR) {
-                    print_message(Some("You feel your looks returning."));
+                    print_message(Some(crate::tr!("You feel your looks returning.")));
                     identified = true;
                 }
             }
@@ -146,7 +146,7 @@ fn player_drink_potion(flags: u32, item_type: u8) -> bool {
             17 => {
                 // Constitution
                 if player_stat_random_increase(A_CON) {
-                    print_message(Some("You feel tingly for a moment."));
+                    print_message(Some(crate::tr!("You feel tingly for a moment.")));
                     identified = true;
                 }
             }
@@ -159,7 +159,7 @@ fn player_drink_potion(flags: u32, item_type: u8) -> bool {
                     }
                     py().misc.exp += exp;
 
-                    print_message(Some("You feel more experienced."));
+                    print_message(Some(crate::tr!("You feel more experienced.")));
                     display_character_experience();
                     identified = true;
                 }
@@ -168,7 +168,7 @@ fn player_drink_potion(flags: u32, item_type: u8) -> bool {
                 // Sleep
                 if !py().flags.free_action {
                     // paralysis must == 0, otherwise could not drink potion
-                    print_message(Some("You fall asleep."));
+                    print_message(Some(crate::tr!("You fall asleep.")));
                     py().flags.paralysis += (random_number(4) + 4) as i16;
                     identified = true;
                 }
@@ -176,7 +176,7 @@ fn player_drink_potion(flags: u32, item_type: u8) -> bool {
             20 => {
                 // Blindness
                 if py().flags.blind == 0 {
-                    print_message(Some("You are covered by a veil of darkness."));
+                    print_message(Some(crate::tr!("You are covered by a veil of darkness.")));
                     identified = true;
                 }
                 py().flags.blind += (random_number(100) + 100) as i16;
@@ -184,7 +184,7 @@ fn player_drink_potion(flags: u32, item_type: u8) -> bool {
             21 => {
                 // Confusion
                 if py().flags.confused == 0 {
-                    print_message(Some("Hey!  This is good stuff!  * Hick! *"));
+                    print_message(Some(crate::tr!("Hey!  This is good stuff!  * Hick! *")));
                     identified = true;
                 }
                 py().flags.confused += (random_number(20) + 12) as i16;
@@ -192,7 +192,7 @@ fn player_drink_potion(flags: u32, item_type: u8) -> bool {
             22 => {
                 // Poison
                 if py().flags.poisoned == 0 {
-                    print_message(Some("You feel very sick."));
+                    print_message(Some(crate::tr!("You feel very sick.")));
                     identified = true;
                 }
                 py().flags.poisoned += (random_number(15) + 10) as i16;
@@ -214,21 +214,21 @@ fn player_drink_potion(flags: u32, item_type: u8) -> bool {
             26 => {
                 // Dexterity
                 if player_stat_random_increase(A_DEX) {
-                    print_message(Some("You feel more limber!"));
+                    print_message(Some(crate::tr!("You feel more limber!")));
                     identified = true;
                 }
             }
             27 => {
                 // Restore Dexterity
                 if player_stat_restore(A_DEX) {
-                    print_message(Some("You feel less clumsy."));
+                    print_message(Some(crate::tr!("You feel less clumsy.")));
                     identified = true;
                 }
             }
             28 => {
                 // Restore Constitution
                 if player_stat_restore(A_CON) {
-                    print_message(Some("You feel your health returning!"));
+                    print_message(Some(crate::tr!("You feel your health returning!")));
                     identified = true;
                 }
             }
@@ -248,7 +248,7 @@ fn player_drink_potion(flags: u32, item_type: u8) -> bool {
             34 => {
                 // Lose Experience
                 if py().misc.exp > 0 {
-                    print_message(Some("You feel your memories fade."));
+                    print_message(Some(crate::tr!("You feel your memories fade.")));
 
                     // Lose between 1/5 and 2/5 of your experience
                     let mut exp = py().misc.exp / 5;
@@ -271,7 +271,7 @@ fn player_drink_potion(flags: u32, item_type: u8) -> bool {
                 }
                 py().flags.paralysis = 4;
 
-                print_message(Some("The potion makes you vomit!"));
+                print_message(Some(crate::tr!("The potion makes you vomit!")));
                 identified = true;
             }
             36 => {
@@ -336,7 +336,7 @@ fn player_drink_potion(flags: u32, item_type: u8) -> bool {
                 // Restore Mana
                 if py().misc.current_mana < py().misc.mana {
                     py().misc.current_mana = py().misc.mana;
-                    print_message(Some("Your feel your head clear."));
+                    print_message(Some(crate::tr!("Your feel your head clear.")));
                     print_character_current_mana();
                     identified = true;
                 }
@@ -344,7 +344,7 @@ fn player_drink_potion(flags: u32, item_type: u8) -> bool {
             47 => {
                 // Infra-Vision
                 if py().flags.timed_infra == 0 {
-                    print_message(Some("Your eyes begin to tingle."));
+                    print_message(Some(crate::tr!("Your eyes begin to tingle.")));
                     identified = true;
                 }
                 py().flags.timed_infra += 100 + random_number(100) as i16;
@@ -364,19 +364,19 @@ pub fn quaff() {
     game().player_free_turn = true;
 
     if py().pack.unique_items == 0 {
-        print_message(Some("But you are not carrying anything."));
+        print_message(Some(crate::tr!("But you are not carrying anything.")));
         return;
     }
 
     let mut item_pos_begin = 0;
     let mut item_pos_end = 0;
     if !inventory_find_range(TV_POTION1 as i32, TV_POTION2 as i32, &mut item_pos_begin, &mut item_pos_end) {
-        print_message(Some("You are not carrying any potions."));
+        print_message(Some(crate::tr!("You are not carrying any potions.")));
         return;
     }
 
     let mut item_id: i32 = 0;
-    if !inventory_get_input_for_item_id(&mut item_id, "Quaff which potion?", item_pos_begin, item_pos_end, None, None) {
+    if !inventory_get_input_for_item_id(&mut item_id, crate::tr!("Quaff which potion?"), item_pos_begin, item_pos_end, None, None) {
         return;
     }
     let item_id = item_id as usize;
@@ -386,7 +386,7 @@ pub fn quaff() {
     let mut item = py().inventory[item_id];
 
     let identified = if item.flags == 0 {
-        print_message(Some("You feel less thirsty."));
+        print_message(Some(crate::tr!("You feel less thirsty.")));
         true
     } else {
         player_drink_potion(item.flags, item.category_id)

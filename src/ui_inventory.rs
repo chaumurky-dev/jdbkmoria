@@ -30,7 +30,8 @@ fn inventory_item_weight_text(item_id: usize) -> String {
     let quotient = total_weight / 10;
     let remainder = total_weight % 10;
 
-    format!("{:3}.{} lb", quotient, remainder)
+    // precision spec pre-rendered so the tr_fmt! key carries no format spec
+    crate::tr_fmt!("{} lb", format!("{:3}.{}", quotient, remainder))
 }
 
 // Displays inventory items from `item_id_start` to `item_id_end` -RAK-
@@ -111,19 +112,19 @@ pub fn display_inventory_items(item_id_start: i32, item_id_end: i32, weighted: b
 // Return a string describing how a given equipment item is carried. -CJS-
 pub fn player_item_wearing_description(body_location: usize) -> &'static str {
     match body_location {
-        x if x == PlayerEquipment::Wield as usize => "wielding",
-        x if x == PlayerEquipment::Head as usize => "wearing on your head",
-        x if x == PlayerEquipment::Neck as usize => "wearing around your neck",
-        x if x == PlayerEquipment::Body as usize => "wearing on your body",
-        x if x == PlayerEquipment::Arm as usize => "wearing on your arm",
-        x if x == PlayerEquipment::Hands as usize => "wearing on your hands",
-        x if x == PlayerEquipment::Right as usize => "wearing on your right hand",
-        x if x == PlayerEquipment::Left as usize => "wearing on your left hand",
-        x if x == PlayerEquipment::Feet as usize => "wearing on your feet",
-        x if x == PlayerEquipment::Outer as usize => "wearing about your body",
-        x if x == PlayerEquipment::Light as usize => "using to light the way",
-        x if x == PlayerEquipment::Auxiliary as usize => "holding ready by your side",
-        _ => "carrying in your pack",
+        x if x == PlayerEquipment::Wield as usize => crate::tr!("wielding"),
+        x if x == PlayerEquipment::Head as usize => crate::tr!("wearing on your head"),
+        x if x == PlayerEquipment::Neck as usize => crate::tr!("wearing around your neck"),
+        x if x == PlayerEquipment::Body as usize => crate::tr!("wearing on your body"),
+        x if x == PlayerEquipment::Arm as usize => crate::tr!("wearing on your arm"),
+        x if x == PlayerEquipment::Hands as usize => crate::tr!("wearing on your hands"),
+        x if x == PlayerEquipment::Right as usize => crate::tr!("wearing on your right hand"),
+        x if x == PlayerEquipment::Left as usize => crate::tr!("wearing on your left hand"),
+        x if x == PlayerEquipment::Feet as usize => crate::tr!("wearing on your feet"),
+        x if x == PlayerEquipment::Outer as usize => crate::tr!("wearing about your body"),
+        x if x == PlayerEquipment::Light as usize => crate::tr!("using to light the way"),
+        x if x == PlayerEquipment::Auxiliary as usize => crate::tr!("holding ready by your side"),
+        _ => crate::tr!("carrying in your pack"),
     }
 }
 
@@ -131,22 +132,24 @@ fn equipment_position_description(id: usize, weight: u16) -> &'static str {
     match id {
         x if x == PlayerEquipment::Wield as usize => {
             if (py().stats.used[A_STR] as i32) * 15 < weight as i32 {
-                "Just lifting"
+                crate::tr!("Just lifting")
             } else {
-                "Wielding"
+                crate::tr!("Wielding")
             }
         }
-        x if x == PlayerEquipment::Head as usize => "On head",
-        x if x == PlayerEquipment::Neck as usize => "Around neck",
-        x if x == PlayerEquipment::Body as usize => "On body",
-        x if x == PlayerEquipment::Arm as usize => "On arm",
-        x if x == PlayerEquipment::Hands as usize => "On hands",
-        x if x == PlayerEquipment::Right as usize => "On right hand",
-        x if x == PlayerEquipment::Left as usize => "On left hand",
-        x if x == PlayerEquipment::Feet as usize => "On feet",
-        x if x == PlayerEquipment::Outer as usize => "About body",
-        x if x == PlayerEquipment::Light as usize => "Light source",
-        x if x == PlayerEquipment::Auxiliary as usize => "Spare weapon",
+        x if x == PlayerEquipment::Head as usize => crate::tr!("On head"),
+        x if x == PlayerEquipment::Neck as usize => crate::tr!("Around neck"),
+        x if x == PlayerEquipment::Body as usize => crate::tr!("On body"),
+        x if x == PlayerEquipment::Arm as usize => crate::tr!("On arm"),
+        x if x == PlayerEquipment::Hands as usize => crate::tr!("On hands"),
+        x if x == PlayerEquipment::Right as usize => crate::tr!("On right hand"),
+        x if x == PlayerEquipment::Left as usize => crate::tr!("On left hand"),
+        x if x == PlayerEquipment::Feet as usize => crate::tr!("On feet"),
+        x if x == PlayerEquipment::Outer as usize => crate::tr!("About body"),
+        x if x == PlayerEquipment::Light as usize => crate::tr!("Light source"),
+        x if x == PlayerEquipment::Auxiliary as usize => crate::tr!("Spare weapon"),
+        // unreachable in normal play (all valid equipment slots are handled
+        // above); left untranslated as internal-only diagnostic text.
         _ => "Unknown equipment position ID",
     }
 }
@@ -222,13 +225,13 @@ pub fn display_equipment(show_weights: bool, column: i32) -> i32 {
 fn show_equipment_help_menu(left_column: i32) -> i32 {
     let left_column = std::cmp::min(left_column, 52);
 
-    put_string_clear_to_eol("  ESC: exit", Coord::new(1, left_column));
-    put_string_clear_to_eol("  w  : wear or wield object", Coord::new(2, left_column));
-    put_string_clear_to_eol("  t  : take off item", Coord::new(3, left_column));
-    put_string_clear_to_eol("  d  : drop object", Coord::new(4, left_column));
-    put_string_clear_to_eol("  x  : exchange weapons", Coord::new(5, left_column));
-    put_string_clear_to_eol("  i  : inventory of pack", Coord::new(6, left_column));
-    put_string_clear_to_eol("  e  : list used equipment", Coord::new(7, left_column));
+    put_string_clear_to_eol(crate::tr!("  ESC: exit"), Coord::new(1, left_column));
+    put_string_clear_to_eol(crate::tr!("  w  : wear or wield object"), Coord::new(2, left_column));
+    put_string_clear_to_eol(crate::tr!("  t  : take off item"), Coord::new(3, left_column));
+    put_string_clear_to_eol(crate::tr!("  d  : drop object"), Coord::new(4, left_column));
+    put_string_clear_to_eol(crate::tr!("  x  : exchange weapons"), Coord::new(5, left_column));
+    put_string_clear_to_eol(crate::tr!("  i  : inventory of pack"), Coord::new(6, left_column));
+    put_string_clear_to_eol(crate::tr!("  e  : list used equipment"), Coord::new(7, left_column));
 
     7 // current line position
 }
@@ -317,7 +320,7 @@ fn request_and_show_inventory_screen(recover_screen: bool) {
     // is a simple ' ' to recover the screen, just quit. Otherwise, check
     // and see what the user wants.
     if *screen_has_changed() {
-        if recover_screen || !get_input_confirmation("Continuing with inventory command?") {
+        if recover_screen || !get_input_confirmation(crate::tr!("Continuing with inventory command?")) {
             game().doing_inventory_command = '\0';
             return;
         }
@@ -332,13 +335,13 @@ fn request_and_show_inventory_screen(recover_screen: bool) {
 
 fn ui_command_inventory_take_off_item(selecting: bool) -> bool {
     if py().equipment_count == 0 {
-        print_message(Some("You are not using any equipment."));
+        print_message(Some(crate::tr!("You are not using any equipment.")));
         // don't print message restarting inven command after taking off something, it is confusing
         return selecting;
     }
 
     if py().pack.unique_items as usize >= WIELD && game().doing_inventory_command == '\0' {
-        print_message(Some("You will have to drop something first."));
+        print_message(Some(crate::tr!("You will have to drop something first.")));
         return selecting;
     }
 
@@ -351,12 +354,12 @@ fn ui_command_inventory_take_off_item(selecting: bool) -> bool {
 
 fn ui_command_inventory_drop_item(command: &mut char, selecting: bool) -> bool {
     if py().pack.unique_items == 0 && py().equipment_count == 0 {
-        print_message(Some("But you're not carrying anything."));
+        print_message(Some(crate::tr!("But you're not carrying anything.")));
         return selecting;
     }
 
     if dg().tile(py().pos).treasure_id != 0 {
-        print_message(Some("There's no room to drop anything here."));
+        print_message(Some(crate::tr!("There's no room to drop anything here.")));
         return selecting;
     }
 
@@ -387,7 +390,7 @@ fn ui_command_inventory_wear_wield_item(selecting: bool) -> bool {
     game().screen.wear_high_id -= 1;
 
     if game().screen.wear_low_id > game().screen.wear_high_id {
-        print_message(Some("You have nothing to wear or wield."));
+        print_message(Some(crate::tr!("You have nothing to wear or wield.")));
         return selecting;
     }
 
@@ -400,13 +403,13 @@ fn ui_command_inventory_wear_wield_item(selecting: bool) -> bool {
 
 fn ui_command_inventory_unwield_item() {
     if !crate::player::player_is_wielding_item() {
-        print_message(Some("But you are wielding no weapons."));
+        print_message(Some(crate::tr!("But you are wielding no weapons.")));
         return;
     }
 
     if crate::player::player_worn_item_is_cursed(PlayerEquipment::Wield) {
         let description = item_description(&py().inventory[WIELD], false);
-        let msg = format!("The {} you are wielding appears to be cursed.", description);
+        let msg = crate::tr_fmt!("The {} you are wielding appears to be cursed.", description);
 
         print_message(Some(&msg));
 
@@ -428,12 +431,11 @@ fn ui_command_inventory_unwield_item() {
     crate::player::player_adjust_bonuses_for_item(py().inventory[WIELD], 1); // Add bonuses
 
     if py().inventory[WIELD].category_id != TV_NOTHING {
-        let mut label = String::from("Primary weapon   : ");
-        label.push_str(&item_description(&py().inventory[WIELD], true));
+        let label = crate::tr_fmt!("Primary weapon   : {}", item_description(&py().inventory[WIELD], true));
 
         print_message(Some(&label));
     } else {
-        print_message(Some("No primary weapon."));
+        print_message(Some(crate::tr!("No primary weapon.")));
     }
 
     // this is a new weapon, so clear the heavy flag
@@ -470,14 +472,14 @@ fn build_command_heading(from: i32, to: i32, swap: &str, command: char, prompt: 
     let to = (b'a' + to as u8) as char;
 
     let list = if game().screen.current_screen_id == Screen::Blank {
-        ", * to list"
+        crate::tr!(", * to list")
     } else {
         ""
     };
 
     let digits = if command == 'w' || command == 'd' { ", 0-9" } else { "" };
 
-    format!("({}-{}{}{}{}, space to break, ESC to exit) {} which one?", from, to, list, swap, digits, prompt)
+    crate::tr_fmt!("({}-{}{}{}{}, space to break, ESC to exit) {} which one?", from, to, list, swap, digits, prompt)
 }
 
 fn change_screen_for_command(command: char) {
@@ -502,23 +504,32 @@ fn request_put_ring_on_which_hand() -> i32 {
     let mut hand: i32 = 0;
 
     // Rings. Give choice over where they go.
+    // jdbkmoria extension: match the hand letters shown by the locale's
+    // "Put ring on which hand (l/r/L/R)?" translation (fr_CA: g/d/G/D).
+    // Lowercase picks the hand outright; uppercase asks to confirm the swap.
+    let def = crate::locale::locale();
+    let left_upper = def.ring_left_key;
+    let right_upper = def.ring_right_key;
+    let left_lower = left_upper.to_ascii_lowercase();
+    let right_lower = right_upper.to_ascii_lowercase();
+
     while hand == 0 {
         let mut query = '\0';
-        if !get_menu_item_id("Put ring on which hand (l/r/L/R)?", &mut query) {
+        if !get_menu_item_id(crate::tr!("Put ring on which hand (l/r/L/R)?"), &mut query) {
             hand = -1;
-        } else if query == 'l' {
+        } else if query == left_lower {
             hand = PlayerEquipment::Left as i32;
-        } else if query == 'r' {
+        } else if query == right_lower {
             hand = PlayerEquipment::Right as i32;
         } else {
-            if query == 'L' {
+            if query == left_upper {
                 hand = PlayerEquipment::Left as i32;
-            } else if query == 'R' {
+            } else if query == right_upper {
                 hand = PlayerEquipment::Right as i32;
             } else {
                 terminal_bell_sound();
             }
-            if hand != 0 && !verify_action("Replace", hand as usize) {
+            if hand != 0 && !verify_action(crate::tr!("Replace"), hand as usize) {
                 hand = 0;
             }
         }
@@ -551,7 +562,7 @@ fn inventory_get_slot_to_wear_equipment(category_id: u8) -> i32 {
             }
         }
         _ => {
-            print_message(Some("IMPOSSIBLE: I don't see how you can use that."));
+            print_message(Some(crate::tr!("IMPOSSIBLE: I don't see how you can use that.")));
             -1
         }
     }
@@ -560,15 +571,12 @@ fn inventory_get_slot_to_wear_equipment(category_id: u8) -> i32 {
 fn inventory_item_is_cursed_message(item_id: usize) {
     let description = item_description(&py().inventory[item_id], false);
 
-    let mut msg = format!("The {} you are ", description);
-
-    if item_id == PlayerEquipment::Head as usize {
-        msg.push_str("wielding ");
+    let msg = if item_id == PlayerEquipment::Head as usize {
+        crate::tr_fmt!("The {} you are wielding appears to be cursed.", description)
     } else {
-        msg.push_str("wearing ");
-    }
+        crate::tr_fmt!("The {} you are wearing appears to be cursed.", description)
+    };
 
-    msg.push_str("appears to be cursed.");
     print_message(Some(&msg));
 }
 
@@ -592,12 +600,12 @@ fn execute_remove_item_command(selecting: bool, item_id: i32, command: &mut char
         item_id = -1;
     } else if crate::inventory::inventory_item_is_cursed(&py().inventory[item_id as usize]) {
         item_id = -1;
-        print_message(Some("Hmmm, it seems to be cursed."));
+        print_message(Some(crate::tr!("Hmmm, it seems to be cursed.")));
     } else if *command == 't' && !crate::inventory::inventory_can_carry_item_count(&py().inventory[item_id as usize]) {
         if dg().tile(py().pos).treasure_id != 0 {
             item_id = -1;
-            print_message(Some("You can't carry it."));
-        } else if get_input_confirmation("You can't carry it.  Drop it?") {
+            print_message(Some(crate::tr!("You can't carry it.")));
+        } else if get_input_confirmation(crate::tr!("You can't carry it.  Drop it?")) {
             *command = 'r';
         } else {
             item_id = -1;
@@ -654,7 +662,7 @@ fn execute_wear_item_command(item_id: i32, which: char, prompt: &str) {
         {
             // this can happen if try to wield a torch,
             // and have more than one in inventory
-            print_message(Some("You will have to drop something first."));
+            print_message(Some(crate::tr!("You will have to drop something first.")));
             item_id = -1;
         }
     }
@@ -711,11 +719,11 @@ fn execute_wear_item_command(item_id: i32, which: char, prompt: &str) {
     crate::player::player_adjust_bonuses_for_item(py().inventory[slot], 1);
 
     let text = if slot == WIELD {
-        "You are wielding"
+        crate::tr!("You are wielding")
     } else if slot == LIGHT {
-        "Your light source is"
+        crate::tr!("Your light source is")
     } else {
-        "You are wearing"
+        crate::tr!("You are wearing")
     };
 
     let description = item_description(&py().inventory[slot], true);
@@ -741,7 +749,7 @@ fn execute_wear_item_command(item_id: i32, which: char, prompt: &str) {
     crate::player::player_strength();
 
     if crate::inventory::inventory_item_is_cursed(&py().inventory[slot]) {
-        print_message(Some("Oops! It feels deathly cold!"));
+        print_message(Some(crate::tr!("Oops! It feels deathly cold!")));
         crate::identification::item_append_to_inscription(&mut py().inventory[slot], config::identification::ID_DAMD);
 
         // To force a cost of 0, even if unidentified.
@@ -758,7 +766,7 @@ fn execute_drop_item_command(item_id: i32, which: char, prompt: &str) {
         description.pop();
         description.push('?'); // replace period with question
 
-        let msg = format!("Drop all {}", description);
+        let msg = crate::tr_fmt!("Drop all {}", description);
 
         // request command from player
         confirmed = get_input_confirmation_with_abort(0, &msg);
@@ -796,27 +804,27 @@ fn select_item_commands(command: &mut char, which: &mut char, selecting: bool) -
         if *command == 'w' {
             from_line = game().screen.wear_low_id;
             to_line = game().screen.wear_high_id;
-            prompt = "Wear/Wield";
+            prompt = crate::tr!("Wear/Wield");
         } else {
             from_line = 0;
             if *command == 'd' {
                 to_line = py().pack.unique_items as i32 - 1;
-                prompt = "Drop";
+                prompt = crate::tr!("Drop");
 
                 if py().equipment_count > 0 {
-                    swap = ", / for Equip";
+                    swap = crate::tr!(", / for Equip");
                 }
             } else {
                 to_line = py().equipment_count as i32 - 1;
 
                 if *command == 't' {
-                    prompt = "Take off";
+                    prompt = crate::tr!("Take off");
                 } else {
                     // command == 'r'
 
-                    prompt = "Throw off";
+                    prompt = crate::tr!("Throw off");
                     if py().pack.unique_items > 0 {
-                        swap = ", / for Inven";
+                        swap = crate::tr!(", / for Inven");
                     }
                 }
             }
@@ -892,18 +900,18 @@ fn inventory_display_appropriate_header() {
         let weight_remainder = py().pack.weight % 10;
 
         let msg = if !config::options::options().show_inventory_weights || py().pack.unique_items == 0 {
-            format!(
+            crate::tr_fmt!(
                 "You are carrying {}.{} pounds. In your pack there is {}",
                 weight_quotient,
                 weight_remainder,
-                if py().pack.unique_items == 0 { "nothing." } else { "-" }
+                if py().pack.unique_items == 0 { crate::tr!("nothing.") } else { "-" }
             )
         } else {
             let capacity = crate::player::player_carrying_load_limit();
             let capacity_quotient = capacity / 10;
             let capacity_remainder = capacity % 10;
 
-            format!(
+            crate::tr_fmt!(
                 "You are carrying {}.{} pounds. Your capacity is {}.{} pounds. In your pack is -",
                 weight_quotient, weight_remainder, capacity_quotient, capacity_remainder
             )
@@ -912,18 +920,18 @@ fn inventory_display_appropriate_header() {
         put_string_clear_to_eol(&msg, Coord::new(0, 0));
     } else if game().screen.current_screen_id == Screen::Wear {
         if game().screen.wear_high_id < game().screen.wear_low_id {
-            put_string_clear_to_eol("You have nothing you could wield.", Coord::new(0, 0));
+            put_string_clear_to_eol(crate::tr!("You have nothing you could wield."), Coord::new(0, 0));
         } else {
-            put_string_clear_to_eol("You could wield -", Coord::new(0, 0));
+            put_string_clear_to_eol(crate::tr!("You could wield -"), Coord::new(0, 0));
         }
     } else if game().screen.current_screen_id == Screen::Equipment {
         if py().equipment_count == 0 {
-            put_string_clear_to_eol("You are not using anything.", Coord::new(0, 0));
+            put_string_clear_to_eol(crate::tr!("You are not using anything."), Coord::new(0, 0));
         } else {
-            put_string_clear_to_eol("You are using -", Coord::new(0, 0));
+            put_string_clear_to_eol(crate::tr!("You are using -"), Coord::new(0, 0));
         }
     } else {
-        put_string_clear_to_eol("Allowed commands:", Coord::new(0, 0));
+        put_string_clear_to_eol(crate::tr!("Allowed commands:"), Coord::new(0, 0));
     }
 
     erase_line(Coord::new(game().screen.screen_bottom_pos, game().screen.screen_left_pos));
@@ -931,7 +939,7 @@ fn inventory_display_appropriate_header() {
 
 fn ui_command_display_inventory() {
     if py().pack.unique_items == 0 {
-        print_message(Some("You are not carrying anything."));
+        print_message(Some(crate::tr!("You are not carrying anything.")));
     } else {
         ui_command_switch_screen(Screen::Inventory);
     }
@@ -939,7 +947,7 @@ fn ui_command_display_inventory() {
 
 fn ui_command_display_equipment() {
     if py().equipment_count == 0 {
-        print_message(Some("You are not using any equipment."));
+        print_message(Some(crate::tr!("You are not using any equipment.")));
     } else {
         ui_command_switch_screen(Screen::Equipment);
     }
@@ -1042,7 +1050,7 @@ fn inventory_switch_pack_menu(prompt: &str, menu: &mut PackMenu, menu_active: bo
         let mut changed = false;
 
         if py().equipment_count == 0 {
-            put_string_clear_to_eol("But you're not using anything -more-", Coord::new(0, 0));
+            put_string_clear_to_eol(crate::tr!("But you're not using anything -more-"), Coord::new(0, 0));
             get_key_input();
         } else {
             *menu = PackMenu::Equipment;
@@ -1064,7 +1072,7 @@ fn inventory_switch_pack_menu(prompt: &str, menu: &mut PackMenu, menu_active: bo
     }
 
     if py().pack.unique_items == 0 {
-        put_string_clear_to_eol("But you're not carrying anything -more-", Coord::new(0, 0));
+        put_string_clear_to_eol(crate::tr!("But you're not carrying anything -more-"), Coord::new(0, 0));
         get_key_input();
         return false;
     }
@@ -1109,7 +1117,7 @@ pub fn inventory_get_input_for_item_id(
     }
 
     if py().pack.unique_items < 1 && (!pack_full || py().equipment_count < 1) {
-        put_string_clear_to_eol("You are not carrying anything.", Coord::new(0, 0));
+        put_string_clear_to_eol(crate::tr!("You are not carrying anything."), Coord::new(0, 0));
         return false;
     }
 
@@ -1128,23 +1136,23 @@ pub fn inventory_get_input_for_item_id(
         }
 
         let description = if pack_full {
-            format!(
+            crate::tr_fmt!(
                 "({}: {}-{},{}{} / for {}, or ESC) {}",
-                if menu == PackMenu::Inventory { "Inven" } else { "Equip" },
+                if menu == PackMenu::Inventory { crate::tr!("Inven") } else { crate::tr!("Equip") },
                 (b'a' + item_id_start as u8) as char,
                 (b'a' + item_id_end as u8) as char,
                 if menu == PackMenu::Inventory { " 0-9," } else { "" },
-                if menu_active { "" } else { " * to see," },
-                if menu == PackMenu::Inventory { "Equip" } else { "Inven" },
+                if menu_active { "" } else { crate::tr!(" * to see,") },
+                if menu == PackMenu::Inventory { crate::tr!("Equip") } else { crate::tr!("Inven") },
                 prompt
             )
         } else {
-            format!(
+            crate::tr_fmt!(
                 "(Items {}-{},{}{} ESC to exit) {}",
                 (b'a' + item_id_start as u8) as char,
                 (b'a' + item_id_end as u8) as char,
                 if menu == PackMenu::Inventory { " 0-9," } else { "" },
-                if menu_active { "" } else { " * for inventory list," },
+                if menu_active { "" } else { crate::tr!(" * for inventory list,") },
                 prompt
             )
         };
@@ -1220,7 +1228,7 @@ pub fn inventory_get_input_for_item_id(
                             *command_key_id = item_id_start;
                         }
 
-                        if which.is_ascii_uppercase() && !verify_action("Try", *command_key_id as usize) {
+                        if which.is_ascii_uppercase() && !verify_action(crate::tr!("Try"), *command_key_id as usize) {
                             menu = PackMenu::CloseMenu;
                             done = true;
 

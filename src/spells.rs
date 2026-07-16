@@ -63,6 +63,7 @@ use crate::ui_io::{
     panel_put_tile, print_message, put_qio, terminal_bell_sound, terminal_restore_screen,
     terminal_save_screen,
 };
+use crate::{tr, tr_fmt};
 
 // Returns spell pointer -RAK-
 fn spell_get_id(spell_ids: &[i32], spell_id: &mut i32, spell_chance: &mut i32, prompt: &str, first_spell: i32) -> bool {
@@ -72,7 +73,7 @@ fn spell_get_id(spell_ids: &[i32], spell_id: &mut i32, spell_chance: &mut i32, p
 
     let first_char = (spell_ids[0] + 'a' as i32 - first_spell) as u8 as char;
     let last_char = (spell_ids[number_of_choices - 1] + 'a' as i32 - first_spell) as u8 as char;
-    let str = format!("(Spells {}-{}, *=List, <ESCAPE>=exit) {}", first_char, last_char, prompt);
+    let str = tr_fmt!("(Spells {}-{}, *=List, <ESCAPE>=exit) {}", first_char, last_char, prompt);
 
     let mut spell_found = false;
     let mut redraw = false;
@@ -102,9 +103,9 @@ fn spell_get_id(spell_ids: &[i32], spell_id: &mut i32, spell_chance: &mut i32, p
             } else {
                 let spell = MAGIC_SPELLS[py().misc.class_id as usize - 1][*spell_id as usize];
 
-                let tmp_str = format!(
+                let tmp_str = tr_fmt!(
                     "Cast {} ({} mana, {}% fail)?",
-                    SPELL_NAMES[(*spell_id + offset) as usize],
+                    tr!(SPELL_NAMES[(*spell_id + offset) as usize]),
                     spell.mana_required,
                     crate::mage_spells::spell_chance_of_success(*spell_id)
                 );
@@ -146,11 +147,12 @@ fn spell_get_id(spell_ids: &[i32], spell_id: &mut i32, spell_chance: &mut i32, p
         }
 
         if *spell_id == -2 {
-            let tmp_str = format!(
-                "You don't know that {}.",
-                if offset == config::spells::NAME_OFFSET_SPELLS as i32 { "spell" } else { "prayer" }
-            );
-            print_message(Some(&tmp_str));
+            let tmp_str = if offset == config::spells::NAME_OFFSET_SPELLS as i32 {
+                tr!("You don't know that spell.")
+            } else {
+                tr!("You don't know that prayer.")
+            };
+            print_message(Some(tmp_str));
         }
     }
 
@@ -205,9 +207,9 @@ pub fn cast_spell_get_id(prompt: &str, item_id: i32, spell_id: &mut i32, spell_c
 
     if result != 0 && MAGIC_SPELLS[class_id - 1][*spell_id as usize].mana_required as i16 > py().misc.current_mana {
         result = if CLASSES[class_id].class_to_use_mage_spells == config::spells::SPELL_TYPE_MAGE {
-            get_input_confirmation("You summon your limited strength to cast this one! Confirm?") as i32
+            get_input_confirmation(tr!("You summon your limited strength to cast this one! Confirm?")) as i32
         } else {
-            get_input_confirmation("The gods may think you presumptuous for this! Confirm?") as i32
+            get_input_confirmation(tr!("The gods may think you presumptuous for this! Confirm?")) as i32
         };
     }
 
@@ -367,7 +369,7 @@ pub fn spell_detect_invisible_creatures_within_vicinity() -> bool {
     }
 
     if detected {
-        print_message(Some("You sense the presence of invisible creatures!"));
+        print_message(Some(tr!("You sense the presence of invisible creatures!")));
         print_message(None);
 
         // must unlight every monster just lighted
@@ -382,7 +384,7 @@ pub fn spell_detect_invisible_creatures_within_vicinity() -> bool {
 //     2.  If room      light entire room plus immediate area.
 pub fn spell_light_area(coord: Coord) -> bool {
     if py().flags.blind < 1 {
-        print_message(Some("You are surrounded by a white light."));
+        print_message(Some(tr!("You are surrounded by a white light.")));
     }
 
     // NOTE: this is not changed anywhere. A bug or correct? -MRC-
@@ -450,7 +452,7 @@ pub fn spell_darken_area(coord: Coord) -> bool {
     }
 
     if darkened && py().flags.blind < 1 {
-        print_message(Some("Darkness surrounds you."));
+        print_message(Some(tr!("Darkness surrounds you.")));
     }
 
     darkened
@@ -497,7 +499,7 @@ pub fn spell_map_current_area() {
 // Identify an object -RAK-
 pub fn spell_identify_item() -> bool {
     let mut item_id: i32 = 0;
-    if !inventory_get_input_for_item_id(&mut item_id, "Item you wish identified?", 0, PLAYER_INVENTORY_SIZE as i32, None, None) {
+    if !inventory_get_input_for_item_id(&mut item_id, tr!("Item you wish identified?"), 0, PLAYER_INVENTORY_SIZE as i32, None, None) {
         return false;
     }
 
@@ -539,7 +541,7 @@ pub fn spell_aggravate_monsters(affect_distance: i32) -> bool {
     }
 
     if aggravated {
-        print_message(Some("You hear a sudden stirring in the distance!"));
+        print_message(Some(tr!("You hear a sudden stirring in the distance!")));
     }
 
     aggravated
@@ -646,7 +648,7 @@ pub fn spell_destroy_adjacent_doors_traps() -> bool {
 
                 destroyed = true;
 
-                print_message(Some("You have disarmed the chest."));
+                print_message(Some(tr!("You have disarmed the chest.")));
                 let item = &mut game().treasure.list[treasure_id as usize];
                 spell_item_identify_and_remove_random_inscription(item);
             }
@@ -677,7 +679,7 @@ pub fn spell_detect_monsters() -> bool {
     }
 
     if detected {
-        print_message(Some("You sense the presence of monsters!"));
+        print_message(Some(tr!("You sense the presence of monsters!")));
         print_message(None);
 
         // must unlight every monster just lighted
@@ -696,7 +698,7 @@ fn spell_light_line_touches_monster(monster_id: i32) {
     monster_update_visibility(monster_id);
 
     let monster = monsters()[monster_id as usize];
-    let creature_name = CREATURES_LIST[creature_id].name;
+    let creature_name = tr!(CREATURES_LIST[creature_id].name);
     let name = monster_name_description(creature_name, monster.lit);
 
     if (CREATURES_LIST[creature_id].defenses & config::monsters::defense::CD_LIGHT) != 0 {
@@ -705,10 +707,10 @@ fn spell_light_line_touches_monster(monster_id: i32) {
         }
 
         if monster_take_hit(monster_id, dice_roll(Dice::new(2, 8))) >= 0 {
-            print_monster_action_text(&name, "shrivels away in the light!");
+            print_monster_action_text(&name, tr!("shrivels away in the light!"));
             display_character_experience();
         } else {
-            print_monster_action_text(&name, "cringes from the light!");
+            print_monster_action_text(&name, tr!("cringes from the light!"));
         }
     }
 }
@@ -759,7 +761,7 @@ pub fn spell_light_line(coord: Coord, direction: i32) {
 // Light line in all directions -RAK-
 pub fn spell_starlite(coord: Coord) {
     if py().flags.blind < 1 {
-        print_message(Some("The end of the staff bursts into a blue shimmering light."));
+        print_message(Some(tr!("The end of the staff bursts into a blue shimmering light.")));
     }
 
     for dir in 1..=9 {
@@ -797,7 +799,7 @@ pub fn spell_disarm_all_in_direction(coord: Coord, direction: i32) -> bool {
                 disarmed = true;
             } else if category_id == TV_CHEST && game().treasure.list[treasure_id].flags != 0 {
                 disarmed = true;
-                print_message(Some("Click!"));
+                print_message(Some(tr!("Click!")));
 
                 let item = &mut game().treasure.list[treasure_id];
                 item.flags &= !(config::treasure::chests::CH_TRAPPED | config::treasure::chests::CH_LOCKED);
@@ -847,8 +849,8 @@ fn spell_get_area_affect_flags(spell_type: i32) -> (u32, u16, DestroyFn) {
 }
 
 fn print_bolt_strikes_monster_message(creature_name: &str, bolt_name: &str, is_lit: bool) {
-    let monster_name = if is_lit { format!("the {}", creature_name) } else { "it".to_string() };
-    let msg = format!("The {} strikes {}.", bolt_name, monster_name);
+    let monster_name = if is_lit { tr_fmt!("the {}", creature_name) } else { tr!("it").to_string() };
+    let msg = tr_fmt!("The {} strikes {}.", bolt_name, monster_name);
     print_message(Some(&msg));
 }
 
@@ -871,7 +873,7 @@ fn spell_fire_bolt_touches_monster(coord: Coord, damage: i32, harm_type: u16, we
     let monster = monsters()[creature_id_of_tile as usize];
     let creature = &CREATURES_LIST[creature_id];
 
-    print_bolt_strikes_monster_message(creature.name, bolt_name, monster.lit);
+    print_bolt_strikes_monster_message(tr!(creature.name), bolt_name, monster.lit);
 
     let mut damage = damage;
     if (harm_type & creature.defenses) != 0 {
@@ -886,13 +888,13 @@ fn spell_fire_bolt_touches_monster(coord: Coord, damage: i32, harm_type: u16, we
         }
     }
 
-    let name = monster_name_description(creature.name, monster.lit);
+    let name = monster_name_description(tr!(creature.name), monster.lit);
 
     if monster_take_hit(creature_id_of_tile, damage) >= 0 {
-        print_monster_action_text(&name, "dies in a fit of agony.");
+        print_monster_action_text(&name, tr!("dies in a fit of agony."));
         display_character_experience();
     } else if damage > 0 {
-        print_monster_action_text(&name, "screams in agony.");
+        print_monster_action_text(&name, tr!("screams in agony."));
     }
 }
 
@@ -1047,15 +1049,15 @@ pub fn spell_fire_ball(coord: Coord, direction: i32, damage_hp: i32, spell_type:
             // End explosion.
 
             if total_hits == 1 {
-                print_message(Some(&format!("The {} envelops a creature!", spell_name)));
+                print_message(Some(&tr_fmt!("The {} envelops a creature!", spell_name)));
             } else if total_hits > 1 {
-                print_message(Some(&format!("The {} envelops several creatures!", spell_name)));
+                print_message(Some(&tr_fmt!("The {} envelops several creatures!", spell_name)));
             }
 
             if total_kills == 1 {
-                print_message(Some("There is a scream of agony!"));
+                print_message(Some(tr!("There is a scream of agony!")));
             } else if total_kills > 1 {
-                print_message(Some("There are several screams of agony!"));
+                print_message(Some(tr!("There are several screams of agony!")));
             }
 
             if total_kills >= 0 {
@@ -1185,12 +1187,12 @@ pub fn spell_recharge_item(number_of_charges: i32) -> bool {
     let mut item_pos_start = 0;
     let mut item_pos_end = 0;
     if !inventory_find_range(TV_STAFF as i32, TV_WAND as i32, &mut item_pos_start, &mut item_pos_end) {
-        print_message(Some("You have nothing to recharge."));
+        print_message(Some(tr!("You have nothing to recharge.")));
         return false;
     }
 
     let mut item_id: i32 = 0;
-    if !inventory_get_input_for_item_id(&mut item_id, "Recharge which item?", item_pos_start, item_pos_end, None, None) {
+    if !inventory_get_input_for_item_id(&mut item_id, tr!("Recharge which item?"), item_pos_start, item_pos_end, None, None) {
         return false;
     }
     let item_id = item_id as usize;
@@ -1213,7 +1215,7 @@ pub fn spell_recharge_item(number_of_charges: i32) -> bool {
     }
 
     if fail_chance == 1 {
-        print_message(Some("There is a bright flash of light."));
+        print_message(Some(tr!("There is a bright flash of light.")));
         inventory_destroy_item(item_id);
     } else {
         let mut number_of_charges = (number_of_charges / (item.depth_first_found as i32 + 2)) + 1;
@@ -1256,13 +1258,13 @@ pub fn spell_change_monster_hit_points(coord: Coord, direction: i32, damage_hp: 
             let monster = monsters()[monster_id as usize];
             let creature = &CREATURES_LIST[monster.creature_id as usize];
 
-            let name = monster_name_description(creature.name, monster.lit);
+            let name = monster_name_description(tr!(creature.name), monster.lit);
 
             if monster_take_hit(monster_id, damage_hp) >= 0 {
-                print_monster_action_text(&name, "dies in a fit of agony.");
+                print_monster_action_text(&name, tr!("dies in a fit of agony."));
                 display_character_experience();
             } else if damage_hp > 0 {
-                print_monster_action_text(&name, "screams in agony.");
+                print_monster_action_text(&name, tr!("screams in agony."));
             }
 
             changed = true;
@@ -1299,13 +1301,13 @@ pub fn spell_drain_life_from_monster(coord: Coord, direction: i32) -> bool {
             let creature = &CREATURES_LIST[creature_id];
 
             if (creature.defenses & config::monsters::defense::CD_UNDEAD) == 0 {
-                let name = monster_name_description(creature.name, monster.lit);
+                let name = monster_name_description(tr!(creature.name), monster.lit);
 
                 if monster_take_hit(monster_id, 75) >= 0 {
-                    print_monster_action_text(&name, "dies in a fit of agony.");
+                    print_monster_action_text(&name, tr!("dies in a fit of agony."));
                     display_character_experience();
                 } else {
-                    print_monster_action_text(&name, "screams in agony.");
+                    print_monster_action_text(&name, tr!("screams in agony."));
                 }
 
                 drained = true;
@@ -1344,7 +1346,7 @@ pub fn spell_speed_monster(coord: Coord, direction: i32, speed: i32) -> bool {
             let monster = monsters()[monster_id as usize];
             let creature = &CREATURES_LIST[monster.creature_id as usize];
 
-            let name = monster_name_description(creature.name, monster.lit);
+            let name = monster_name_description(tr!(creature.name), monster.lit);
 
             if speed > 0 {
                 monsters()[monster_id as usize].speed += speed as i16;
@@ -1352,18 +1354,18 @@ pub fn spell_speed_monster(coord: Coord, direction: i32, speed: i32) -> bool {
 
                 changed = true;
 
-                print_monster_action_text(&name, "starts moving faster.");
+                print_monster_action_text(&name, tr!("starts moving faster."));
             } else if random_number(MON_MAX_LEVELS as i32) > creature.level as i32 {
                 monsters()[monster_id as usize].speed += speed as i16;
                 monsters()[monster_id as usize].sleep_count = 0;
 
                 changed = true;
 
-                print_monster_action_text(&name, "starts moving slower.");
+                print_monster_action_text(&name, tr!("starts moving slower."));
             } else {
                 monsters()[monster_id as usize].sleep_count = 0;
 
-                print_monster_action_text(&name, "is unaffected.");
+                print_monster_action_text(&name, tr!("is unaffected."));
             }
         }
     }
@@ -1397,7 +1399,7 @@ pub fn spell_confuse_monster(coord: Coord, direction: i32) -> bool {
             let creature_id = monster.creature_id as usize;
             let creature = &CREATURES_LIST[creature_id];
 
-            let name = monster_name_description(creature.name, monster.lit);
+            let name = monster_name_description(tr!(creature.name), monster.lit);
 
             if random_number(MON_MAX_LEVELS as i32) < creature.level as i32 || (creature.defenses & config::monsters::defense::CD_NO_SLEEP) != 0 {
                 if monster.lit && (creature.defenses & config::monsters::defense::CD_NO_SLEEP) != 0 {
@@ -1410,7 +1412,7 @@ pub fn spell_confuse_monster(coord: Coord, direction: i32) -> bool {
                     monsters()[monster_id as usize].sleep_count = 0;
                 }
 
-                print_monster_action_text(&name, "is unaffected.");
+                print_monster_action_text(&name, tr!("is unaffected."));
             } else {
                 if monsters()[monster_id as usize].confused_amount != 0 {
                     monsters()[monster_id as usize].confused_amount += 3;
@@ -1421,7 +1423,7 @@ pub fn spell_confuse_monster(coord: Coord, direction: i32) -> bool {
 
                 confused = true;
 
-                print_monster_action_text(&name, "appears confused.");
+                print_monster_action_text(&name, tr!("appears confused."));
             }
         }
     }
@@ -1455,20 +1457,20 @@ pub fn spell_sleep_monster(coord: Coord, direction: i32) -> bool {
             let creature_id = monster.creature_id as usize;
             let creature = &CREATURES_LIST[creature_id];
 
-            let name = monster_name_description(creature.name, monster.lit);
+            let name = monster_name_description(tr!(creature.name), monster.lit);
 
             if random_number(MON_MAX_LEVELS as i32) < creature.level as i32 || (creature.defenses & config::monsters::defense::CD_NO_SLEEP) != 0 {
                 if monster.lit && (creature.defenses & config::monsters::defense::CD_NO_SLEEP) != 0 {
                     creature_recall()[creature_id].defenses |= config::monsters::defense::CD_NO_SLEEP;
                 }
 
-                print_monster_action_text(&name, "is unaffected.");
+                print_monster_action_text(&name, tr!("is unaffected."));
             } else {
                 monsters()[monster_id as usize].sleep_count = 500;
 
                 asleep = true;
 
-                print_monster_action_text(&name, "falls asleep.");
+                print_monster_action_text(&name, tr!("falls asleep."));
             }
         }
     }
@@ -1501,7 +1503,7 @@ pub fn spell_wall_to_mud(coord: Coord, direction: i32) -> bool {
 
             if cave_tile_visible(coord) {
                 turned = true;
-                print_message(Some("The wall turns into mud."));
+                print_message(Some(tr!("The wall turns into mud.")));
             }
         } else if tile.treasure_id != 0 && tile.feature_id >= MIN_CLOSED_SPACE {
             finished = true;
@@ -1512,7 +1514,7 @@ pub fn spell_wall_to_mud(coord: Coord, direction: i32) -> bool {
                 let item = game().treasure.list[tile.treasure_id as usize];
                 let description = item_description(&item, false);
 
-                let out_val = format!("The {} turns into mud.", description);
+                let out_val = tr_fmt!("The {} turns into mud.", description);
                 print_message(Some(&out_val));
             }
 
@@ -1521,7 +1523,7 @@ pub fn spell_wall_to_mud(coord: Coord, direction: i32) -> bool {
                 if random_number(10) == 1 {
                     dungeon_place_random_object_at(coord, false);
                     if cave_tile_visible(coord) {
-                        print_message(Some("You have found something!"));
+                        print_message(Some(tr!("You have found something!")));
                     }
                 }
                 dungeon_lite_spot(coord);
@@ -1537,17 +1539,17 @@ pub fn spell_wall_to_mud(coord: Coord, direction: i32) -> bool {
             let creature = &CREATURES_LIST[monster.creature_id as usize];
 
             if (creature.defenses & config::monsters::defense::CD_STONE) != 0 {
-                let name = monster_name_description(creature.name, monster.lit);
+                let name = monster_name_description(tr!(creature.name), monster.lit);
 
                 // Should get these messages even if the monster is not visible.
                 let creature_id = monster_take_hit(monster_id, 100);
                 if creature_id >= 0 {
                     creature_recall()[creature_id as usize].defenses |= config::monsters::defense::CD_STONE;
-                    print_monster_action_text(&name, "dissolves!");
+                    print_monster_action_text(&name, tr!("dissolves!"));
                     display_character_experience(); // print msg before calling prt_exp
                 } else {
                     creature_recall()[monster.creature_id as usize].defenses |= config::monsters::defense::CD_STONE;
-                    print_monster_action_text(&name, "grunts in pain!");
+                    print_monster_action_text(&name, tr!("grunts in pain!"));
                 }
                 finished = true;
             }
@@ -1577,11 +1579,11 @@ pub fn spell_destroy_doors_traps_in_direction(coord: Coord, direction: i32) -> b
             if category_id == TV_INVIS_TRAP || category_id == TV_CLOSED_DOOR || category_id == TV_VIS_TRAP || category_id == TV_OPEN_DOOR || category_id == TV_SECRET_DOOR {
                 if dungeon_delete_object(coord) {
                     destroyed = true;
-                    print_message(Some("There is a bright flash of light!"));
+                    print_message(Some(tr!("There is a bright flash of light!")));
                 }
             } else if category_id == TV_CHEST && game().treasure.list[treasure_id].flags != 0 {
                 destroyed = true;
-                print_message(Some("Click!"));
+                print_message(Some(tr!("Click!")));
 
                 let item = &mut game().treasure.list[treasure_id];
                 item.flags &= !(config::treasure::chests::CH_TRAPPED | config::treasure::chests::CH_LOCKED);
@@ -1640,8 +1642,8 @@ pub fn spell_polymorph_monster(coord: Coord, direction: i32) -> bool {
                     morphed = true;
                 }
             } else {
-                let name = monster_name_description(creature.name, monster.lit);
-                print_monster_action_text(&name, "is unaffected.");
+                let name = monster_name_description(tr!(creature.name), monster.lit);
+                print_monster_action_text(&name, tr!("is unaffected."));
             }
         }
     }
@@ -1688,12 +1690,12 @@ pub fn spell_build_wall(coord: Coord, direction: i32) -> bool {
                     dice_roll(Dice::new(4, 8))
                 };
 
-                let name = monster_name_description(creature.name, monster.lit);
+                let name = monster_name_description(tr!(creature.name), monster.lit);
 
-                print_monster_action_text(&name, "wails out in pain!");
+                print_monster_action_text(&name, tr!("wails out in pain!"));
 
                 if monster_take_hit(monster_id, damage) >= 0 {
-                    print_monster_action_text(&name, "is embedded in the rock.");
+                    print_monster_action_text(&name, tr!("is embedded in the rock."));
                     display_character_experience();
                 }
             } else if creature.sprite == b'E' || creature.sprite == b'X' {
@@ -1887,7 +1889,7 @@ pub fn spell_mass_genocide() -> bool {
 // NOTE : Winning creatures can not be killed by genocide.
 pub fn spell_genocide() -> bool {
     let mut creature_char = '\0';
-    if !get_tile_character("Which type of creature do you wish exterminated?", &mut creature_char) {
+    if !get_tile_character(tr!("Which type of creature do you wish exterminated?"), &mut creature_char) {
         return false;
     }
 
@@ -1906,7 +1908,7 @@ pub fn spell_genocide() -> bool {
                 // genocide is a powerful spell, so we will let the player
                 // know the names of the creatures they did not destroy,
                 // this message makes no sense otherwise
-                print_message(Some(&format!("The {} is unaffected.", creature.name)));
+                print_message(Some(&tr_fmt!("The {} is unaffected.", tr!(creature.name))));
             }
         }
 
@@ -1926,7 +1928,7 @@ pub fn spell_speed_all_monsters(speed: i32) -> bool {
         let monster = monsters()[id as usize];
         let creature = &CREATURES_LIST[monster.creature_id as usize];
 
-        let name = monster_name_description(creature.name, monster.lit);
+        let name = monster_name_description(tr!(creature.name), monster.lit);
 
         if monster.distance_from_player > config::monsters::MON_MAX_SIGHT || !los(py().pos, monster.pos) {
             id -= 1;
@@ -1939,7 +1941,7 @@ pub fn spell_speed_all_monsters(speed: i32) -> bool {
 
             if monster.lit {
                 speedy = true;
-                print_monster_action_text(&name, "starts moving faster.");
+                print_monster_action_text(&name, tr!("starts moving faster."));
             }
         } else if random_number(MON_MAX_LEVELS as i32) > creature.level as i32 {
             monsters()[id as usize].speed += speed as i16;
@@ -1947,11 +1949,11 @@ pub fn spell_speed_all_monsters(speed: i32) -> bool {
 
             if monster.lit {
                 speedy = true;
-                print_monster_action_text(&name, "starts moving slower.");
+                print_monster_action_text(&name, tr!("starts moving slower."));
             }
         } else if monster.lit {
             monsters()[id as usize].sleep_count = 0;
-            print_monster_action_text(&name, "is unaffected.");
+            print_monster_action_text(&name, tr!("is unaffected."));
         }
 
         id -= 1;
@@ -1970,7 +1972,7 @@ pub fn spell_sleep_all_monsters() -> bool {
         let creature_id = monster.creature_id as usize;
         let creature = &CREATURES_LIST[creature_id];
 
-        let name = monster_name_description(creature.name, monster.lit);
+        let name = monster_name_description(tr!(creature.name), monster.lit);
 
         if monster.distance_from_player > config::monsters::MON_MAX_SIGHT || !los(py().pos, monster.pos) {
             id -= 1;
@@ -1982,13 +1984,13 @@ pub fn spell_sleep_all_monsters() -> bool {
                 if (creature.defenses & config::monsters::defense::CD_NO_SLEEP) != 0 {
                     creature_recall()[creature_id].defenses |= config::monsters::defense::CD_NO_SLEEP;
                 }
-                print_monster_action_text(&name, "is unaffected.");
+                print_monster_action_text(&name, tr!("is unaffected."));
             }
         } else {
             monsters()[id as usize].sleep_count = 500;
             if monster.lit {
                 asleep = true;
-                print_monster_action_text(&name, "falls asleep.");
+                print_monster_action_text(&name, tr!("falls asleep."));
             }
         }
 
@@ -2047,7 +2049,7 @@ pub fn spell_detect_evil() -> bool {
     }
 
     if detected {
-        print_message(Some("You sense the presence of evil!"));
+        print_message(Some(tr!("You sense the presence of evil!")));
         print_message(None);
 
         // must unlight every monster just lighted
@@ -2074,14 +2076,14 @@ pub fn spell_change_player_hit_points(adjustment: i32) -> bool {
 
     if adjustment < 3 {
         if adjustment == 0 {
-            print_message(Some("You feel a little better."));
+            print_message(Some(tr!("You feel a little better.")));
         } else {
-            print_message(Some("You feel better."));
+            print_message(Some(tr!("You feel better.")));
         }
     } else if adjustment < 7 {
-        print_message(Some("You feel much better."));
+        print_message(Some(tr!("You feel much better.")));
     } else {
-        print_message(Some("You feel very good."));
+        print_message(Some(tr!("You feel very good.")));
     }
 
     true
@@ -2099,12 +2101,12 @@ fn earthquake_hits_monster(monster_id: i32) {
             dice_roll(Dice::new(4, 8))
         };
 
-        let name = monster_name_description(creature.name, monster.lit);
+        let name = monster_name_description(tr!(creature.name), monster.lit);
 
-        print_monster_action_text(&name, "wails out in pain!");
+        print_monster_action_text(&name, tr!("wails out in pain!"));
 
         if monster_take_hit(monster_id, damage) >= 0 {
-            print_monster_action_text(&name, "is embedded in the rock.");
+            print_monster_action_text(&name, tr!("is embedded in the rock."));
             display_character_experience();
         }
     } else if creature.sprite == b'E' || creature.sprite == b'X' {
@@ -2167,7 +2169,7 @@ pub fn spell_create_food() {
         // set player_free_turn so that scroll/spell points won't be used
         game().player_free_turn = true;
 
-        print_message(Some("There is already an object under you."));
+        print_message(Some(tr!("There is already an object under you.")));
 
         return;
     }
@@ -2197,15 +2199,15 @@ pub fn spell_dispel_creature(creature_defense: i32, damage: i32) -> bool {
 
             dispelled = true;
 
-            let name = monster_name_description(creature.name, monster.lit);
+            let name = monster_name_description(tr!(creature.name), monster.lit);
 
             let hit = monster_take_hit(id, random_number(damage));
 
             // Should get these messages even if the monster is not visible.
             if hit >= 0 {
-                print_monster_action_text(&name, "dissolves!");
+                print_monster_action_text(&name, tr!("dissolves!"));
             } else {
-                print_monster_action_text(&name, "shudders.");
+                print_monster_action_text(&name, tr!("shudders."));
             }
 
             if hit >= 0 {
@@ -2233,7 +2235,7 @@ pub fn spell_turn_undead() -> bool {
             && (creature.defenses & config::monsters::defense::CD_UNDEAD) != 0
             && los(py().pos, monster.pos)
         {
-            let name = monster_name_description(creature.name, monster.lit);
+            let name = monster_name_description(tr!(creature.name), monster.lit);
 
             if py().misc.level as i32 + 1 > creature.level as i32 || random_number(5) == 1 {
                 if monster.lit {
@@ -2241,12 +2243,12 @@ pub fn spell_turn_undead() -> bool {
 
                     turned = true;
 
-                    print_monster_action_text(&name, "runs frantically!");
+                    print_monster_action_text(&name, tr!("runs frantically!"));
                 }
 
                 monsters()[id as usize].confused_amount = py().misc.level as u8;
             } else if monster.lit {
-                print_monster_action_text(&name, "is unaffected.");
+                print_monster_action_text(&name, tr!("is unaffected."));
             }
         }
 
@@ -2270,9 +2272,9 @@ pub fn spell_warding_glyph() {
 pub fn spell_lose_str() {
     if !py().flags.sustain_str {
         player_stat_random_decrease(A_STR);
-        print_message(Some("You feel very sick."));
+        print_message(Some(tr!("You feel very sick.")));
     } else {
-        print_message(Some("You feel sick for a moment,  it passes."));
+        print_message(Some(tr!("You feel sick for a moment,  it passes.")));
     }
 }
 
@@ -2280,9 +2282,9 @@ pub fn spell_lose_str() {
 pub fn spell_lose_int() {
     if !py().flags.sustain_int {
         player_stat_random_decrease(A_INT);
-        print_message(Some("You become very dizzy."));
+        print_message(Some(tr!("You become very dizzy.")));
     } else {
-        print_message(Some("You become dizzy for a moment,  it passes."));
+        print_message(Some(tr!("You become dizzy for a moment,  it passes.")));
     }
 }
 
@@ -2290,9 +2292,9 @@ pub fn spell_lose_int() {
 pub fn spell_lose_wis() {
     if !py().flags.sustain_wis {
         player_stat_random_decrease(A_WIS);
-        print_message(Some("You feel very naive."));
+        print_message(Some(tr!("You feel very naive.")));
     } else {
-        print_message(Some("You feel naive for a moment,  it passes."));
+        print_message(Some(tr!("You feel naive for a moment,  it passes.")));
     }
 }
 
@@ -2302,9 +2304,9 @@ pub fn spell_lose_wis() {
 pub fn spell_lose_dex() {
     if !py().flags.sustain_dex {
         player_stat_random_decrease(A_DEX);
-        print_message(Some("You feel very sore."));
+        print_message(Some(tr!("You feel very sore.")));
     } else {
-        print_message(Some("You feel sore for a moment,  it passes."));
+        print_message(Some(tr!("You feel sore for a moment,  it passes.")));
     }
 }
 
@@ -2312,9 +2314,9 @@ pub fn spell_lose_dex() {
 pub fn spell_lose_con() {
     if !py().flags.sustain_con {
         player_stat_random_decrease(A_CON);
-        print_message(Some("You feel very sick."));
+        print_message(Some(tr!("You feel very sick.")));
     } else {
-        print_message(Some("You feel sick for a moment,  it passes."));
+        print_message(Some(tr!("You feel sick for a moment,  it passes.")));
     }
 }
 
@@ -2322,9 +2324,9 @@ pub fn spell_lose_con() {
 pub fn spell_lose_chr() {
     if !py().flags.sustain_chr {
         player_stat_random_decrease(A_CHR);
-        print_message(Some("Your skin starts to itch."));
+        print_message(Some(tr!("Your skin starts to itch.")));
     } else {
-        print_message(Some("Your skin starts to itch, but feels better now."));
+        print_message(Some(tr!("Your skin starts to itch, but feels better now.")));
     }
 }
 
@@ -2371,7 +2373,7 @@ pub fn spell_slow_poison() -> bool {
         if py().flags.poisoned < 1 {
             py().flags.poisoned = 1;
         }
-        print_message(Some("The effect of the poison has been reduced."));
+        print_message(Some(tr!("The effect of the poison has been reduced.")));
         return true;
     }
 
@@ -2431,7 +2433,7 @@ pub fn spell_destroy_area(coord: Coord) {
         }
     }
 
-    print_message(Some("There is a searing blast of light!"));
+    print_message(Some(tr!("There is a searing blast of light!")));
     py().flags.blind += (10 + random_number(10)) as i16;
 }
 
@@ -2494,7 +2496,7 @@ pub fn spell_remove_curse_from_all_worn_items() -> bool {
 // Restores any drained experience -RAK-
 pub fn spell_restore_player_levels() -> bool {
     if py().misc.max_exp > py().misc.exp {
-        print_message(Some("You feel your life energies returning."));
+        print_message(Some(tr!("You feel your life energies returning.")));
 
         // this while loop is not redundant, ptr_exp may reduce the exp level
         while py().misc.exp < py().misc.max_exp {

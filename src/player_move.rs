@@ -33,10 +33,10 @@ use crate::ui::{coord_outside_panel, draw_dungeon_panel, print_character_gold_va
 use crate::ui_io::{get_input_confirmation, print_message};
 
 fn trap_open_pit(item: &Inventory, dam: i32) {
-    print_message(Some("You fell into a pit!"));
+    print_message(Some(crate::tr!("You fell into a pit!")));
 
     if py().flags.free_fall {
-        print_message(Some("You gently float down."));
+        print_message(Some(crate::tr!("You gently float down.")));
         return;
     }
 
@@ -49,18 +49,18 @@ fn trap_arrow(item: &Inventory, dam: i32) {
         let description = item_description(item, true);
         player_takes_hit(dam, &description);
 
-        print_message(Some("An arrow hits you."));
+        print_message(Some(crate::tr!("An arrow hits you.")));
         return;
     }
 
-    print_message(Some("An arrow barely misses you."));
+    print_message(Some(crate::tr!("An arrow barely misses you.")));
 }
 
 fn trap_covered_pit(item: &Inventory, dam: i32, coord: Coord) {
-    print_message(Some("You fell into a covered pit."));
+    print_message(Some(crate::tr!("You fell into a covered pit.")));
 
     if py().flags.free_fall {
-        print_message(Some("You gently float down."));
+        print_message(Some(crate::tr!("You gently float down.")));
     } else {
         let description = item_description(item, true);
         player_takes_hit(dam, &description);
@@ -73,10 +73,10 @@ fn trap_door(item: &Inventory, dam: i32) {
     dg().generate_new_level = true;
     dg().current_level += 1;
 
-    print_message(Some("You fell through a trap door!"));
+    print_message(Some(crate::tr!("You fell through a trap door!")));
 
     if py().flags.free_fall {
-        print_message(Some("You gently float down."));
+        print_message(Some(crate::tr!("You gently float down.")));
     } else {
         let description = item_description(item, true);
         player_takes_hit(dam, &description);
@@ -91,15 +91,15 @@ fn trap_sleeping_gas() {
         return;
     }
 
-    print_message(Some("A strange white mist surrounds you!"));
+    print_message(Some(crate::tr!("A strange white mist surrounds you!")));
 
     if py().flags.free_action {
-        print_message(Some("You are unaffected."));
+        print_message(Some(crate::tr!("You are unaffected.")));
         return;
     }
 
     py().flags.paralysis += (random_number(10) + 4) as i16;
-    print_message(Some("You fall asleep."));
+    print_message(Some(crate::tr!("You fall asleep.")));
 }
 
 fn trap_hidden_object(coord: Coord) {
@@ -107,7 +107,7 @@ fn trap_hidden_object(coord: Coord) {
 
     dungeon_place_random_object_at(coord, false);
 
-    print_message(Some("Hmmm, there was something under this rock."));
+    print_message(Some(crate::tr!("Hmmm, there was something under this rock.")));
 }
 
 fn trap_strength_dart(item: &Inventory, dam: i32) {
@@ -118,37 +118,37 @@ fn trap_strength_dart(item: &Inventory, dam: i32) {
             let description = item_description(item, true);
             player_takes_hit(dam, &description);
 
-            print_message(Some("A small dart weakens you!"));
+            print_message(Some(crate::tr!("A small dart weakens you!")));
         } else {
-            print_message(Some("A small dart hits you."));
+            print_message(Some(crate::tr!("A small dart hits you.")));
         }
     } else {
-        print_message(Some("A small dart barely misses you."));
+        print_message(Some(crate::tr!("A small dart barely misses you.")));
     }
 }
 
 fn trap_teleport(coord: Coord) {
     game().teleport_player = true;
 
-    print_message(Some("You hit a teleport trap!"));
+    print_message(Some(crate::tr!("You hit a teleport trap!")));
 
     // Light up the teleport trap, before we teleport away.
     dungeon_move_character_light(coord, coord);
 }
 
 fn trap_rockfall(coord: Coord, dam: i32) {
-    player_takes_hit(dam, "a falling rock");
+    player_takes_hit(dam, crate::tr!("a falling rock"));
 
     dungeon_delete_object(coord);
     dungeon_place_rubble(coord);
 
-    print_message(Some("You are hit by falling rock."));
+    print_message(Some(crate::tr!("You are hit by falling rock.")));
 }
 
 fn trap_corrode_gas() {
-    print_message(Some("A strange red gas surrounds you."));
+    print_message(Some(crate::tr!("A strange red gas surrounds you.")));
 
-    damage_corroding_gas("corrosion gas");
+    damage_corroding_gas(crate::tr!("corrosion gas"));
 }
 
 fn trap_summon_monster(coord: Coord) {
@@ -164,31 +164,31 @@ fn trap_summon_monster(coord: Coord) {
 }
 
 fn trap_fire(dam: i32) {
-    print_message(Some("You are enveloped in flames!"));
+    print_message(Some(crate::tr!("You are enveloped in flames!")));
 
-    damage_fire(dam, "a fire trap");
+    damage_fire(dam, crate::tr!("a fire trap"));
 }
 
 fn trap_acid(dam: i32) {
-    print_message(Some("You are splashed with acid!"));
+    print_message(Some(crate::tr!("You are splashed with acid!")));
 
-    damage_acid(dam, "an acid trap");
+    damage_acid(dam, crate::tr!("an acid trap"));
 }
 
 fn trap_poison_gas(dam: i32) {
-    print_message(Some("A pungent green gas surrounds you!"));
+    print_message(Some(crate::tr!("A pungent green gas surrounds you!")));
 
-    damage_poisoned_gas(dam, "a poison gas trap");
+    damage_poisoned_gas(dam, crate::tr!("a poison gas trap"));
 }
 
 fn trap_blind_gas() {
-    print_message(Some("A black gas surrounds you!"));
+    print_message(Some(crate::tr!("A black gas surrounds you!")));
 
     py().flags.blind += (random_number(50) + 50) as i16;
 }
 
 fn trap_confuse_gas() {
-    print_message(Some("A gas of scintillating colors surrounds you!"));
+    print_message(Some(crate::tr!("A gas of scintillating colors surrounds you!")));
 
     py().flags.confused += (random_number(15) + 15) as i16;
 }
@@ -198,15 +198,15 @@ fn trap_slow_dart(item: &Inventory, dam: i32) {
         let description = item_description(item, true);
         player_takes_hit(dam, &description);
 
-        print_message(Some("A small dart hits you!"));
+        print_message(Some(crate::tr!("A small dart hits you!")));
 
         if py().flags.free_action {
-            print_message(Some("You are unaffected."));
+            print_message(Some(crate::tr!("You are unaffected.")));
         } else {
             py().flags.slow += (random_number(20) + 10) as i16;
         }
     } else {
-        print_message(Some("A small dart barely misses you."));
+        print_message(Some(crate::tr!("A small dart barely misses you.")));
     }
 }
 
@@ -218,12 +218,12 @@ fn trap_constitution_dart(item: &Inventory, dam: i32) {
             let description = item_description(item, true);
             player_takes_hit(dam, &description);
 
-            print_message(Some("A small dart saps your health!"));
+            print_message(Some(crate::tr!("A small dart saps your health!")));
         } else {
-            print_message(Some("A small dart hits you."));
+            print_message(Some(crate::tr!("A small dart hits you.")));
         }
     } else {
-        print_message(Some("A small dart barely misses you."));
+        print_message(Some(crate::tr!("A small dart barely misses you.")));
     }
 }
 
@@ -314,7 +314,7 @@ fn carry(coord: Coord, pickup: bool) {
         py().misc.au += item.cost;
 
         let description = item_description(&item, true);
-        let msg = format!("You have found {} gold pieces worth of {}", item.cost, description);
+        let msg = crate::tr_fmt!("You have found {} gold pieces worth of {}", crate::locale::format_number(item.cost as i64), description);
 
         print_character_gold_value();
         dungeon_delete_object(coord);
@@ -333,7 +333,7 @@ fn carry(coord: Coord, pickup: bool) {
             // change the period to a question mark
             description.pop();
             description.push('?');
-            pickup = get_input_confirmation(&format!("Pick up {}", description));
+            pickup = get_input_confirmation(&crate::tr_fmt!("Pick up {}", description));
         }
 
         // Check to see if it will change the players speed.
@@ -343,7 +343,7 @@ fn carry(coord: Coord, pickup: bool) {
             // change the period to a question mark
             description.pop();
             description.push('?');
-            pickup = get_input_confirmation(&format!("Exceed your weight limit to pick up {}", description));
+            pickup = get_input_confirmation(&crate::tr_fmt!("Exceed your weight limit to pick up {}", description));
         }
 
         // Attempt to pick up an object.
@@ -353,13 +353,13 @@ fn carry(coord: Coord, pickup: bool) {
             game().treasure.list[treasure_id] = item_copy;
 
             let description = item_description(&py().inventory[locn], true);
-            let msg = format!("You have {} ({})", description, (b'a' + locn as u8) as char);
+            let msg = crate::tr_fmt!("You have {} ({})", description, (b'a' + locn as u8) as char);
             print_message(Some(&msg));
             dungeon_delete_object(coord);
         }
     } else {
         let description = item_description(&item, true);
-        let msg = format!("You can't carry {}", description);
+        let msg = crate::tr_fmt!("You can't carry {}", description);
         print_message(Some(&msg));
     }
 }
@@ -483,9 +483,9 @@ pub fn player_move(direction: i32, do_pickup: bool) {
 
             if py().running_tracker == 0 && tile.treasure_id != 0 {
                 if game().treasure.list[tile.treasure_id as usize].category_id == TV_RUBBLE {
-                    print_message(Some("There is rubble blocking your way."));
+                    print_message(Some(crate::tr!("There is rubble blocking your way.")));
                 } else if game().treasure.list[tile.treasure_id as usize].category_id == TV_CLOSED_DOOR {
-                    print_message(Some("There is a closed door blocking your way."));
+                    print_message(Some(crate::tr!("There is a closed door blocking your way.")));
                 }
             } else {
                 player_end_running();

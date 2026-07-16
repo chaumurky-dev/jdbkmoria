@@ -149,7 +149,7 @@ pub fn player_run_and_find() {
 
     // prevent infinite loops in find mode, will stop after moving 100 times
     if tracker > 100 {
-        print_message(Some("You stop running to catch your breath."));
+        print_message(Some(crate::tr!("You stop running to catch your breath.")));
         player_end_running();
         return;
     }

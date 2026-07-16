@@ -14,11 +14,12 @@ use crate::player::py;
 use crate::treasure::*;
 use crate::types::Coord;
 use crate::ui::draw_dungeon_panel;
+use crate::tr;
 use crate::ui_io::print_message;
 
 // If too many objects on floor level, delete some of them-RAK-
 fn compact_objects() {
-    print_message(Some("Compacting objects..."));
+    print_message(Some(tr!("Compacting objects...")));
 
     let mut counter = 0;
     let mut current_distance = 66;

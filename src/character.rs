@@ -20,6 +20,7 @@ use crate::ui::{
     print_character_vital_statistics, ESCAPE,
 };
 use crate::ui_io::{clear_to_bottom, erase_line, get_key_input, move_cursor, put_string, put_string_clear_to_eol, terminal_bell_sound};
+use crate::tr;
 
 // Race type for the generated player character
 pub struct Race {
@@ -200,12 +201,12 @@ fn character_generate_stats_and_race() {
 // shown during the character creation screens.
 fn display_character_races() {
     clear_to_bottom(20);
-    put_string("Choose a race (? for Help):", Coord::new(20, 2));
+    put_string(tr!("Choose a race (? for Help):"), Coord::new(20, 2));
 
     let mut coord = Coord::new(21, 2);
 
     for i in 0..PLAYER_MAX_RACES {
-        let description = format!("{}) {}", (b'a' + i as u8) as char, CHARACTER_RACES[i].name);
+        let description = format!("{}) {}", (b'a' + i as u8) as char, tr!(CHARACTER_RACES[i].name));
         put_string(&description, coord);
 
         coord.x += 15;
@@ -229,19 +230,19 @@ fn character_choose_race() {
         if id >= 0 && (id as usize) < PLAYER_MAX_RACES {
             break;
         } else if key == '?' {
-            display_text_help_file(config::files::WELCOME_SCREEN);
+            display_text_help_file(&config::files::localized(config::files::WELCOME_SCREEN));
         } else {
             terminal_bell_sound();
         }
     }
     py().misc.race_id = id as u8;
 
-    put_string(CHARACTER_RACES[id as usize].name, Coord::new(3, 15));
+    put_string(tr!(CHARACTER_RACES[id as usize].name), Coord::new(3, 15));
 }
 
 // Will print the history of a character -JWT-
 fn display_character_history() {
-    put_string("Character Background", Coord::new(14, 27));
+    put_string(tr!("Character Background"), Coord::new(14, 27));
 
     for i in 0..4 {
         put_string_clear_to_eol(&py().misc.history[i], Coord::new(i as i32 + 15, 10));
@@ -281,7 +282,7 @@ fn character_get_history() {
 
                 let background = &CHARACTER_BACKGROUNDS[background_id];
 
-                history_block.push_str(background.info);
+                history_block.push_str(tr!(background.info));
                 social_class += background.bonus as i32 - 50;
 
                 if history_id > background.next as i32 {
@@ -302,48 +303,9 @@ fn character_get_history() {
 
     player_clear_history();
 
-    // Process block of history text for pretty output
-    let bytes = history_block.as_bytes();
-
-    let mut cursor_start: i32 = 0;
-    let mut cursor_end: i32 = bytes.len() as i32 - 1;
-    while bytes[cursor_end as usize] == b' ' {
-        cursor_end -= 1;
-    }
-
-    let mut line_number: usize = 0;
-    let mut new_cursor_start = 0;
-
-    let mut flag = false;
-    while !flag {
-        while bytes[cursor_start as usize] == b' ' {
-            cursor_start += 1;
-        }
-
-        let mut current_cursor_position = cursor_end - cursor_start + 1;
-
-        if current_cursor_position > 60 {
-            current_cursor_position = 60;
-
-            while bytes[(cursor_start + current_cursor_position - 1) as usize] != b' ' {
-                current_cursor_position -= 1;
-            }
-
-            new_cursor_start = cursor_start + current_cursor_position;
-
-            while bytes[(cursor_start + current_cursor_position - 1) as usize] == b' ' {
-                current_cursor_position -= 1;
-            }
-        } else {
-            flag = true;
-        }
-
-        let start = cursor_start as usize;
-        let len = current_cursor_position as usize;
-        py().misc.history[line_number] = String::from_utf8_lossy(&bytes[start..start + len]).into_owned();
-
-        line_number += 1;
-        cursor_start = new_cursor_start;
+    // Process block of history text for pretty output.
+    for (line_number, line) in wrap_history_lines(&history_block).into_iter().enumerate() {
+        py().misc.history[line_number] = line;
     }
 
     // Compute social class for player
@@ -352,26 +314,93 @@ fn character_get_history() {
     py().misc.social_class = social_class as i16;
 }
 
+// Word-wraps a block of history text into (at most 4) lines of at most 60
+// display columns, trimming runs of spaces at line boundaries. Mirrors the
+// original C cursor-walking algorithm exactly, but operates on chars rather
+// than raw bytes: -RAK-
+//
+// jdbkmoria extension: using chars (not bytes) means a multi-byte UTF-8
+// character (accented French background text) can never be sliced across a
+// character boundary; for pure-ASCII text this produces byte-for-byte
+// identical output to the original byte-indexed version, since every char
+// is one byte. Factored out of `character_get_history()` so it can be unit
+// tested without touching global player state.
+pub fn wrap_history_lines(history_block: &str) -> Vec<String> {
+    let chars: Vec<char> = history_block.chars().collect();
+
+    let mut lines = Vec::new();
+
+    let mut cursor_start: i32 = 0;
+    let mut cursor_end: i32 = chars.len() as i32 - 1;
+    while chars[cursor_end as usize] == ' ' {
+        cursor_end -= 1;
+    }
+
+    let mut new_cursor_start = 0;
+
+    let mut flag = false;
+    while !flag {
+        while chars[cursor_start as usize] == ' ' {
+            cursor_start += 1;
+        }
+
+        let mut current_cursor_position = cursor_end - cursor_start + 1;
+
+        if current_cursor_position > 60 {
+            current_cursor_position = 60;
+
+            while chars[(cursor_start + current_cursor_position - 1) as usize] != ' ' {
+                current_cursor_position -= 1;
+            }
+
+            new_cursor_start = cursor_start + current_cursor_position;
+
+            while chars[(cursor_start + current_cursor_position - 1) as usize] == ' ' {
+                current_cursor_position -= 1;
+            }
+        } else {
+            flag = true;
+        }
+
+        let start = cursor_start as usize;
+        let len = current_cursor_position as usize;
+        lines.push(chars[start..start + len].iter().collect());
+
+        cursor_start = new_cursor_start;
+    }
+
+    lines
+}
+
 // Gets the character's gender -JWT-
 fn character_set_gender() {
     clear_to_bottom(20);
-    put_string("Choose a sex (? for Help):", Coord::new(20, 2));
-    put_string("m) Male       f) Female", Coord::new(21, 2));
+    let prompt = tr!("Choose a sex (? for Help):");
+    put_string(prompt, Coord::new(20, 2));
+    put_string(tr!("m) Male       f) Female"), Coord::new(21, 2));
+
+    // jdbkmoria extension: the answer cursor sits just past the prompt,
+    // whose translated length varies (upstream hardcoded column 29).
+    let cursor_column = 2 + prompt.chars().count() as i32 + 1;
 
     loop {
-        move_cursor(Coord::new(20, 29));
+        move_cursor(Coord::new(20, cursor_column));
         let key = get_key_input();
+        let upper_key = key.to_ascii_uppercase();
+        // jdbkmoria extension: match the m/f letters shown by the locale's
+        // "m) Male       f) Female" translation (fr_CA: h/f).
+        let def = crate::locale::locale();
 
-        if key == 'f' || key == 'F' {
+        if upper_key == def.female_key {
             player_set_gender(false);
-            put_string("Female", Coord::new(4, 15));
+            put_string(tr!("Female"), Coord::new(4, 15));
             break;
-        } else if key == 'm' || key == 'M' {
+        } else if upper_key == def.male_key {
             player_set_gender(true);
-            put_string("Male", Coord::new(4, 15));
+            put_string(tr!("Male"), Coord::new(4, 15));
             break;
         } else if key == '?' {
-            display_text_help_file(config::files::WELCOME_SCREEN);
+            display_text_help_file(&config::files::localized(config::files::WELCOME_SCREEN));
         } else {
             terminal_bell_sound();
         }
@@ -414,11 +443,11 @@ fn display_race_classes(race_id: u8, class_list: &mut [u8; PLAYER_MAX_CLASSES]) 
     let mut mask: u32 = 0x1;
 
     clear_to_bottom(20);
-    put_string("Choose a class (? for Help):", Coord::new(20, 2));
+    put_string(tr!("Choose a class (? for Help):"), Coord::new(20, 2));
 
     for i in 0..PLAYER_MAX_CLASSES {
         if (CHARACTER_RACES[race_id as usize].classes_bit_field as u32 & mask) != 0 {
-            let description = format!("{}) {}", (b'a' + class_id as u8) as char, CLASSES[i].title);
+            let description = format!("{}) {}", (b'a' + class_id as u8) as char, tr!(CLASSES[i].title));
             put_string(&description, coord);
             class_list[class_id] = i as u8;
 
@@ -441,7 +470,7 @@ fn generate_character_class(class_id: u8) {
     let class = &CLASSES[py().misc.class_id as usize];
 
     clear_to_bottom(20);
-    put_string(class.title, Coord::new(5, 15));
+    put_string(tr!(class.title), Coord::new(5, 15));
 
     // Adjust the stats for the class adjustment -RAK-
     py().stats.max[A_STR] = create_modify_player_stat(py().stats.max[A_STR], class.strength);
@@ -521,7 +550,7 @@ fn character_get_class() {
             generate_character_class(class_list[id as usize]);
             break;
         } else if key == '?' {
-            display_text_help_file(config::files::WELCOME_SCREEN);
+            display_text_help_file(&config::files::localized(config::files::WELCOME_SCREEN));
         } else {
             terminal_bell_sound();
         }
@@ -580,7 +609,7 @@ pub fn character_create() {
         print_character_stats();
 
         clear_to_bottom(20);
-        put_string("Hit space to re-roll or ESC to accept characteristics: ", Coord::new(20, 2));
+        put_string(tr!("Hit space to re-roll or ESC to accept characteristics: "), Coord::new(20, 2));
 
         loop {
             let key = get_key_input();
@@ -602,7 +631,7 @@ pub fn character_create() {
     print_character_abilities();
     get_character_name();
 
-    put_string_clear_to_eol("[ press any key to continue, or Q to exit ]", Coord::new(23, 17));
+    put_string_clear_to_eol(tr!("[ press any key to continue, or Q to exit ]"), Coord::new(23, 17));
     if get_key_input() == 'Q' {
         exit_program();
     }

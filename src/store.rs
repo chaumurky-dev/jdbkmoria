@@ -13,7 +13,7 @@ use crate::data_store_owners::{
 use crate::dungeon::dg;
 use crate::game::{game, random_number};
 use crate::globals::RacyCell;
-use crate::helpers::{insert_number_into_string, string_to_number};
+use crate::helpers::{insert_string_into_string, string_to_number};
 use crate::identification::{item_description, item_identify, spell_item_identify_and_remove_random_inscription};
 use crate::inventory::{
     inventory_can_carry_item_count, inventory_carry_item, inventory_destroy_item, inventory_item_single_stackable, inventory_take_one_item, Inventory, PlayerEquipment,
@@ -72,66 +72,66 @@ pub fn store_initialize_owners() {
 // Comments vary. -RAK-
 // Comment one : Finished haggling
 fn print_speech_finished_haggling() {
-    print_message(Some(SPEECH_SALE_ACCEPTED[(random_number(14) - 1) as usize]));
+    print_message(Some(crate::tr!(SPEECH_SALE_ACCEPTED[(random_number(14) - 1) as usize])));
 }
 
 // %A1 is offer, %A2 is asking.
 fn print_speech_selling_haggle(offer: i32, asking: i32, final_offer: i32) {
     let mut comment = if final_offer > 0 {
-        SPEECH_SELLING_HAGGLE_FINAL[(random_number(3) - 1) as usize].to_string()
+        crate::tr!(SPEECH_SELLING_HAGGLE_FINAL[(random_number(3) - 1) as usize]).to_string()
     } else {
-        SPEECH_SELLING_HAGGLE[(random_number(16) - 1) as usize].to_string()
+        crate::tr!(SPEECH_SELLING_HAGGLE[(random_number(16) - 1) as usize]).to_string()
     };
 
-    insert_number_into_string(&mut comment, "%A1", offer, false);
-    insert_number_into_string(&mut comment, "%A2", asking, false);
+    insert_string_into_string(&mut comment, "%A1", &crate::locale::format_number(offer as i64));
+    insert_string_into_string(&mut comment, "%A2", &crate::locale::format_number(asking as i64));
     print_message(Some(&comment));
 }
 
 fn print_speech_buying_haggle(offer: i32, asking: i32, final_offer: i32) {
     let mut comment = if final_offer > 0 {
-        SPEECH_BUYING_HAGGLE_FINAL[(random_number(3) - 1) as usize].to_string()
+        crate::tr!(SPEECH_BUYING_HAGGLE_FINAL[(random_number(3) - 1) as usize]).to_string()
     } else {
-        SPEECH_BUYING_HAGGLE[(random_number(15) - 1) as usize].to_string()
+        crate::tr!(SPEECH_BUYING_HAGGLE[(random_number(15) - 1) as usize]).to_string()
     };
 
-    insert_number_into_string(&mut comment, "%A1", offer, false);
-    insert_number_into_string(&mut comment, "%A2", asking, false);
+    insert_string_into_string(&mut comment, "%A1", &crate::locale::format_number(offer as i64));
+    insert_string_into_string(&mut comment, "%A2", &crate::locale::format_number(asking as i64));
     print_message(Some(&comment));
 }
 
 // Kick 'da bum out. -RAK-
 fn print_speech_get_out_of_my_store() {
     let comment = (random_number(5) - 1) as usize;
-    print_message(Some(SPEECH_INSULTED_HAGGLING_DONE[comment]));
-    print_message(Some(SPEECH_GET_OUT_OF_MY_STORE[comment]));
+    print_message(Some(crate::tr!(SPEECH_INSULTED_HAGGLING_DONE[comment])));
+    print_message(Some(crate::tr!(SPEECH_GET_OUT_OF_MY_STORE[comment])));
 }
 
 fn print_speech_try_again() {
-    print_message(Some(SPEECH_HAGGLING_TRY_AGAIN[(random_number(10) - 1) as usize]));
+    print_message(Some(crate::tr!(SPEECH_HAGGLING_TRY_AGAIN[(random_number(10) - 1) as usize])));
 }
 
 fn print_speech_sorry() {
-    print_message(Some(SPEECH_SORRY[(random_number(5) - 1) as usize]));
+    print_message(Some(crate::tr!(SPEECH_SORRY[(random_number(5) - 1) as usize])));
 }
 
 // Displays the set of commands -RAK-
 fn display_store_commands() {
-    put_string_clear_to_eol("You may:", Coord::new(20, 0));
-    put_string_clear_to_eol(" p) Purchase an item.           b) Browse store's inventory.", Coord::new(21, 0));
-    put_string_clear_to_eol(" s) Sell an item.               i/e/t/w/x) Inventory/Equipment Lists.", Coord::new(22, 0));
-    put_string_clear_to_eol("ESC) Exit from Building.        ^R) Redraw the screen.", Coord::new(23, 0));
+    put_string_clear_to_eol(crate::tr!("You may:"), Coord::new(20, 0));
+    put_string_clear_to_eol(crate::tr!(" p) Purchase an item.           b) Browse store's inventory."), Coord::new(21, 0));
+    put_string_clear_to_eol(crate::tr!(" s) Sell an item.               i/e/t/w/x) Inventory/Equipment Lists."), Coord::new(22, 0));
+    put_string_clear_to_eol(crate::tr!("ESC) Exit from Building.        ^R) Redraw the screen."), Coord::new(23, 0));
 }
 
 // Displays the set of commands -RAK-
 fn display_store_haggle_commands(haggle_type: i32) {
     if haggle_type == -1 {
-        put_string_clear_to_eol("Specify an asking-price in gold pieces.", Coord::new(21, 0));
+        put_string_clear_to_eol(crate::tr!("Specify an asking-price in gold pieces."), Coord::new(21, 0));
     } else {
-        put_string_clear_to_eol("Specify an offer in gold pieces.", Coord::new(21, 0));
+        put_string_clear_to_eol(crate::tr!("Specify an offer in gold pieces."), Coord::new(21, 0));
     }
 
-    put_string_clear_to_eol("ESC) Quit Haggling.", Coord::new(22, 0));
+    put_string_clear_to_eol(crate::tr!("ESC) Quit Haggling."), Coord::new(22, 0));
     erase_line(Coord::new(23, 0)); // clear last line
 }
 
@@ -170,9 +170,12 @@ fn display_store_inventory(store_id: usize, item_pos_start: i32) {
             if value <= 0 {
                 value = 1;
             }
+            // fixed-width 80-col table column: grouping would misalign it, so
+            // this stays plain digits (skipped per i18n number-grouping rules).
             format!("{:9}", value)
         } else {
-            format!("{:9} [Fixed]", cost)
+            // ditto: cost stays plain digits, but the "[Fixed]" label is translated.
+            format!("{:9} {}", cost, crate::tr!("[Fixed]"))
         };
 
         put_string_clear_to_eol(&msg, Coord::new(item_line_num + 5, 59));
@@ -188,7 +191,7 @@ fn display_store_inventory(store_id: usize, item_pos_start: i32) {
     }
 
     if store.unique_items_counter > 12 {
-        put_string("- cont. -", Coord::new(17, 60));
+        put_string(crate::tr!("- cont. -"), Coord::new(17, 60));
     } else {
         erase_line(Coord::new(17, 60));
     }
@@ -201,16 +204,18 @@ fn display_single_cost(store_id: usize, item_id: usize) {
     let msg = if cost < 0 {
         let mut c = -cost;
         c = c * player_stat_adjustment_charisma() / 100;
+        // kept plain digits for consistency with the aligned price column below
+        // (skipped per i18n number-grouping rules).
         format!("{}", c)
     } else {
-        format!("{:9} [Fixed]", cost)
+        format!("{:9} {}", cost, crate::tr!("[Fixed]"))
     };
     put_string_clear_to_eol(&msg, Coord::new((item_id as i32 % 12) + 5, 59));
 }
 
 // Displays players gold -RAK-
 fn display_player_remaining_gold() {
-    let msg = format!("Gold Remaining : {}", py().misc.au);
+    let msg = crate::tr_fmt!("Gold Remaining : {}", crate::locale::format_number(py().misc.au as i64));
     put_string_clear_to_eol(&msg, Coord::new(18, 17));
 }
 
@@ -218,8 +223,8 @@ fn display_player_remaining_gold() {
 fn display_store(store_id: usize, owner_name: &str, current_top_item_id: i32) {
     clear_screen();
     put_string(owner_name, Coord::new(3, 9));
-    put_string("Item", Coord::new(4, 3));
-    put_string("Asking Price", Coord::new(4, 60));
+    put_string(crate::tr!("Item"), Coord::new(4, 3));
+    put_string(crate::tr!("Asking Price"), Coord::new(4, 60));
     display_player_remaining_gold();
     display_store_commands();
     display_store_inventory(store_id, current_top_item_id);
@@ -231,7 +236,7 @@ fn store_get_item_id(item_id: &mut i32, prompt: &str, item_pos_start: i32, item_
     *item_id = -1;
     let mut item_found = false;
 
-    let msg = format!(
+    let msg = crate::tr_fmt!(
         "(Items {}-{}, ESC to exit) {}",
         (b'a' + item_pos_start as u8) as char,
         (b'a' + item_pos_end as u8) as char,
@@ -354,7 +359,7 @@ fn store_get_haggle(prompt: &str, new_offer: &mut i32, offer_count: i32) -> bool
 
         // don't allow incremental haggling, if player has not made an offer yet
         if valid_offer && offer_count == 0 && increment {
-            print_message(Some("You haven't even made your first offer yet!"));
+            print_message(Some(crate::tr!("You haven't even made your first offer yet!")));
             adjustment = 0;
             increment = false;
         }
@@ -441,15 +446,15 @@ fn store_purchase_haggle(store_id: usize, price: &mut i32, item: &Inventory) -> 
     let final_asking_price = min_sell;
     let mut current_asking_price = max_sell;
 
-    let mut comment = "Asking".to_string();
+    let mut comment = crate::tr!("Asking").to_string();
     let mut accepted_without_haggle = false;
     let mut offers_count = 0; // this prevents incremental haggling on first try
 
     // go right to final price if player has bargained well
     if store_no_need_to_bargain(&store, final_asking_price) {
-        print_message(Some("After a long bargaining session, you agree upon the price."));
+        print_message(Some(crate::tr!("After a long bargaining session, you agree upon the price.")));
         current_asking_price = min_sell;
-        comment = "Final offer".to_string();
+        comment = crate::tr!("Final offer").to_string();
         accepted_without_haggle = true;
 
         // Set up automatic increment, so that a return will accept the final price.
@@ -473,10 +478,10 @@ fn store_purchase_haggle(store_id: usize, price: &mut i32, item: &Inventory) -> 
         loop {
             bidding_open = true;
 
-            let msg = format!("{} :  {}", comment, current_asking_price);
+            let msg = format!("{} :  {}", comment, crate::locale::format_number(current_asking_price as i64));
             put_string(&msg, Coord::new(1, 0));
 
-            status = store_receive_offer(store_id, "What do you offer? ", &mut new_offer, last_offer, offers_count, 1);
+            status = store_receive_offer(store_id, crate::tr!("What do you offer? "), &mut new_offer, last_offer, offers_count, 1);
 
             if status != BidState::Received {
                 rejected = true;
@@ -532,7 +537,7 @@ fn store_purchase_haggle(store_id: usize, price: &mut i32, item: &Inventory) -> 
 
             if current_asking_price < final_asking_price {
                 current_asking_price = final_asking_price;
-                comment = "Final Offer".to_string();
+                comment = crate::tr!("Final Offer").to_string();
 
                 // Set the automatic haggle increment so that RET will give
                 // a new_offer equal to the final_asking_price price.
@@ -557,7 +562,7 @@ fn store_purchase_haggle(store_id: usize, price: &mut i32, item: &Inventory) -> 
                 offers_count += 1; // enable incremental haggling
 
                 erase_line(Coord::new(1, 0));
-                let msg = format!("Your last offer : {}", last_offer);
+                let msg = crate::tr_fmt!("Your last offer : {}", crate::locale::format_number(last_offer as i64));
                 put_string(&msg, Coord::new(1, 39));
 
                 print_speech_selling_haggle(last_offer, current_asking_price, final_flag);
@@ -651,13 +656,13 @@ fn store_sell_haggle(store_id: usize, price: &mut i32, item: &Inventory) -> BidS
 
         if max_buy > max_gold {
             final_flag = 1;
-            comment = "Final Offer".to_string();
+            comment = crate::tr!("Final Offer").to_string();
 
             // Disable the automatic haggle increment on RET.
             *store_last_increment() = 0;
             current_asking_price = max_gold;
             final_asking_price = max_gold;
-            print_message(Some("I am sorry, but I have not the money to afford such a fine item."));
+            print_message(Some(crate::tr!("I am sorry, but I have not the money to afford such a fine item.")));
             accepted_without_haggle = true;
         } else {
             current_asking_price = max_buy;
@@ -667,13 +672,13 @@ fn store_sell_haggle(store_id: usize, price: &mut i32, item: &Inventory) -> BidS
                 final_asking_price = max_gold;
             }
 
-            comment = "Offer".to_string();
+            comment = crate::tr!("Offer").to_string();
 
             // go right to final price if player has bargained well
             if store_no_need_to_bargain(&store, final_asking_price) {
-                print_message(Some("After a long bargaining session, you agree upon the price."));
+                print_message(Some(crate::tr!("After a long bargaining session, you agree upon the price.")));
                 current_asking_price = final_asking_price;
-                comment = "Final offer".to_string();
+                comment = crate::tr!("Final offer").to_string();
                 accepted_without_haggle = true;
 
                 // Set up automatic increment, so that a return
@@ -696,10 +701,10 @@ fn store_sell_haggle(store_id: usize, price: &mut i32, item: &Inventory) -> BidS
             loop {
                 bidding_open = true;
 
-                let msg = format!("{} :  {}", comment, current_asking_price);
+                let msg = format!("{} :  {}", comment, crate::locale::format_number(current_asking_price as i64));
                 put_string(&msg, Coord::new(1, 0));
 
-                status = store_receive_offer(store_id, "What price do you ask? ", &mut new_offer, last_offer, offer_count, -1);
+                status = store_receive_offer(store_id, crate::tr!("What price do you ask? "), &mut new_offer, last_offer, offer_count, -1);
 
                 if status != BidState::Received {
                     rejected = true;
@@ -755,7 +760,7 @@ fn store_sell_haggle(store_id: usize, price: &mut i32, item: &Inventory) -> BidS
 
                 if current_asking_price > final_asking_price {
                     current_asking_price = final_asking_price;
-                    comment = "Final Offer".to_string();
+                    comment = crate::tr!("Final Offer").to_string();
 
                     // Set the automatic haggle increment so that RET will give
                     // a new_offer equal to the final_asking_price price.
@@ -780,7 +785,7 @@ fn store_sell_haggle(store_id: usize, price: &mut i32, item: &Inventory) -> BidS
                     offer_count += 1; // enable incremental haggling
 
                     erase_line(Coord::new(1, 0));
-                    let msg = format!("Your last bid {}", last_offer);
+                    let msg = crate::tr_fmt!("Your last bid {}", crate::locale::format_number(last_offer as i64));
                     put_string(&msg, Coord::new(1, 39));
 
                     print_speech_buying_haggle(current_asking_price, last_offer, final_flag);
@@ -828,13 +833,13 @@ fn store_purchase_an_item(store_id: usize, current_top_item_id: &mut i32) -> boo
     let mut kick_customer = false; // don't kick them out of the store!
 
     if stores()[store_id].unique_items_counter < 1 {
-        print_message(Some("I am currently out of stock."));
+        print_message(Some(crate::tr!("I am currently out of stock.")));
         return false;
     }
 
     let mut item_id: i32 = 0;
     let item_count = store_items_to_display(stores()[store_id].unique_items_counter as i32, *current_top_item_id);
-    if !store_get_item_id(&mut item_id, "Which item are you interested in? ", 0, item_count) {
+    if !store_get_item_id(&mut item_id, crate::tr!("Which item are you interested in? "), 0, item_count) {
         return false;
     }
 
@@ -847,7 +852,7 @@ fn store_purchase_an_item(store_id: usize, current_top_item_id: &mut i32) -> boo
     inventory_take_one_item(&mut sell_item, &store_item);
 
     if !inventory_can_carry_item_count(&sell_item) {
-        put_string_clear_to_eol("You cannot carry that many different items.", Coord::new(0, 0));
+        put_string_clear_to_eol(crate::tr!("You cannot carry that many different items."), Coord::new(0, 0));
         return false;
     }
 
@@ -875,7 +880,7 @@ fn store_purchase_an_item(store_id: usize, current_top_item_id: &mut i32) -> boo
             store_destroy_item(store_id as i32, item_id, true);
 
             let description = item_description(&py().inventory[new_item_id as usize], true);
-            let msg = format!("You have {} ({})", description, (b'a' + new_item_id as u8) as char);
+            let msg = crate::tr_fmt!("You have {} ({})", description, (b'a' + new_item_id as u8) as char);
             put_string_clear_to_eol(&msg, Coord::new(0, 0));
 
             player_strength();
@@ -896,7 +901,7 @@ fn store_purchase_an_item(store_id: usize, current_top_item_id: &mut i32) -> boo
             kick_customer = true;
         } else {
             print_speech_finished_haggling();
-            print_message(Some("Liar!  You have not the gold!"));
+            print_message(Some(crate::tr!("Liar!  You have not the gold!")));
         }
     }
 
@@ -978,12 +983,12 @@ fn store_sell_an_item(store_id: usize, current_top_item_id: &mut i32) -> bool {
     }
 
     if last_item == -1 {
-        print_message(Some("You have nothing to sell to this store!"));
+        print_message(Some(crate::tr!("You have nothing to sell to this store!")));
         return false;
     }
 
     let mut item_id: i32 = 0;
-    if !inventory_get_input_for_item_id(&mut item_id, "Which one? ", first_item, last_item, Some(&mask), Some("I do not buy such items.")) {
+    if !inventory_get_input_for_item_id(&mut item_id, crate::tr!("Which one? "), first_item, last_item, Some(&mask), Some(crate::tr!("I do not buy such items."))) {
         return false;
     }
 
@@ -991,12 +996,12 @@ fn store_sell_an_item(store_id: usize, current_top_item_id: &mut i32) -> bool {
     inventory_take_one_item(&mut sold_item, &py().inventory[item_id as usize]);
 
     let description = item_description(&sold_item, true);
-    let msg = format!("Selling {} ({})", description, (b'a' + item_id as u8) as char);
+    let msg = crate::tr_fmt!("Selling {} ({})", description, (b'a' + item_id as u8) as char);
     print_message(Some(&msg));
 
     let store = stores()[store_id];
     if !store_check_player_items_count(&store, &sold_item) {
-        print_message(Some("I have not the room in my store to keep it."));
+        print_message(Some(crate::tr!("I have not the room in my store to keep it.")));
         return false;
     }
 
@@ -1007,8 +1012,8 @@ fn store_sell_an_item(store_id: usize, current_top_item_id: &mut i32) -> bool {
     if status == BidState::Insulted {
         kick_customer = true;
     } else if status == BidState::Offended {
-        print_message(Some("How dare you!"));
-        print_message(Some("I will not buy that!"));
+        print_message(Some(crate::tr!("How dare you!")));
+        print_message(Some(crate::tr!("I will not buy that!")));
         kick_customer = store_increase_insults(store_id);
     } else if status == BidState::Received {
         // bid received, and accepted!
@@ -1030,7 +1035,7 @@ fn store_sell_an_item(store_id: usize, current_top_item_id: &mut i32) -> bool {
         inventory_destroy_item(item_id as usize);
 
         let description = item_description(&sold_item, true);
-        let msg = format!("You've sold {}", description);
+        let msg = crate::tr_fmt!("You've sold {}", description);
         print_message(Some(&msg));
 
         let mut item_pos_id: i32 = -1;
@@ -1069,12 +1074,12 @@ pub fn store_enter(store_id: i32) {
     let store = stores()[store_id];
 
     if store.turns_left_before_closing >= dg().game_turn {
-        print_message(Some("The doors are locked."));
+        print_message(Some(crate::tr!("The doors are locked.")));
         return;
     }
 
     let mut current_top_item_id: i32 = 0;
-    display_store(store_id, STORE_OWNERS[store.owner_id as usize].name, current_top_item_id);
+    display_store(store_id, crate::tr!(STORE_OWNERS[store.owner_id as usize].name), current_top_item_id);
 
     let mut exit_store = false;
     while !exit_store {
@@ -1092,7 +1097,7 @@ pub fn store_enter(store_id: i32) {
                             current_top_item_id = 12;
                             display_store_inventory(store_id, current_top_item_id);
                         } else {
-                            print_message(Some("Entire inventory is shown."));
+                            print_message(Some(crate::tr!("Entire inventory is shown.")));
                         }
                     } else {
                         current_top_item_id = 0;

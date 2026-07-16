@@ -31,6 +31,7 @@ use crate::spells::{
     spell_wall_to_mud,
 };
 use crate::spells_data::MagicSpellFlags;
+use crate::tr;
 use crate::treasure::{TV_NEVER, TV_STAFF, TV_WAND};
 use crate::ui::display_character_experience;
 use crate::ui_inventory::inventory_get_input_for_item_id;
@@ -47,12 +48,12 @@ use crate::ui_io::print_message;
 
 fn staff_player_is_carrying(item_pos_start: &mut i32, item_pos_end: &mut i32) -> bool {
     if py().pack.unique_items == 0 {
-        print_message(Some("But you are not carrying anything."));
+        print_message(Some(tr!("But you are not carrying anything.")));
         return false;
     }
 
     if !inventory_find_range(TV_STAFF as i32, TV_NEVER as i32, item_pos_start, item_pos_end) {
-        print_message(Some("You are not carrying any staffs."));
+        print_message(Some(tr!("You are not carrying any staffs.")));
         return false;
     }
 
@@ -83,12 +84,12 @@ fn staff_player_can_use(item_id: usize) -> bool {
     }
 
     if random_number(chance) < config::player::PLAYER_USE_DEVICE_DIFFICULTY as i32 {
-        print_message(Some("You failed to use the staff properly."));
+        print_message(Some(tr!("You failed to use the staff properly.")));
         return false;
     }
 
     if item.misc_use < 1 {
-        print_message(Some("The staff has no charges left."));
+        print_message(Some(tr!("The staff has no charges left.")));
         if !spell_item_identified(&item) {
             item_append_to_inscription(&mut py().inventory[item_id], config::identification::ID_EMPTY);
         }
@@ -164,7 +165,7 @@ fn staff_discharge(item_id: usize) -> bool {
                 // RemoveCurse
                 if spell_remove_curse_from_all_worn_items() {
                     if py().flags.blind < 1 {
-                        print_message(Some("The staff glows blue for a moment.."));
+                        print_message(Some(tr!("The staff glows blue for a moment..")));
                     }
                     identified = true;
                 }
@@ -205,7 +206,7 @@ pub fn staff_use() {
     }
 
     let mut item_id: i32 = 0;
-    if !inventory_get_input_for_item_id(&mut item_id, "Use which staff?", item_pos_start, item_pos_end, None, None) {
+    if !inventory_get_input_for_item_id(&mut item_id, tr!("Use which staff?"), item_pos_start, item_pos_end, None, None) {
         return;
     }
     let mut item_id = item_id as usize;
@@ -260,23 +261,23 @@ fn wand_discharge(item_id: usize, direction: i32) -> bool {
         match get_and_clear_first_bit(&mut flags) + 1 {
             1 => {
                 // WandLight
-                print_message(Some("A line of blue shimmering light appears."));
+                print_message(Some(tr!("A line of blue shimmering light appears.")));
                 spell_light_line(py().pos, direction);
                 identified = true;
             }
             2 => {
                 // LightningBolt
-                spell_fire_bolt(coord, direction, dice_roll(Dice::new(4, 8)), MagicSpellFlags::Lightning as i32, SPELL_NAMES[8]);
+                spell_fire_bolt(coord, direction, dice_roll(Dice::new(4, 8)), MagicSpellFlags::Lightning as i32, tr!(SPELL_NAMES[8]));
                 identified = true;
             }
             3 => {
                 // FrostBolt
-                spell_fire_bolt(coord, direction, dice_roll(Dice::new(6, 8)), MagicSpellFlags::Frost as i32, SPELL_NAMES[14]);
+                spell_fire_bolt(coord, direction, dice_roll(Dice::new(6, 8)), MagicSpellFlags::Frost as i32, tr!(SPELL_NAMES[14]));
                 identified = true;
             }
             4 => {
                 // FireBolt
-                spell_fire_bolt(coord, direction, dice_roll(Dice::new(9, 8)), MagicSpellFlags::Fire as i32, SPELL_NAMES[22]);
+                spell_fire_bolt(coord, direction, dice_roll(Dice::new(9, 8)), MagicSpellFlags::Fire as i32, tr!(SPELL_NAMES[22]));
                 identified = true;
             }
             5 => identified = spell_wall_to_mud(coord, direction), // StoneToMud
@@ -290,7 +291,7 @@ fn wand_discharge(item_id: usize, direction: i32) -> bool {
             13 => identified = spell_destroy_doors_traps_in_direction(coord, direction), // TrapDoorDestruction
             14 => {
                 // WandMagicMissile
-                spell_fire_bolt(coord, direction, dice_roll(Dice::new(2, 6)), MagicSpellFlags::MagicMissile as i32, SPELL_NAMES[0]);
+                spell_fire_bolt(coord, direction, dice_roll(Dice::new(2, 6)), MagicSpellFlags::MagicMissile as i32, tr!(SPELL_NAMES[0]));
                 identified = true;
             }
             15 => identified = spell_build_wall(coord, direction), // WallBuilding
@@ -299,27 +300,27 @@ fn wand_discharge(item_id: usize, direction: i32) -> bool {
             18 => identified = spell_disarm_all_in_direction(coord, direction), // Disarming
             19 => {
                 // LightningBall
-                spell_fire_ball(coord, direction, 32, MagicSpellFlags::Lightning as i32, "Lightning Ball");
+                spell_fire_ball(coord, direction, 32, MagicSpellFlags::Lightning as i32, tr!("Lightning Ball"));
                 identified = true;
             }
             20 => {
                 // ColdBall
-                spell_fire_ball(coord, direction, 48, MagicSpellFlags::Frost as i32, "Cold Ball");
+                spell_fire_ball(coord, direction, 48, MagicSpellFlags::Frost as i32, tr!("Cold Ball"));
                 identified = true;
             }
             21 => {
                 // FireBall
-                spell_fire_ball(coord, direction, 72, MagicSpellFlags::Fire as i32, SPELL_NAMES[28]);
+                spell_fire_ball(coord, direction, 72, MagicSpellFlags::Fire as i32, tr!(SPELL_NAMES[28]));
                 identified = true;
             }
             22 => {
                 // StinkingCloud
-                spell_fire_ball(coord, direction, 12, MagicSpellFlags::PoisonGas as i32, SPELL_NAMES[6]);
+                spell_fire_ball(coord, direction, 12, MagicSpellFlags::PoisonGas as i32, tr!(SPELL_NAMES[6]));
                 identified = true;
             }
             23 => {
                 // AcidBall
-                spell_fire_ball(coord, direction, 60, MagicSpellFlags::Acid as i32, "Acid Ball");
+                spell_fire_ball(coord, direction, 60, MagicSpellFlags::Acid as i32, tr!("Acid Ball"));
                 identified = true;
             }
             24 => {
@@ -341,19 +342,19 @@ pub fn wand_aim() {
     game().player_free_turn = true;
 
     if py().pack.unique_items == 0 {
-        print_message(Some("But you are not carrying anything."));
+        print_message(Some(tr!("But you are not carrying anything.")));
         return;
     }
 
     let mut item_pos_start = 0;
     let mut item_pos_end = 0;
     if !inventory_find_range(TV_WAND as i32, TV_NEVER as i32, &mut item_pos_start, &mut item_pos_end) {
-        print_message(Some("You are not carrying any wands."));
+        print_message(Some(tr!("You are not carrying any wands.")));
         return;
     }
 
     let mut item_id: i32 = 0;
-    if !inventory_get_input_for_item_id(&mut item_id, "Aim which wand?", item_pos_start, item_pos_end, None, None) {
+    if !inventory_get_input_for_item_id(&mut item_id, tr!("Aim which wand?"), item_pos_start, item_pos_end, None, None) {
         return;
     }
     let mut item_id = item_id as usize;
@@ -366,7 +367,7 @@ pub fn wand_aim() {
     }
 
     if py().flags.confused > 0 {
-        print_message(Some("You are confused."));
+        print_message(Some(tr!("You are confused.")));
         direction = get_random_direction();
     }
 
@@ -390,12 +391,12 @@ pub fn wand_aim() {
     }
 
     if random_number(chance) < config::player::PLAYER_USE_DEVICE_DIFFICULTY as i32 {
-        print_message(Some("You failed to use the wand properly."));
+        print_message(Some(tr!("You failed to use the wand properly.")));
         return;
     }
 
     if item.misc_use < 1 {
-        print_message(Some("The wand has no charges left."));
+        print_message(Some(tr!("The wand has no charges left.")));
         if !spell_item_identified(&item) {
             item_append_to_inscription(&mut py().inventory[item_id], config::identification::ID_EMPTY);
         }

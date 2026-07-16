@@ -168,7 +168,7 @@ fn inventory_drop_or_throw_item(coord: crate::types::Coord, item: &Inventory) {
         dungeon_lite_spot(position);
     } else {
         let description = item_description(item, false);
-        let msg = format!("The {} disappears.", description);
+        let msg = crate::tr_fmt!("The {} disappears.", description);
         print_message(Some(&msg));
     }
 }
@@ -179,13 +179,13 @@ fn inventory_drop_or_throw_item(coord: crate::types::Coord, item: &Inventory) {
 // with correct weapon. i.e. wield bow and throw arrow.
 pub fn player_throw_item() {
     if py().pack.unique_items == 0 {
-        print_message(Some("But you are not carrying anything."));
+        print_message(Some(crate::tr!("But you are not carrying anything.")));
         game().player_free_turn = true;
         return;
     }
 
     let mut item_id: i32 = 0;
-    if !inventory_get_input_for_item_id(&mut item_id, "Fire/Throw which one?", 0, py().pack.unique_items as i32 - 1, None, None) {
+    if !inventory_get_input_for_item_id(&mut item_id, crate::tr!("Fire/Throw which one?"), 0, py().pack.unique_items as i32 - 1, None, None) {
         return;
     }
     let item_id = item_id as usize;
@@ -198,7 +198,7 @@ pub fn player_throw_item() {
     item_type_remaining_count_description(item_id);
 
     if py().flags.confused > 0 {
-        print_message(Some("You are confused."));
+        print_message(Some(crate::tr!("You are confused.")));
         dir = get_random_direction();
     }
 
@@ -255,10 +255,10 @@ pub fn player_throw_item() {
                     let visible;
                     let msg;
                     if !m_ptr.lit {
-                        msg = format!("You hear a cry as the {} finds a mark.", description);
+                        msg = crate::tr_fmt!("You hear a cry as the {} finds a mark.", description);
                         visible = false;
                     } else {
-                        msg = format!("The {} hits the {}.", description, CREATURES_LIST[creature_id].name);
+                        msg = crate::tr_fmt!("The {} hits the {}.", description, crate::tr!(CREATURES_LIST[creature_id].name));
                         visible = true;
                     }
                     print_message(Some(&msg));
@@ -274,9 +274,9 @@ pub fn player_throw_item() {
 
                     if kill_result >= 0 {
                         if !visible {
-                            print_message(Some("You have killed something!"));
+                            print_message(Some(crate::tr!("You have killed something!")));
                         } else {
-                            let msg2 = format!("You have killed the {}.", CREATURES_LIST[kill_result as usize].name);
+                            let msg2 = crate::tr_fmt!("You have killed the {}.", crate::tr!(CREATURES_LIST[kill_result as usize].name));
                             print_message(Some(&msg2));
                         }
                         display_character_experience();
@@ -302,7 +302,7 @@ pub fn player_throw_item() {
 
                     if player_test_being_hit(tbth, py().misc.level as i32, tpth, crate::paintings::painting_armor_class(index), CLASS_BTHB) {
                         let description = item_description(&thrown_item, false);
-                        let msg = format!("The {} strikes a painting.", description);
+                        let msg = crate::tr_fmt!("The {} strikes a painting.", description);
                         print_message(Some(&msg));
 
                         tdam = player_weapon_critical_blow(thrown_item.weight as i32, tpth, tdam, CLASS_BTHB);
@@ -311,8 +311,8 @@ pub fn player_throw_item() {
                         }
 
                         match crate::paintings::painting_take_hit(index, tdam) {
-                            crate::paintings::PaintingHitResult::Destroyed => print_message(Some("The painting is torn from the wall!")),
-                            crate::paintings::PaintingHitResult::Damaged => print_message(Some("The canvas shudders.")),
+                            crate::paintings::PaintingHitResult::Destroyed => print_message(Some(crate::tr!("The painting is torn from the wall!"))),
+                            crate::paintings::PaintingHitResult::Damaged => print_message(Some(crate::tr!("The canvas shudders."))),
                             _ => {}
                         }
                     }

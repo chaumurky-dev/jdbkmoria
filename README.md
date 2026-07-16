@@ -48,6 +48,7 @@ Options:
     -r           Enable classic roguelike keys on startup
     -d           Display high scores and exit
     -s NUMBER    Game Seed, as a decimal number (max: 2147483647)
+    -l LOCALE    Locale (en_US, en_GB, fr_CA)
     -v           Print version info and exit
     -h           Display this message
 ```
@@ -98,6 +99,33 @@ Gameplay is otherwise unchanged, but the terminal input handling accepts a few e
   followed by the direction (or the shifted letter in roguelike-keys mode).
   This requires a terminal that sends xterm-style modified sequences for
   shifted keys (most modern terminal emulators do).
+
+### Locales
+
+The game speaks **en_US** (default), **en_GB**, and **fr_CA**. The locale is
+chosen at startup from, in order of precedence:
+
+1. the `-l LOCALE` command line option
+2. the `JDBKMORIA_LOCALE` environment variable
+3. the system locale (`LC_ALL`, then `LC_MESSAGES`, then `LANG` —
+   e.g. `LANG=fr_CA.UTF-8` just works; a bare language like `fr` selects
+   that language's default region)
+4. `en_US`
+
+Everything player-facing is localized: messages, prompts, item/monster/spell
+names, store dialogue, character backgrounds, help screens (`data/fr_CA/`),
+and number formatting (`12,345` in English; `12 345` in Canadian French).
+The dungeon-map numerals on store entrances and digit grouping are
+data-driven per locale, so future locales such as `en_IN` (lakh/crore
+grouping) or `ar_AE` (Arabic-Indic digits) only need a new locale
+definition. To add a locale, see "Locale support" in `PORTING.md` and
+`tools/locale_catalog.py` (key extraction + catalog generation).
+
+French rendering requires a UTF-8 terminal (the game links `ncursesw` and
+adopts the system locale, falling back to `C.UTF-8`). Known v1 limitations:
+articles don't elide (« Le Ogre » rather than « L'Ogre »), grammatical
+gender defaults to masculine, and text stored in old save files or the
+high-score table keeps the language it was written in.
 
 ## Testing
 

@@ -75,6 +75,7 @@ use crate::ui_io::{
     get_string_input, panel_put_tile, print_message, put_string, put_string_clear_to_eol,
     terminal_bell_sound,
 };
+use crate::{tr, tr_fmt};
 
 static STAT_NAMES: [&str; 6] = ["STR : ", "INT : ", "WIS : ", "DEX : ", "CON : ", "CHR : "];
 
@@ -225,7 +226,7 @@ pub fn stats_as_string(stat: u8) -> String {
 // Print character stat in given row, column -RAK-
 pub fn display_character_stats(stat: usize) {
     let text = stats_as_string(py().stats.used[stat]);
-    put_string(STAT_NAMES[stat], Coord::new(6 + stat as i32, STAT_COLUMN));
+    put_string(&format!("{:<6.6}", tr!(STAT_NAMES[stat])), Coord::new(6 + stat as i32, STAT_COLUMN));
     put_string(&text, Coord::new(6 + stat as i32, STAT_COLUMN + 6));
 }
 
@@ -235,7 +236,7 @@ fn print_character_info_in_field(info: &str, coord: Coord) {
     // blank out the current field space
     put_blanks(13, coord);
 
-    put_string(info, coord);
+    put_string(&format!("{:.13}", info), coord);
 }
 
 // Print long number with header at given row, column
@@ -303,9 +304,9 @@ pub fn print_character_current_depth() {
     let depth = dg().current_level as i32 * 50;
 
     let depths = if depth == 0 {
-        "Town level".to_string()
+        tr!("Town level").to_string()
     } else {
-        format!("{} feet", depth)
+        tr_fmt!("{} feet", depth)
     };
 
     put_string_clear_to_eol(&depths, Coord::new(23, 65));
@@ -314,9 +315,9 @@ pub fn print_character_current_depth() {
 // Prints status of hunger -RAK-
 pub fn print_character_hunger_status() {
     if (py().flags.status & config::player::status::PY_WEAK) != 0 {
-        put_string("Weak  ", Coord::new(23, 0));
+        put_string(&format!("{:<6.6}", tr!("Weak")), Coord::new(23, 0));
     } else if (py().flags.status & config::player::status::PY_HUNGRY) != 0 {
-        put_string("Hungry", Coord::new(23, 0));
+        put_string(&format!("{:<6.6}", tr!("Hungry")), Coord::new(23, 0));
     } else {
         put_blanks(6, Coord::new(23, 0));
     }
@@ -325,7 +326,7 @@ pub fn print_character_hunger_status() {
 // Prints Blind status -RAK-
 pub fn print_character_blind_status() {
     if (py().flags.status & config::player::status::PY_BLIND) != 0 {
-        put_string("Blind", Coord::new(23, 7));
+        put_string(&format!("{:<5.5}", tr!("Blind")), Coord::new(23, 7));
     } else {
         put_blanks(5, Coord::new(23, 7));
     }
@@ -334,7 +335,7 @@ pub fn print_character_blind_status() {
 // Prints Confusion status -RAK-
 pub fn print_character_confused_state() {
     if (py().flags.status & config::player::status::PY_CONFUSED) != 0 {
-        put_string("Confused", Coord::new(23, 13));
+        put_string(&format!("{:<8.8}", tr!("Confused")), Coord::new(23, 13));
     } else {
         put_blanks(8, Coord::new(23, 13));
     }
@@ -343,7 +344,7 @@ pub fn print_character_confused_state() {
 // Prints Fear status -RAK-
 pub fn print_character_fear_state() {
     if (py().flags.status & config::player::status::PY_FEAR) != 0 {
-        put_string("Afraid", Coord::new(23, 22));
+        put_string(&format!("{:<6.6}", tr!("Afraid")), Coord::new(23, 22));
     } else {
         put_blanks(6, Coord::new(23, 22));
     }
@@ -352,7 +353,7 @@ pub fn print_character_fear_state() {
 // Prints Poisoned status -RAK-
 pub fn print_character_poisoned_state() {
     if (py().flags.status & config::player::status::PY_POISONED) != 0 {
-        put_string("Poisoned", Coord::new(23, 29));
+        put_string(&format!("{:<8.8}", tr!("Poisoned")), Coord::new(23, 29));
     } else {
         put_blanks(8, Coord::new(23, 29));
     }
@@ -363,17 +364,17 @@ pub fn print_character_movement_state() {
     py().flags.status &= !config::player::status::PY_REPEAT;
 
     if py().flags.paralysis > 1 {
-        put_string("Paralysed", Coord::new(23, 38));
+        put_string(&format!("{:<9.9}", tr!("Paralysed")), Coord::new(23, 38));
         return;
     }
 
     if (py().flags.status & config::player::status::PY_REST) != 0 {
         let rest_string = if py().flags.rest < 0 {
-            "Rest *".to_string()
+            format!("{:<6.6}", tr!("Rest *"))
         } else if config::options::options().display_counts {
-            format!("Rest {:<5}", py().flags.rest)
+            tr_fmt!("Rest {}", format!("{:<5}", py().flags.rest))
         } else {
-            "Rest".to_string()
+            format!("{:<4.4}", tr!("Rest"))
         };
 
         put_string(&rest_string, Coord::new(23, 38));
@@ -383,9 +384,9 @@ pub fn print_character_movement_state() {
 
     if game().command_count > 0 {
         let repeat_string = if config::options::options().display_counts {
-            format!("Repeat {:03}", game().command_count)
+            tr_fmt!("Repeat {}", format!("{:03}", game().command_count))
         } else {
-            "Repeat".to_string()
+            format!("{:<6.6}", tr!("Repeat"))
         };
 
         py().flags.status |= config::player::status::PY_REPEAT;
@@ -393,14 +394,14 @@ pub fn print_character_movement_state() {
         put_string(&repeat_string, Coord::new(23, 38));
 
         if (py().flags.status & config::player::status::PY_SEARCH) != 0 {
-            put_string("Search", Coord::new(23, 38));
+            put_string(&format!("{:<6.6}", tr!("Search")), Coord::new(23, 38));
         }
 
         return;
     }
 
     if (py().flags.status & config::player::status::PY_SEARCH) != 0 {
-        put_string("Searching", Coord::new(23, 38));
+        put_string(&format!("{:<9.9}", tr!("Searching")), Coord::new(23, 38));
         return;
     }
 
@@ -418,15 +419,15 @@ pub fn print_character_speed() {
     }
 
     if speed > 1 {
-        put_string("Very Slow", Coord::new(23, 49));
+        put_string(&format!("{:<9.9}", tr!("Very Slow")), Coord::new(23, 49));
     } else if speed == 1 {
-        put_string("Slow     ", Coord::new(23, 49));
+        put_string(&format!("{:<9.9}", tr!("Slow")), Coord::new(23, 49));
     } else if speed == 0 {
         put_blanks(9, Coord::new(23, 49));
     } else if speed == -1 {
-        put_string("Fast     ", Coord::new(23, 49));
+        put_string(&format!("{:<9.9}", tr!("Fast")), Coord::new(23, 49));
     } else {
-        put_string("Very Fast", Coord::new(23, 49));
+        put_string(&format!("{:<9.9}", tr!("Very Fast")), Coord::new(23, 49));
     }
 }
 
@@ -436,7 +437,7 @@ pub fn print_character_study_instruction() {
     if py().flags.new_spells_to_learn == 0 {
         put_blanks(5, Coord::new(23, 59));
     } else {
-        put_string("Study", Coord::new(23, 59));
+        put_string(&format!("{:<5.5}", tr!("Study")), Coord::new(23, 59));
     }
 }
 
@@ -444,36 +445,36 @@ pub fn print_character_study_instruction() {
 pub fn print_character_winner() {
     if (game().noscore & 0x2) != 0 {
         if game().wizard_mode {
-            put_string("Is wizard  ", Coord::new(22, 0));
+            put_string(&format!("{:<11.11}", tr!("Is wizard")), Coord::new(22, 0));
         } else {
-            put_string("Was wizard ", Coord::new(22, 0));
+            put_string(&format!("{:<11.11}", tr!("Was wizard")), Coord::new(22, 0));
         }
     } else if (game().noscore & 0x1) != 0 {
-        put_string("Resurrected", Coord::new(22, 0));
+        put_string(&format!("{:<11.11}", tr!("Resurrected")), Coord::new(22, 0));
     } else if (game().noscore & 0x4) != 0 {
-        put_string("Duplicate", Coord::new(22, 0));
+        put_string(&format!("{:<9.9}", tr!("Duplicate")), Coord::new(22, 0));
     } else if game().total_winner {
-        put_string("*Winner*   ", Coord::new(22, 0));
+        put_string(&format!("{:<11.11}", tr!("*Winner*")), Coord::new(22, 0));
     }
 }
 
 // Prints character-screen info -RAK-
 pub fn print_character_stats_block() {
-    print_character_info_in_field(CHARACTER_RACES[py().misc.race_id as usize].name, Coord::new(2, STAT_COLUMN));
-    print_character_info_in_field(CLASSES[py().misc.class_id as usize].title, Coord::new(3, STAT_COLUMN));
+    print_character_info_in_field(tr!(CHARACTER_RACES[py().misc.race_id as usize].name), Coord::new(2, STAT_COLUMN));
+    print_character_info_in_field(tr!(CLASSES[py().misc.class_id as usize].title), Coord::new(3, STAT_COLUMN));
     print_character_info_in_field(&player_rank_title(), Coord::new(4, STAT_COLUMN));
 
     for i in 0..6 {
         display_character_stats(i);
     }
 
-    print_header_number("LEV ", py().misc.level as i32, Coord::new(13, STAT_COLUMN));
-    print_header_long_number("EXP ", py().misc.exp, Coord::new(14, STAT_COLUMN));
-    print_header_number("MANA", py().misc.current_mana as i32, Coord::new(15, STAT_COLUMN));
-    print_header_number("MHP ", py().misc.max_hp as i32, Coord::new(16, STAT_COLUMN));
-    print_header_number("CHP ", py().misc.current_hp as i32, Coord::new(17, STAT_COLUMN));
-    print_header_number("AC  ", py().misc.display_ac as i32, Coord::new(19, STAT_COLUMN));
-    print_header_long_number("GOLD", py().misc.au, Coord::new(20, STAT_COLUMN));
+    print_header_number(&format!("{:<4.4}", tr!("LEV ")), py().misc.level as i32, Coord::new(13, STAT_COLUMN));
+    print_header_long_number(&format!("{:<4.4}", tr!("EXP ")), py().misc.exp, Coord::new(14, STAT_COLUMN));
+    print_header_number(&format!("{:<4.4}", tr!("MANA")), py().misc.current_mana as i32, Coord::new(15, STAT_COLUMN));
+    print_header_number(&format!("{:<4.4}", tr!("MHP ")), py().misc.max_hp as i32, Coord::new(16, STAT_COLUMN));
+    print_header_number(&format!("{:<4.4}", tr!("CHP ")), py().misc.current_hp as i32, Coord::new(17, STAT_COLUMN));
+    print_header_number(&format!("{:<4.4}", tr!("AC  ")), py().misc.display_ac as i32, Coord::new(19, STAT_COLUMN));
+    print_header_long_number(&format!("{:<4.4}", tr!("GOLD")), py().misc.au, Coord::new(20, STAT_COLUMN));
     print_character_winner();
 
     let status = py().flags.status;
@@ -516,10 +517,10 @@ pub fn print_character_stats_block() {
 pub fn print_character_information() {
     clear_screen();
 
-    put_string("Name        :", Coord::new(2, 1));
-    put_string("Race        :", Coord::new(3, 1));
-    put_string("Sex         :", Coord::new(4, 1));
-    put_string("Class       :", Coord::new(5, 1));
+    put_string(&format!("{:<13.13}", tr!("Name        :")), Coord::new(2, 1));
+    put_string(&format!("{:<13.13}", tr!("Race        :")), Coord::new(3, 1));
+    put_string(&format!("{:<13.13}", tr!("Sex         :")), Coord::new(4, 1));
+    put_string(&format!("{:<13.13}", tr!("Class       :")), Coord::new(5, 1));
 
     if !game().character_generated {
         return;
@@ -527,16 +528,16 @@ pub fn print_character_information() {
 
     let name = py().misc.name.clone();
     put_string(&name, Coord::new(2, 15));
-    put_string(CHARACTER_RACES[py().misc.race_id as usize].name, Coord::new(3, 15));
+    put_string(tr!(CHARACTER_RACES[py().misc.race_id as usize].name), Coord::new(3, 15));
     put_string(player_get_gender_label(), Coord::new(4, 15));
-    put_string(CLASSES[py().misc.class_id as usize].title, Coord::new(5, 15));
+    put_string(tr!(CLASSES[py().misc.class_id as usize].title), Coord::new(5, 15));
 }
 
 // Prints the following information on the screen. -JWT-
 pub fn print_character_stats() {
     for i in 0..6 {
         let buf = stats_as_string(py().stats.used[i]);
-        put_string(STAT_NAMES[i], Coord::new(2 + i as i32, 61));
+        put_string(&format!("{:<6.6}", tr!(STAT_NAMES[i])), Coord::new(2 + i as i32, 61));
         put_string(&buf, Coord::new(2 + i as i32, 66));
 
         if py().stats.max[i] > py().stats.current[i] {
@@ -545,55 +546,56 @@ pub fn print_character_stats() {
         }
     }
 
-    print_header_number("+ To Hit    ", py().misc.display_to_hit as i32, Coord::new(9, 1));
-    print_header_number("+ To Damage ", py().misc.display_to_damage as i32, Coord::new(10, 1));
-    print_header_number("+ To AC     ", py().misc.display_to_ac as i32, Coord::new(11, 1));
-    print_header_number("  Total AC  ", py().misc.display_ac as i32, Coord::new(12, 1));
+    print_header_number(&format!("{:<12.12}", tr!("+ To Hit    ")), py().misc.display_to_hit as i32, Coord::new(9, 1));
+    print_header_number(&format!("{:<12.12}", tr!("+ To Damage ")), py().misc.display_to_damage as i32, Coord::new(10, 1));
+    print_header_number(&format!("{:<12.12}", tr!("+ To AC     ")), py().misc.display_to_ac as i32, Coord::new(11, 1));
+    print_header_number(&format!("{:<12.12}", tr!("  Total AC  ")), py().misc.display_ac as i32, Coord::new(12, 1));
 }
 
 // Returns a rating of x depending on y -JWT-
 pub fn stat_rating(coord: Coord) -> &'static str {
     match coord.x / coord.y {
-        -3..=-1 => "Very Bad",
-        0 | 1 => "Bad",
-        2 => "Poor",
-        3 | 4 => "Fair",
-        5 => "Good",
-        6 => "Very Good",
-        7 | 8 => "Excellent",
-        _ => "Superb",
+        -3..=-1 => tr!("Very Bad"),
+        0 | 1 => tr!("Bad"),
+        2 => tr!("Poor"),
+        3 | 4 => tr!("Fair"),
+        5 => tr!("Good"),
+        6 => tr!("Very Good"),
+        7 | 8 => tr!("Excellent"),
+        _ => tr!("Superb"),
     }
 }
 
 // Prints age, height, weight, and SC -JWT-
 pub fn print_character_vital_statistics() {
-    print_header_number("Age          ", py().misc.age as i32, Coord::new(2, 38));
-    print_header_number("Height       ", py().misc.height as i32, Coord::new(3, 38));
-    print_header_number("Weight       ", py().misc.weight as i32, Coord::new(4, 38));
-    print_header_number("Social Class ", py().misc.social_class as i32, Coord::new(5, 38));
+    print_header_number(&format!("{:<13.13}", tr!("Age          ")), py().misc.age as i32, Coord::new(2, 38));
+    print_header_number(&format!("{:<13.13}", tr!("Height       ")), py().misc.height as i32, Coord::new(3, 38));
+    print_header_number(&format!("{:<13.13}", tr!("Weight       ")), py().misc.weight as i32, Coord::new(4, 38));
+    print_header_number(&format!("{:<13.13}", tr!("Social Class ")), py().misc.social_class as i32, Coord::new(5, 38));
 }
 
 // Prints the following information on the screen. -JWT-
 pub fn print_character_level_experience() {
-    print_header_long_number_7_spaces("Level      ", py().misc.level as i32, Coord::new(9, 28));
-    print_header_long_number_7_spaces("Experience ", py().misc.exp, Coord::new(10, 28));
-    print_header_long_number_7_spaces("Max Exp    ", py().misc.max_exp, Coord::new(11, 28));
+    print_header_long_number_7_spaces(&format!("{:<11.11}", tr!("Level      ")), py().misc.level as i32, Coord::new(9, 28));
+    print_header_long_number_7_spaces(&format!("{:<11.11}", tr!("Experience ")), py().misc.exp, Coord::new(10, 28));
+    print_header_long_number_7_spaces(&format!("{:<11.11}", tr!("Max Exp    ")), py().misc.max_exp, Coord::new(11, 28));
 
     if py().misc.level as usize >= PLAYER_MAX_LEVEL {
-        put_string_clear_to_eol("Exp to Adv.: *******", Coord::new(12, 28));
+        let header = format!("{:<11.11}", tr!("Exp to Adv."));
+        put_string_clear_to_eol(&format!("{}: *******", header), Coord::new(12, 28));
     } else {
         print_header_long_number_7_spaces(
-            "Exp to Adv.",
+            &format!("{:<11.11}", tr!("Exp to Adv.")),
             (py().base_exp_levels[py().misc.level as usize - 1] as i64 * py().misc.experience_factor as i64 / 100) as i32,
             Coord::new(12, 28),
         );
     }
 
-    print_header_long_number_7_spaces("Gold       ", py().misc.au, Coord::new(13, 28));
-    print_header_number("Max Hit Points ", py().misc.max_hp as i32, Coord::new(9, 52));
-    print_header_number("Cur Hit Points ", py().misc.current_hp as i32, Coord::new(10, 52));
-    print_header_number("Max Mana       ", py().misc.mana as i32, Coord::new(11, 52));
-    print_header_number("Cur Mana       ", py().misc.current_mana as i32, Coord::new(12, 52));
+    print_header_long_number_7_spaces(&format!("{:<11.11}", tr!("Gold       ")), py().misc.au, Coord::new(13, 28));
+    print_header_number(&format!("{:<15.15}", tr!("Max Hit Points ")), py().misc.max_hp as i32, Coord::new(9, 52));
+    print_header_number(&format!("{:<15.15}", tr!("Cur Hit Points ")), py().misc.current_hp as i32, Coord::new(10, 52));
+    print_header_number(&format!("{:<15.15}", tr!("Max Mana       ")), py().misc.mana as i32, Coord::new(11, 52));
+    print_header_number(&format!("{:<15.15}", tr!("Cur Mana       ")), py().misc.current_mana as i32, Coord::new(12, 52));
 }
 
 // Prints ratings on certain abilities -RAK-
@@ -624,29 +626,29 @@ pub fn print_character_abilities() {
     let xdev = misc.saving_throw as i32 + player_stat_adjustment_wisdom_intelligence(A_INT)
         + (CLASS_LEVEL_ADJ[class_id][CLASS_DEVICE] as i32 * level / 3);
 
-    let xinfra = format!("{} feet", py().flags.see_infra * 10);
+    let xinfra = tr_fmt!("{} feet", py().flags.see_infra * 10);
 
-    put_string("(Miscellaneous Abilities)", Coord::new(15, 25));
-    put_string("Fighting    :", Coord::new(16, 1));
-    put_string(stat_rating(Coord::new(12, xbth)), Coord::new(16, 15));
-    put_string("Bows/Throw  :", Coord::new(17, 1));
-    put_string(stat_rating(Coord::new(12, xbthb)), Coord::new(17, 15));
-    put_string("Saving Throw:", Coord::new(18, 1));
-    put_string(stat_rating(Coord::new(6, xsave)), Coord::new(18, 15));
+    put_string(tr!("(Miscellaneous Abilities)"), Coord::new(15, 25));
+    put_string(&format!("{:<13.13}", tr!("Fighting    :")), Coord::new(16, 1));
+    put_string(&format!("{:<13.13}", stat_rating(Coord::new(12, xbth))), Coord::new(16, 15));
+    put_string(&format!("{:<13.13}", tr!("Bows/Throw  :")), Coord::new(17, 1));
+    put_string(&format!("{:<13.13}", stat_rating(Coord::new(12, xbthb))), Coord::new(17, 15));
+    put_string(&format!("{:<13.13}", tr!("Saving Throw:")), Coord::new(18, 1));
+    put_string(&format!("{:<13.13}", stat_rating(Coord::new(6, xsave))), Coord::new(18, 15));
 
-    put_string("Stealth     :", Coord::new(16, 28));
-    put_string(stat_rating(Coord::new(1, xstl)), Coord::new(16, 42));
-    put_string("Disarming   :", Coord::new(17, 28));
-    put_string(stat_rating(Coord::new(8, xdis)), Coord::new(17, 42));
-    put_string("Magic Device:", Coord::new(18, 28));
-    put_string(stat_rating(Coord::new(6, xdev)), Coord::new(18, 42));
+    put_string(&format!("{:<13.13}", tr!("Stealth     :")), Coord::new(16, 28));
+    put_string(&format!("{:<13.13}", stat_rating(Coord::new(1, xstl))), Coord::new(16, 42));
+    put_string(&format!("{:<13.13}", tr!("Disarming   :")), Coord::new(17, 28));
+    put_string(&format!("{:<13.13}", stat_rating(Coord::new(8, xdis))), Coord::new(17, 42));
+    put_string(&format!("{:<13.13}", tr!("Magic Device:")), Coord::new(18, 28));
+    put_string(&format!("{:<13.13}", stat_rating(Coord::new(6, xdev))), Coord::new(18, 42));
 
-    put_string("Perception  :", Coord::new(16, 55));
-    put_string(stat_rating(Coord::new(3, xfos)), Coord::new(16, 69));
-    put_string("Searching   :", Coord::new(17, 55));
-    put_string(stat_rating(Coord::new(6, xsrh)), Coord::new(17, 69));
-    put_string("Infra-Vision:", Coord::new(18, 55));
-    put_string(&xinfra, Coord::new(18, 69));
+    put_string(&format!("{:<13.13}", tr!("Perception  :")), Coord::new(16, 55));
+    put_string(&format!("{:.11}", stat_rating(Coord::new(3, xfos))), Coord::new(16, 69));
+    put_string(&format!("{:<13.13}", tr!("Searching   :")), Coord::new(17, 55));
+    put_string(&format!("{:.11}", stat_rating(Coord::new(6, xsrh))), Coord::new(17, 69));
+    put_string(&format!("{:<13.13}", tr!("Infra-Vision:")), Coord::new(18, 55));
+    put_string(&format!("{:.11}", xinfra), Coord::new(18, 69));
 }
 
 // Used to display the character on the screen. -RAK-
@@ -660,7 +662,7 @@ pub fn print_character() {
 
 // Gets a name for the character -JWT-
 pub fn get_character_name() {
-    put_string_clear_to_eol("Enter your player's name  [press <RETURN> when finished]", Coord::new(21, 2));
+    put_string_clear_to_eol(tr!("Enter your player's name  [press <RETURN> when finished]"), Coord::new(21, 2));
 
     put_blanks(23, Coord::new(2, 15));
 
@@ -681,7 +683,7 @@ pub fn change_character_name() {
     print_character();
 
     while !flag {
-        put_string_clear_to_eol("<f>ile character description. <c>hange character name.", Coord::new(21, 2));
+        put_string_clear_to_eol(tr!("<f>ile character description. <c>hange character name."), Coord::new(21, 2));
 
         match get_key_input() {
             'c' => {
@@ -689,7 +691,7 @@ pub fn change_character_name() {
                 flag = true;
             }
             'f' => {
-                put_string_clear_to_eol("File name:", Coord::new(0, 0));
+                put_string_clear_to_eol(tr!("File name:"), Coord::new(0, 0));
 
                 let mut temp = String::new();
                 if get_string_input(&mut temp, Coord::new(0, 10), 60) && !temp.is_empty() {
@@ -721,8 +723,8 @@ pub fn display_spells_list(spell_ids: &[i32], number_of_choices: i32, comment: b
     };
 
     erase_line(Coord::new(1, col));
-    put_string("Name", Coord::new(1, col + 5));
-    put_string("Lv Mana Fail", Coord::new(1, col + 35));
+    put_string(tr!("Name"), Coord::new(1, col + 5));
+    put_string(tr!("Lv Mana Fail"), Coord::new(1, col + 35));
 
     // only show the first 22 choices
     let number_of_choices = std::cmp::min(number_of_choices, 22);
@@ -734,11 +736,11 @@ pub fn display_spells_list(spell_ids: &[i32], number_of_choices: i32, comment: b
         let p = if !comment {
             ""
         } else if (py().flags.spells_forgotten & (1u32 << spell_id)) != 0 {
-            " forgotten"
+            tr!(" forgotten")
         } else if (py().flags.spells_learnt & (1u32 << spell_id)) == 0 {
-            " unknown"
+            tr!(" unknown")
         } else if (py().flags.spells_worked & (1u32 << spell_id)) == 0 {
-            " untried"
+            tr!(" untried")
         } else {
             ""
         };
@@ -752,9 +754,9 @@ pub fn display_spells_list(spell_ids: &[i32], number_of_choices: i32, comment: b
         };
 
         let out_val = format!(
-            "  {}) {:<30}{:2} {:4} {:3}%{}",
+            "  {}) {:<30.30}{:2} {:4} {:3}%{}",
             spell_char,
-            SPELL_NAMES[(spell_id + consecutive_offset as i32) as usize],
+            tr!(SPELL_NAMES[(spell_id + consecutive_offset as i32) as usize]),
             spell.level_required,
             spell.mana_required,
             spell_chance_of_success(spell_id),
@@ -768,7 +770,7 @@ pub fn display_spells_list(spell_ids: &[i32], number_of_choices: i32, comment: b
 fn player_gain_level() {
     py().misc.level += 1;
 
-    let msg = format!("Welcome to level {}.", py().misc.level);
+    let msg = tr_fmt!("Welcome to level {}.", py().misc.level);
     print_message(Some(&msg));
 
     player_calculate_hit_points();

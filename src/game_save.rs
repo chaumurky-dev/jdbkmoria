@@ -11,6 +11,7 @@ use std::path::Path;
 
 use crate::config;
 use crate::dungeon::{dg, MAX_HEIGHT, MAX_WIDTH};
+use crate::{tr, tr_fmt};
 use crate::game::{game, is_current_game_version, random_number, valid_game_version, LEVEL_MAX_OBJECTS};
 use crate::globals::RacyCell;
 use crate::helpers::get_current_unix_time;
@@ -359,7 +360,7 @@ pub fn save_game() -> bool {
             return true;
         }
 
-        let output = format!("Save file '{}' fails.", config::files::save_game());
+        let output = tr_fmt!("Save file '{}' fails.", config::files::save_game());
         print_message(Some(&output));
 
         let path_exists = Path::new(&config::files::save_game()).exists();
@@ -367,7 +368,7 @@ pub fn save_game() -> bool {
 
         let should_prompt = if !path_exists {
             true
-        } else if !get_input_confirmation("File exists. Delete old save file?") {
+        } else if !get_input_confirmation(tr!("File exists. Delete old save file?")) {
             true
         } else if std::fs::remove_file(config::files::save_game()).is_err() {
             unlink_failed = true;
@@ -378,11 +379,11 @@ pub fn save_game() -> bool {
 
         if should_prompt {
             if unlink_failed {
-                let output = format!("Can't delete '{}'", config::files::save_game());
+                let output = tr_fmt!("Can't delete '{}'", config::files::save_game());
                 print_message(Some(&output));
             }
 
-            put_string_clear_to_eol("New Save file [ESC to give up]:", Coord::new(0, 0));
+            put_string_clear_to_eol(tr!("New Save file [ESC to give up]:"), Coord::new(0, 0));
             let mut input = String::new();
             if !get_string_input(&mut input, Coord::new(0, 31), 45) {
                 return false;
@@ -392,7 +393,7 @@ pub fn save_game() -> bool {
             }
         }
 
-        let output = format!("Saving with '{}'...", config::files::save_game());
+        let output = tr_fmt!("Saving with '{}'...", config::files::save_game());
         put_string_clear_to_eol(&output, Coord::new(0, 0));
     }
 }
@@ -800,7 +801,7 @@ fn save_char(filename: &str) -> bool {
 
     if open_result.is_err()
         && Path::new(filename).exists()
-        && (*FROM_SAVE_FILE.get() || (game().wizard_mode && get_input_confirmation("Can't make new save file. Overwrite old?")))
+        && (*FROM_SAVE_FILE.get() || (game().wizard_mode && get_input_confirmation(tr!("Can't make new save file. Overwrite old?"))))
     {
         #[cfg(unix)]
         {
@@ -833,9 +834,9 @@ fn save_char(filename: &str) -> bool {
         }
 
         let output = if created_file {
-            format!("Error writing to file '{}'", filename)
+            tr_fmt!("Error writing to file '{}'", filename)
         } else {
-            format!("Can't create new file '{}'", filename)
+            tr_fmt!("Can't create new file '{}'", filename)
         };
         print_message(Some(&output));
 
@@ -876,18 +877,18 @@ pub fn load_game(generate: &mut bool) -> bool {
     // Not required for Mac, because the file name is obtained through a dialog.
     // There is no way for a nonexistent file to be specified. -BS-
     if !Path::new(&config::files::save_game()).exists() {
-        print_message(Some("Save file does not exist."));
+        print_message(Some(tr!("Save file does not exist.")));
         return false; // Don't bother with messages here. File absent.
     }
 
     clear_screen();
 
-    let filename_msg = format!("Save file '{}' present. Attempting restore.", config::files::save_game());
+    let filename_msg = tr_fmt!("Save file '{}' present. Attempting restore.", config::files::save_game());
     put_string(&filename_msg, Coord::new(23, 0));
 
     // FIXME: check this if/else logic! -- MRC
     if dg().game_turn >= 0 {
-        print_message(Some("IMPOSSIBLE! Attempt to restore while still alive!"));
+        print_message(Some(tr!("IMPOSSIBLE! Attempt to restore while still alive!")));
     } else if let Some(file) = try_open_for_read(&config::files::save_game()) {
         dg().game_turn = -1;
 
@@ -896,11 +897,11 @@ pub fn load_game(generate: &mut bool) -> bool {
         }
         // ok was false: "Error during reading of file." was already printed.
     } else {
-        print_message(Some("Can't open file for reading."));
+        print_message(Some(tr!("Can't open file for reading.")));
     }
 
     dg().game_turn = -1;
-    put_string_clear_to_eol("Please try again without that save file.", Coord::new(1, 0));
+    put_string_clear_to_eol(tr!("Please try again without that save file."), Coord::new(1, 0));
 
     // We have messages for the player to read, this will ask for a keypress
     print_message(None);
@@ -927,7 +928,7 @@ fn restore_from_file(file: File, generate: &mut bool, interactive: bool) -> Opti
     set_fileptr(file);
 
     if interactive {
-        put_string_clear_to_eol("Restoring Memory...", Coord::new(0, 0));
+        put_string_clear_to_eol(tr!("Restoring Memory..."), Coord::new(0, 0));
         put_qio();
     }
 
@@ -943,11 +944,11 @@ fn restore_from_file(file: File, generate: &mut bool, interactive: bool) -> Opti
 
     if !valid_game_version(version_maj, version_min, patch_level) {
         if interactive {
-            put_string_clear_to_eol("Sorry. This save file is from a different version of umoria.", Coord::new(2, 0));
+            put_string_clear_to_eol(tr!("Sorry. This save file is from a different version of umoria."), Coord::new(2, 0));
         }
         close_fileptr();
         if interactive {
-            print_message(Some("Error during reading of file."));
+            print_message(Some(tr!("Error during reading of file.")));
         }
         return None;
     }
@@ -996,9 +997,9 @@ fn restore_from_file(file: File, generate: &mut bool, interactive: bool) -> Opti
         // Don't allow resurrection of game.total_winner characters.  It causes
         // problems because the character level is out of the allowed range.
         if game().to_be_wizard && (l & 0x4000_0000) != 0 {
-            print_message(Some("Sorry, this character is retired from moria."));
-            print_message(Some("You can not resurrect a retired character."));
-        } else if game().to_be_wizard && (l & 0x8000_0000) != 0 && get_input_confirmation("Resurrect a dead character?") {
+            print_message(Some(tr!("Sorry, this character is retired from moria.")));
+            print_message(Some(tr!("You can not resurrect a retired character.")));
+        } else if game().to_be_wizard && (l & 0x8000_0000) != 0 && get_input_confirmation(tr!("Resurrect a dead character?")) {
             l &= !0x8000_0000u32;
         }
 
@@ -1165,7 +1166,7 @@ fn restore_from_file(file: File, generate: &mut bool, interactive: bool) -> Opti
                     break 'restore false;
                 }
                 if interactive {
-                    put_string_clear_to_eol("Attempting a resurrection!", Coord::new(0, 0));
+                    put_string_clear_to_eol(tr!("Attempting a resurrection!"), Coord::new(0, 0));
                 }
                 if py().misc.current_hp < 0 {
                     py().misc.current_hp = 0;
@@ -1192,7 +1193,7 @@ fn restore_from_file(file: File, generate: &mut bool, interactive: bool) -> Opti
                 // Make sure that this message is seen, since it is a bit
                 // more interesting than the other messages.
                 if interactive {
-                    print_message(Some("Restoring Memory of a departed spirit..."));
+                    print_message(Some(tr!("Restoring Memory of a departed spirit...")));
                 }
                 dg().game_turn = -1;
             }
@@ -1208,7 +1209,7 @@ fn restore_from_file(file: File, generate: &mut bool, interactive: bool) -> Opti
         }
 
         if interactive {
-            put_string_clear_to_eol("Restoring Character...", Coord::new(0, 0));
+            put_string_clear_to_eol(tr!("Restoring Character..."), Coord::new(0, 0));
             put_qio();
         }
 
@@ -1348,6 +1349,11 @@ fn restore_from_file(file: File, generate: &mut bool, interactive: bool) -> Opti
             false
         } else {
             // don't overwrite the killed by string if character is dead
+            // jdbkmoria extension note: "(alive and well)" is left
+            // untranslated -- it's part of the character_died_from sentinel
+            // family (see also the matching literal in game_run.rs) which
+            // flows into the save file and score board, outside this
+            // module's ownership.
             if py().misc.current_hp >= 0 {
                 game().character_died_from = "(alive and well)".to_string();
             }
@@ -1359,7 +1365,7 @@ fn restore_from_file(file: File, generate: &mut bool, interactive: bool) -> Opti
     if !ok {
         close_fileptr();
         if interactive {
-            print_message(Some("Error during reading of file."));
+            print_message(Some(tr!("Error during reading of file.")));
         }
         return None;
     }
@@ -1371,7 +1377,7 @@ fn restore_from_file(file: File, generate: &mut bool, interactive: bool) -> Opti
 
     if *panic_save() {
         if interactive {
-            print_message(Some("This game is from a panic save.  Score will not be added to scoreboard."));
+            print_message(Some(tr!("This game is from a panic save.  Score will not be added to scoreboard.")));
         }
     } else {
         // NOTE: faithfully ports `(!game.noscore) & 0x04` from the original
@@ -1382,7 +1388,7 @@ fn restore_from_file(file: File, generate: &mut bool, interactive: bool) -> Opti
         let logical_not_noscore: i16 = if game().noscore == 0 { 1 } else { 0 };
         if (logical_not_noscore & 0x4) != 0 {
             if interactive {
-                print_message(Some("This character is already on the scoreboard; it will not be scored again."));
+                print_message(Some(tr!("This character is already on the scoreboard; it will not be scored again.")));
             }
             game().noscore |= 0x4;
         }
@@ -1412,10 +1418,10 @@ fn restore_from_file(file: File, generate: &mut bool, interactive: bool) -> Opti
     }
 
     if interactive && game().noscore != 0 {
-        print_message(Some("This save file cannot be used to get on the score board."));
+        print_message(Some(tr!("This save file cannot be used to get on the score board.")));
     }
     if interactive && valid_game_version(version_maj, version_min, patch_level) && !is_current_game_version(version_maj, version_min, patch_level) {
-        let msg = format!(
+        let msg = tr_fmt!(
             "Save file version {}.{} accepted on game version {}.{}.",
             version_maj, version_min, CURRENT_VERSION_MAJOR, CURRENT_VERSION_MINOR
         );

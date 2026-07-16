@@ -23,33 +23,35 @@ use crate::ui_io::{
     clear_screen, clear_to_bottom, erase_line, flush_input_buffer, get_key_input, get_string_input, print_message,
     put_string, wait_for_continue_key,
 };
+use crate::locale::format_number;
+use crate::{tr, tr_fmt};
 
 // Prints the gravestone of the character -RAK-
 fn death_tomb() {
-    display_death_file(config::files::DEATH_TOMB);
+    display_death_file(&config::files::localized(config::files::DEATH_TOMB));
 
     let text = py().misc.name.clone();
     put_string(&text, Coord::new(6, 26 - text.chars().count() as i32 / 2));
 
-    let text = if !game().total_winner { player_rank_title() } else { "Magnificent".to_string() };
+    let text = if !game().total_winner { player_rank_title() } else { tr!("Magnificent").to_string() };
     put_string(&text, Coord::new(8, 26 - text.chars().count() as i32 / 2));
 
     let text = if !game().total_winner {
-        CLASSES[py().misc.class_id as usize].title.to_string()
+        tr!(CLASSES[py().misc.class_id as usize].title).to_string()
     } else if player_is_male() {
-        "*King*".to_string()
+        tr!("*King*").to_string()
     } else {
-        "*Queen*".to_string()
+        tr!("*Queen*").to_string()
     };
     put_string(&text, Coord::new(10, 26 - text.chars().count() as i32 / 2));
 
     let text = py().misc.level.to_string();
     put_string(&text, Coord::new(11, 30));
 
-    let text = format!("{} Exp", py().misc.exp);
+    let text = tr_fmt!("{} Exp", format_number(py().misc.exp as i64));
     put_string(&text, Coord::new(12, 26 - text.chars().count() as i32 / 2));
 
-    let text = format!("{} Au", py().misc.au);
+    let text = tr_fmt!("{} Au", format_number(py().misc.au as i64));
     put_string(&text, Coord::new(13, 26 - text.chars().count() as i32 / 2));
 
     let text = dg().current_level.to_string();
@@ -64,8 +66,8 @@ fn death_tomb() {
     loop {
         flush_input_buffer();
 
-        put_string("(ESC to abort, return to print on screen, or file name)", Coord::new(23, 0));
-        put_string("Character record?", Coord::new(22, 0));
+        put_string(tr!("(ESC to abort, return to print on screen, or file name)"), Coord::new(23, 0));
+        put_string(tr!("Character record?"), Coord::new(22, 0));
 
         let mut str_input = String::new();
         if !get_string_input(&mut str_input, Coord::new(22, 18), 60) {
@@ -88,13 +90,13 @@ fn death_tomb() {
         } else {
             clear_screen();
             print_character();
-            put_string("Type ESC to skip the inventory:", Coord::new(23, 0));
+            put_string(tr!("Type ESC to skip the inventory:"), Coord::new(23, 0));
             if get_key_input() != ESCAPE {
                 clear_screen();
-                print_message(Some("You are using:"));
+                print_message(Some(tr!("You are using:")));
                 display_equipment(true, 0);
                 print_message(None);
-                print_message(Some("You are carrying:"));
+                print_message(Some(tr!("You are carrying:")));
                 clear_to_bottom(1);
                 display_inventory_items(0, py().pack.unique_items as i32 - 1, true, 0, None);
                 print_message(None);
@@ -107,12 +109,12 @@ fn death_tomb() {
 
 // Let the player know they did good.
 fn death_royal() {
-    display_death_file(config::files::DEATH_ROYAL);
+    display_death_file(&config::files::localized(config::files::DEATH_ROYAL));
 
     if player_is_male() {
-        put_string("King!", Coord::new(17, 45));
+        put_string(tr!("King!"), Coord::new(17, 45));
     } else {
-        put_string("Queen!", Coord::new(17, 45));
+        put_string(tr!("Queen!"), Coord::new(17, 45));
     }
 
     flush_input_buffer();
@@ -123,7 +125,7 @@ fn death_royal() {
 fn kingly() {
     // Change the character attributes.
     dg().current_level = 0;
-    game().character_died_from = "Ripe Old Age".to_string();
+    game().character_died_from = tr!("Ripe Old Age").to_string();
 
     let _ = spell_restore_player_levels();
 

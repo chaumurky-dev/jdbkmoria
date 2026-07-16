@@ -30,32 +30,32 @@ use crate::ui_io::print_message;
 
 fn player_can_pray(item_pos_begin: &mut i32, item_pos_end: &mut i32) -> bool {
     if py().flags.blind > 0 {
-        print_message(Some("You can't see to read your prayer!"));
+        print_message(Some(crate::tr!("You can't see to read your prayer!")));
         return false;
     }
 
     if player_no_light() {
-        print_message(Some("You have no light to read by."));
+        print_message(Some(crate::tr!("You have no light to read by.")));
         return false;
     }
 
     if py().flags.confused > 0 {
-        print_message(Some("You are too confused."));
+        print_message(Some(crate::tr!("You are too confused.")));
         return false;
     }
 
     if CLASSES[py().misc.class_id as usize].class_to_use_mage_spells != config::spells::SPELL_TYPE_PRIEST {
-        print_message(Some("Pray hard enough and your prayers may be answered."));
+        print_message(Some(crate::tr!("Pray hard enough and your prayers may be answered.")));
         return false;
     }
 
     if py().pack.unique_items == 0 {
-        print_message(Some("But you are not carrying anything!"));
+        print_message(Some(crate::tr!("But you are not carrying anything!")));
         return false;
     }
 
     if !inventory_find_range(TV_PRAYER_BOOK as i32, TV_NEVER as i32, item_pos_begin, item_pos_end) {
-        print_message(Some("You are not carrying any Holy Books!"));
+        print_message(Some(crate::tr!("You are not carrying any Holy Books!")));
         return false;
     }
 
@@ -158,7 +158,7 @@ fn player_recite_prayer(prayer_type: i32) {
                     dir,
                     dice_roll(Dice::new(3, 6)) + py().misc.level as i32,
                     MagicSpellFlags::HolyOrb as i32,
-                    "Black Sphere",
+                    crate::tr!("Black Sphere"),
                 );
             }
         }
@@ -246,15 +246,15 @@ pub fn pray() {
     }
 
     let mut item_id: i32 = 0;
-    if !inventory_get_input_for_item_id(&mut item_id, "Use which Holy Book?", item_pos_begin, item_pos_end, None, None) {
+    if !inventory_get_input_for_item_id(&mut item_id, crate::tr!("Use which Holy Book?"), item_pos_begin, item_pos_end, None, None) {
         return;
     }
 
     let mut choice = 0;
     let mut chance = 0;
-    let result = crate::spells::cast_spell_get_id("Recite which prayer?", item_id, &mut choice, &mut chance);
+    let result = crate::spells::cast_spell_get_id(crate::tr!("Recite which prayer?"), item_id, &mut choice, &mut chance);
     if result < 0 {
-        print_message(Some("You don't know any prayers in that book."));
+        print_message(Some(crate::tr!("You don't know any prayers in that book.")));
         return;
     }
     if result == 0 {
@@ -268,7 +268,7 @@ pub fn pray() {
     game().player_free_turn = false;
 
     if random_number(100) < chance {
-        print_message(Some("You lost your concentration!"));
+        print_message(Some(crate::tr!("You lost your concentration!")));
     } else {
         player_recite_prayer(choice);
 
@@ -284,14 +284,14 @@ pub fn pray() {
     }
 
     if spell.mana_required as i16 > py().misc.current_mana {
-        print_message(Some("You faint from fatigue!"));
+        print_message(Some(crate::tr!("You faint from fatigue!")));
 
         py().flags.paralysis = random_number(5 * (spell.mana_required as i32 - py().misc.current_mana as i32)) as i16;
         py().misc.current_mana = 0;
         py().misc.current_mana_fraction = 0;
 
         if random_number(3) == 1 {
-            print_message(Some("You have damaged your health!"));
+            print_message(Some(crate::tr!("You have damaged your health!")));
             let _ = player_stat_random_decrease(A_CON);
         }
     } else {

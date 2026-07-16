@@ -133,3 +133,35 @@ and marked `jdbkmoria extension` at every hook site in shared code:
   (placement on a real generated level, legacy conversion, Swarm placement
   invariants, `painting_from_save()` validation) and
   `tests/save_roundtrip.rs` (serialization).
+
+- **Locale support** (`locale.rs` + `locale_data_en_gb.rs` /
+  `locale_data_fr_ca.rs`, 2026-07): the game supports en_US (default),
+  en_GB, and fr_CA. Selection at startup: `-l LOCALE` > `JDBKMORIA_LOCALE`
+  > `LC_ALL`/`LC_MESSAGES`/`LANG` > en_US (`locale::initialize_locale()`).
+  Translation is keyed by the original en_US string: user-facing literals
+  are wrapped in `tr!(...)` (lookup) or `tr_fmt!(...)` (lookup + `{}`/`{0}`
+  positional template formatting, so translations can reorder arguments);
+  static data-table names (creatures, treasure, stores, spells, races,
+  backgrounds, recall fragments, paintings) are wrapped at their DISPLAY
+  sites — the machine-verified `data_*.rs` tables themselves are never
+  edited. Catalogs are sorted `&[(&str, &str)]` arrays; missing keys fall
+  back to en_US; `tests/locale.rs` enforces sortedness and placeholder
+  parity. `LocaleDef` also carries digit-grouping rules (`format_number`;
+  fr_CA groups with no-break spaces; an en_IN-style `[3, 2]` grouping is
+  supported), digit glyphs for the store-entrance map numerals
+  (`map_digit_glyph`, ready for e.g. Arabic-Indic digits), and per-locale
+  plural-suffix rewrite rules used by `item_description()`'s `~` marker.
+  Item-name templates keep upstream's `&`/`~`/`%s` codes; store haggle
+  speech keeps `%A1`/`%A2`. Localized data files resolve via
+  `config::files::localized()` (`data/fr_CA/help.txt` etc., falling back
+  to English). UTF-8: the binary links `ncursesw` (pancurses `wide`
+  feature) and calls `setlocale()` before `initscr()`; text
+  truncation/wrapping paths were hardened to char boundaries
+  (`tests/utf8_safety.rs`). Adding a locale: run
+  `python3 tools/locale_catalog.py extract` for the key list, translate to
+  JSONL, `gen` the catalog module, add a `LocaleDef` to `locale.rs`, and
+  (optionally) drop localized text files under `data/<tag>/`. Known v1
+  limitations: English-specific article machinery (a/an via `is_vowel`,
+  no French elision), masculine-default gender, en-US-shaped plural rules
+  in a few composed fragments, and fixed-width status fields that truncate
+  long translations (`{:<N.N}`).

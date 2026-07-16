@@ -16,6 +16,7 @@ use crate::identification::item_description;
 use crate::monster::monsters;
 use crate::player::py;
 use crate::treasure::{TV_INVIS_TRAP, TV_SECRET_DOOR};
+use crate::{tr, tr_fmt};
 use crate::types::Coord;
 use crate::ui::{coord_inside_panel, ESCAPE};
 use crate::ui_io::{
@@ -224,17 +225,17 @@ const GRADF: i32 = 10000; // Any sufficiently big number will do
 // option is set.
 pub fn look() {
     if py().flags.blind > 0 {
-        print_message(Some("You can't see a damn thing!"));
+        print_message(Some(tr!("You can't see a damn thing!")));
         return;
     }
 
     if py().flags.image > 0 {
-        print_message(Some("You can't believe what you are seeing! It's like a dream!"));
+        print_message(Some(tr!("You can't believe what you are seeing! It's like a dream!")));
         return;
     }
 
     let mut dir = 0;
-    if !get_all_directions("Look which direction?", &mut dir) {
+    if !get_all_directions(tr!("Look which direction?"), &mut dir) {
         return;
     }
 
@@ -310,20 +311,20 @@ pub fn look() {
     }
 
     if abort {
-        print_message(Some("--Aborting look--"));
+        print_message(Some(tr!("--Aborting look--")));
         return;
     }
 
     if *LOS_NUM_PLACES_SEEN.get() != 0 {
         if dir == 5 {
-            print_message(Some("That's all you see."));
+            print_message(Some(tr!("That's all you see.")));
         } else {
-            print_message(Some("That's all you see in that direction."));
+            print_message(Some(tr!("That's all you see in that direction.")));
         }
     } else if dir == 5 {
-        print_message(Some("You see nothing of interest."));
+        print_message(Some(tr!("You see nothing of interest.")));
     } else {
-        print_message(Some("You see nothing of interest in that direction."));
+        print_message(Some(tr!("You see nothing of interest in that direction.")));
     }
 }
 
@@ -444,9 +445,9 @@ fn look_see(coord: Coord, transparent: &mut bool) -> bool {
     }
 
     let mut description: &str = if coord.x == 0 && coord.y == 0 {
-        "You are on"
+        tr!("You are on")
     } else {
-        "You see"
+        tr!("You see")
     };
 
     let j = py().pos.x + *LOS_FXX.get() * coord.x + *LOS_FXY.get() * coord.y;
@@ -471,13 +472,12 @@ fn look_see(coord: Coord, transparent: &mut bool) -> bool {
     if *LOS_ROCKS_AND_OBJECTS.get() == 0 && tile.creature_id > 1 && monsters()[tile.creature_id as usize].lit {
         let creature_id = monsters()[tile.creature_id as usize].creature_id as usize;
         let name = CREATURES_LIST[creature_id].name;
-        msg = format!(
-            "{} {} {}. [(r)ecall]",
-            description,
-            if is_vowel(name.chars().next().unwrap_or(' ')) { "an" } else { "a" },
-            name
-        );
-        description = "It is on";
+        msg = if is_vowel(name.chars().next().unwrap_or(' ')) {
+            tr_fmt!("{} an {}. [(r)ecall]", description, name)
+        } else {
+            tr_fmt!("{} a {}. [(r)ecall]", description, name)
+        };
+        description = tr!("It is on");
         put_string_clear_to_eol(&msg, Coord::new(0, 0));
 
         panel_move_cursor(coord);
@@ -501,8 +501,8 @@ fn look_see(coord: Coord, transparent: &mut bool) -> bool {
             } else if *LOS_ROCKS_AND_OBJECTS.get() == 0 && game().treasure.list[tile.treasure_id as usize].category_id != TV_INVIS_TRAP {
                 let obj_string = item_description(&game().treasure.list[tile.treasure_id as usize], true);
 
-                msg = format!("{} {} ---pause---", description, obj_string);
-                description = "It is in";
+                msg = tr_fmt!("{} {} ---pause---", description, obj_string);
+                description = tr!("It is in");
                 put_string_clear_to_eol(&msg, Coord::new(0, 0));
 
                 panel_move_cursor(coord);
@@ -526,20 +526,20 @@ fn look_see(coord: Coord, transparent: &mut bool) -> bool {
             let wall_description: Option<&str> = if goto_granite || tile.feature_id == TILE_BOUNDARY_WALL || tile.feature_id == TILE_GRANITE_WALL {
                 // Granite is only interesting if it contains something.
                 if !msg.is_empty() {
-                    Some("a granite wall")
+                    Some(tr!("a granite wall"))
                 } else {
                     None
                 }
             } else if tile.feature_id == TILE_MAGMA_WALL {
-                Some("some dark rock")
+                Some(tr!("some dark rock"))
             } else if tile.feature_id == TILE_QUARTZ_WALL {
-                Some("a quartz vein")
+                Some(tr!("a quartz vein"))
             } else {
                 None
             };
 
             if let Some(wall_description) = wall_description {
-                msg = format!("{} {} ---pause---", description, wall_description);
+                msg = tr_fmt!("{} {} ---pause---", description, wall_description);
                 put_string_clear_to_eol(&msg, Coord::new(0, 0));
                 panel_move_cursor(coord);
                 key = get_key_input();

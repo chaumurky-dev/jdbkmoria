@@ -88,6 +88,7 @@ use crate::ui_io::{
     get_input_confirmation, get_key_input, panel_move_cursor, print_message, print_message_no_command_interrupt,
     put_string_clear_to_eol,
 };
+use crate::{tr, tr_fmt};
 
 // Hard cap on the registry (the target count is 46-56 per level). Must stay
 // below 0x40: the save format now packs two version flag bits into the top
@@ -287,35 +288,41 @@ fn level() -> i32 {
 // "a Giant Frog" / "an Ogre" -- the creature's name with its article, for
 // splicing into the description templates.
 fn creature_indefinite_name(creature_id: u16) -> String {
-    let name = CREATURES_LIST[creature_id as usize].name;
-    let article = match name.chars().next() {
-        Some('A' | 'E' | 'I' | 'O' | 'U') => "an",
-        _ => "a",
-    };
-    format!("{} {}", article, name)
+    let name = tr!(CREATURES_LIST[creature_id as usize].name);
+    // jdbkmoria extension: the a/an choice is English grammar the locale
+    // layer cannot generalize; each branch is still its own translatable
+    // template, but a locale with no article distinction just returns the
+    // same text for both keys.
+    match name.chars().next() {
+        Some('A' | 'E' | 'I' | 'O' | 'U') => tr_fmt!("an {}", name),
+        _ => tr_fmt!("a {}", name),
+    }
 }
 
 // The name used in combat and death messages for a monster painting.
 fn painted_name(painting: &Painting) -> String {
-    format!("painted {}", CREATURES_LIST[painting.creature_id as usize].name)
+    tr_fmt!("painted {}", tr!(CREATURES_LIST[painting.creature_id as usize].name))
 }
 
 fn painting_description(painting: &Painting) -> String {
+    // jdbkmoria extension: the template comes from a data_paintings.rs array
+    // (never edited directly); tr! looks it up before the "{}" splice, and a
+    // translated template keeps its own "{}" marker so the replace still works.
     match painting.kind {
-        PaintingKind::Harmless => HARMLESS_PAINTINGS[painting.desc_id as usize].to_string(),
+        PaintingKind::Harmless => tr!(HARMLESS_PAINTINGS[painting.desc_id as usize]).to_string(),
         PaintingKind::MeleeMonster => {
-            MELEE_PAINTING_TEMPLATES[painting.desc_id as usize].replace("{}", &creature_indefinite_name(painting.creature_id))
+            tr!(MELEE_PAINTING_TEMPLATES[painting.desc_id as usize]).replace("{}", &creature_indefinite_name(painting.creature_id))
         }
         PaintingKind::RangedMonster => {
-            RANGED_PAINTING_TEMPLATES[painting.desc_id as usize].replace("{}", &creature_indefinite_name(painting.creature_id))
+            tr!(RANGED_PAINTING_TEMPLATES[painting.desc_id as usize]).replace("{}", &creature_indefinite_name(painting.creature_id))
         }
         PaintingKind::Swarm => {
-            SWARM_PAINTING_TEMPLATES[painting.desc_id as usize].replace("{}", &creature_indefinite_name(painting.creature_id))
+            tr!(SWARM_PAINTING_TEMPLATES[painting.desc_id as usize]).replace("{}", &creature_indefinite_name(painting.creature_id))
         }
-        PaintingKind::Loot | PaintingKind::FakeLoot => LOOT_PAINTINGS[painting.desc_id as usize].to_string(),
-        PaintingKind::Teleport => TELEPORT_PAINTINGS[painting.desc_id as usize].to_string(),
-        PaintingKind::SleepGas => SLEEP_PAINTINGS[painting.desc_id as usize].to_string(),
-        PaintingKind::LevelMap => MAP_PAINTING.to_string(),
+        PaintingKind::Loot | PaintingKind::FakeLoot => tr!(LOOT_PAINTINGS[painting.desc_id as usize]).to_string(),
+        PaintingKind::Teleport => tr!(TELEPORT_PAINTINGS[painting.desc_id as usize]).to_string(),
+        PaintingKind::SleepGas => tr!(SLEEP_PAINTINGS[painting.desc_id as usize]).to_string(),
+        PaintingKind::LevelMap => tr!(MAP_PAINTING).to_string(),
     }
 }
 
@@ -633,17 +640,17 @@ fn painting_grab_item() -> bool {
             let floor_id = popt() as usize;
             game().treasure.list[floor_id] = item;
             dg().tile_mut(py().pos).treasure_id = floor_id as u8;
-            print_message(Some("Your pack is full; it tumbles to the floor at your feet."));
+            print_message(Some(tr!("Your pack is full; it tumbles to the floor at your feet.")));
             return true;
         }
 
-        print_message(Some("Your pack is full, and it slips back into the canvas."));
+        print_message(Some(tr!("Your pack is full, and it slips back into the canvas.")));
         return false;
     }
 
     let slot_id = inventory_carry_item(&mut item) as usize;
     let description = item_description(&py().inventory[slot_id], true);
-    let msg = format!("You have {} ({})", description, (slot_id as u8 + b'a') as char);
+    let msg = tr_fmt!("You have {} ({})", description, (slot_id as u8 + b'a') as char);
     print_message(Some(&msg));
 
     true
@@ -692,7 +699,7 @@ fn painting_after_monster_leaves(index: usize) {
     }
 
     if cave_tile_visible(paintings()[index].pos) {
-        print_message(Some("The paint swirls and settles into a new scene."));
+        print_message(Some(tr!("The paint swirls and settles into a new scene.")));
     }
 }
 
@@ -719,7 +726,7 @@ fn melee_monster_breaks_out(index: usize, announce_failure: bool) -> bool {
     if !place_monster_adjacent_to(painting.creature_id as i32, &mut coord, false) {
         paintings()[index].awake = true;
         if announce_failure {
-            print_message(Some("The canvas bulges, but nothing emerges."));
+            print_message(Some(tr!("The canvas bulges, but nothing emerges.")));
         }
         return false;
     }
@@ -729,7 +736,7 @@ fn melee_monster_breaks_out(index: usize, announce_failure: bool) -> bool {
     monsters()[monster_id as usize].hp = painting.hp;
     monster_update_visibility(monster_id);
 
-    let msg = format!("The {} tears itself free of the canvas!", painted_name(&painting));
+    let msg = tr_fmt!("The {} tears itself free of the canvas!", painted_name(&painting));
     print_message(Some(&msg));
     player_disturb(1, 0);
 
@@ -749,7 +756,7 @@ fn painting_monster_roused(index: usize, announce_failure: bool) {
         PaintingKind::RangedMonster => {
             if !paintings()[index].awake {
                 paintings()[index].awake = true;
-                let msg = format!("The {} turns its gaze upon you!", painted_name(&paintings()[index]));
+                let msg = tr_fmt!("The {} turns its gaze upon you!", painted_name(&paintings()[index]));
                 print_message(Some(&msg));
                 player_disturb(1, 0);
             }
@@ -757,7 +764,7 @@ fn painting_monster_roused(index: usize, announce_failure: bool) {
         PaintingKind::Swarm => {
             if !paintings()[index].awake {
                 paintings()[index].awake = true;
-                print_message(Some("The canvas seethes -- a hundred painted eyes turn toward you!"));
+                print_message(Some(tr!("The canvas seethes -- a hundred painted eyes turn toward you!")));
                 player_disturb(1, 0);
             }
         }
@@ -774,7 +781,7 @@ fn painting_swarm_member_dies(index: usize) -> PaintingHitResult {
     let painting = paintings()[index];
     let creature = &CREATURES_LIST[painting.creature_id as usize];
 
-    let msg = format!("A {} dissolves into dead pigment!", painted_name(&painting));
+    let msg = tr_fmt!("A {} dissolves into dead pigment!", painted_name(&painting));
     print_message(Some(&msg));
 
     painting_gain_experience(creature.kill_exp_value as i32 * creature.level as i32);
@@ -812,7 +819,7 @@ pub fn painting_take_hit(index: usize, damage: i32) -> PaintingHitResult {
             let painting = paintings()[index];
             let creature = &CREATURES_LIST[painting.creature_id as usize];
 
-            let msg = format!("The {} shrieks and dissolves into dead pigment!", painted_name(&painting));
+            let msg = tr_fmt!("The {} shrieks and dissolves into dead pigment!", painted_name(&painting));
             print_message(Some(&msg));
 
             painting_gain_experience(creature.kill_exp_value as i32 * creature.level as i32);
@@ -844,12 +851,12 @@ pub fn painting_struck_by_magic(coord: Coord, damage: i32, spell_name: &str) {
         None => return,
     };
 
-    let msg = format!("The {} strikes a painting.", spell_name);
+    let msg = tr_fmt!("The {} strikes a painting.", spell_name);
     print_message(Some(&msg));
 
     match painting_take_hit(index, damage) {
-        PaintingHitResult::Destroyed => print_message(Some("The painting is blasted from the wall!")),
-        PaintingHitResult::Damaged => print_message(Some("The canvas shudders.")),
+        PaintingHitResult::Destroyed => print_message(Some(tr!("The painting is blasted from the wall!"))),
+        PaintingHitResult::Damaged => print_message(Some(tr!("The canvas shudders."))),
         PaintingHitResult::MonsterKilled | PaintingHitResult::MonsterAlive => {}
     }
 }
@@ -872,14 +879,14 @@ pub fn look_at_painting(coord: Coord, prefix: &str) -> (String, char) {
 
     // Full descriptions (and effects) require standing beside the painting.
     if coord_distance_between(py().pos, coord) > 1 {
-        let msg = format!("{} a painting hanging on the wall ---pause---", prefix);
+        let msg = tr_fmt!("{} a painting hanging on the wall ---pause---", prefix);
         put_string_clear_to_eol(&msg, Coord::new(0, 0));
         panel_move_cursor(coord);
         return (msg, get_key_input());
     }
 
     let painting = paintings()[index];
-    let msg = format!("{} a painting ---pause---", prefix);
+    let msg = tr_fmt!("{} a painting ---pause---", prefix);
     put_string_clear_to_eol(&msg, Coord::new(0, 0));
     panel_move_cursor(coord);
     let key = get_key_input();
@@ -887,7 +894,7 @@ pub fn look_at_painting(coord: Coord, prefix: &str) -> (String, char) {
         return (msg, key);
     }
 
-    let depicts = format!("It depicts {}.", painting_description(&painting));
+    let depicts = tr_fmt!("It depicts {}.", painting_description(&painting));
     print_message(Some(&depicts));
 
     match painting.kind {
@@ -895,27 +902,27 @@ pub fn look_at_painting(coord: Coord, prefix: &str) -> (String, char) {
             // jdbkmoria extension: reaching in is now the dedicated 'g' command;
             // looking only hints at what a reach might find.
             if painting.kind == PaintingKind::Loot && painting.items > 0 {
-                print_message(Some("Your fingertips tingle: something waits behind the paint."));
+                print_message(Some(tr!("Your fingertips tingle: something waits behind the paint.")));
             }
             if painting.kind == PaintingKind::FakeLoot && painting.found {
-                print_message(Some("You sense a malevolent presence behind the paint!"));
+                print_message(Some(tr!("You sense a malevolent presence behind the paint!")));
             }
         }
         PaintingKind::LevelMap => {
             reveal_level_map();
-            print_message(Some("You suddenly know every hall and chamber of this level!"));
+            print_message(Some(tr!("You suddenly know every hall and chamber of this level!")));
         }
         PaintingKind::MeleeMonster | PaintingKind::RangedMonster | PaintingKind::Swarm => {
             painting_monster_roused(index, true);
         }
         PaintingKind::Teleport => {
-            if painting.found && !get_input_confirmation("It pulls at your gaze. Stare into the painting?") {
+            if painting.found && !get_input_confirmation(tr!("It pulls at your gaze. Stare into the painting?")) {
                 return (msg, key);
             }
             painting_teleport_trap(index);
         }
         PaintingKind::SleepGas => {
-            if painting.found && !get_input_confirmation("Its warmth invites sleep. Keep gazing?") {
+            if painting.found && !get_input_confirmation(tr!("Its warmth invites sleep. Keep gazing?")) {
                 return (msg, key);
             }
             painting_sleep_trap(index);
@@ -929,14 +936,14 @@ pub fn look_at_painting(coord: Coord, prefix: &str) -> (String, char) {
 fn painting_sleep_trap(index: usize) {
     paintings()[index].found = true;
 
-    print_message(Some("A drowsy sweetness seems to pour from the canvas."));
+    print_message(Some(tr!("A drowsy sweetness seems to pour from the canvas.")));
 
     if py().flags.free_action {
-        print_message(Some("You feel momentarily heavy-lidded, but it passes."));
+        print_message(Some(tr!("You feel momentarily heavy-lidded, but it passes.")));
         return;
     }
 
-    print_message(Some("Your eyes close; you fall into an enchanted sleep!"));
+    print_message(Some(tr!("Your eyes close; you fall into an enchanted sleep!")));
     py().flags.paralysis += (10 + random_number(20)) as i16;
     player_disturb(1, 0);
 }
@@ -945,7 +952,7 @@ fn painting_sleep_trap(index: usize) {
 fn painting_teleport_trap(index: usize) {
     paintings()[index].found = true;
 
-    print_message(Some("The dungeon spins around you!"));
+    print_message(Some(tr!("The dungeon spins around you!")));
     game().teleport_player = true;
 }
 
@@ -955,13 +962,13 @@ fn fake_loot_trap(index: usize) {
     paintings()[index].found = true;
 
     if paintings()[index].items == 0 {
-        print_message(Some("Fangs sink into your hand!"));
+        print_message(Some(tr!("Fangs sink into your hand!")));
         let damage = dice_roll(Dice::new(2, 6)) + level() / 2;
-        player_takes_hit(damage, "a fanged painting");
+        player_takes_hit(damage, tr!("a fanged painting"));
     } else {
-        print_message(Some("Poisoned spikes spring through the canvas!"));
+        print_message(Some(tr!("Poisoned spikes spring through the canvas!")));
         let damage = dice_roll(Dice::new(1, 8)) + level() / 3;
-        player_takes_hit(damage, "a spiked painting");
+        player_takes_hit(damage, tr!("a spiked painting"));
         py().flags.poisoned += (10 + random_number(20)) as i16;
     }
 }
@@ -999,7 +1006,7 @@ pub fn painting_reach_command() {
     let index = match index {
         Some(index) => index,
         None => {
-            print_message(Some("You see no painting there."));
+            print_message(Some(tr!("You see no painting there.")));
             game().player_free_turn = true;
             return;
         }
@@ -1008,7 +1015,7 @@ pub fn painting_reach_command() {
     match paintings()[index].kind {
         PaintingKind::Loot | PaintingKind::Harmless if paintings()[index].items > 0 => {
             if random_number(2) == 1 {
-                print_message(Some("You feel nothing but the rough back of the canvas."));
+                print_message(Some(tr!("You feel nothing but the rough back of the canvas.")));
                 return;
             }
 
@@ -1016,7 +1023,7 @@ pub fn painting_reach_command() {
                 paintings()[index].items -= 1;
 
                 if paintings()[index].items == 0 && paintings()[index].kind == PaintingKind::Loot {
-                    print_message(Some("The colors fade to a dull grey."));
+                    print_message(Some(tr!("The colors fade to a dull grey.")));
                 }
             }
         }
@@ -1024,7 +1031,7 @@ pub fn painting_reach_command() {
             fake_loot_trap(index);
         }
         PaintingKind::MeleeMonster | PaintingKind::RangedMonster | PaintingKind::Swarm => {
-            print_message(Some("Something inside the canvas snaps at your fingers!"));
+            print_message(Some(tr!("Something inside the canvas snaps at your fingers!")));
             painting_monster_roused(index, true);
         }
         PaintingKind::Teleport if !paintings()[index].found => {
@@ -1034,8 +1041,11 @@ pub fn painting_reach_command() {
             painting_sleep_trap(index);
         }
         _ => {
+            // jdbkmoria extension: flavor-only fallback array (not a
+            // data_*.rs table); tr! looks up the chosen line at the use
+            // site so the random pick itself stays untouched.
             let msg = MUNDANE_REACH_MESSAGES[(random_number(MUNDANE_REACH_MESSAGES.len() as i32) - 1) as usize];
-            print_message(Some(msg));
+            print_message(Some(tr!(msg)));
             game().player_free_turn = true;
         }
     }
@@ -1053,7 +1063,7 @@ pub fn player_bash_painting(coord: Coord) {
         None => return,
     };
 
-    print_message_no_command_interrupt("You slam your shoulder into the painting!");
+    print_message_no_command_interrupt(tr!("You slam your shoulder into the painting!"));
 
     let kind = paintings()[index].kind;
     let is_monster = painting_kind_is_monster(kind);
@@ -1068,9 +1078,9 @@ pub fn player_bash_painting(coord: Coord) {
         paintings().swap_remove(index);
         dungeon_lite_spot(coord);
 
-        print_message(Some("The painting rips from the wall and tears apart!"));
+        print_message(Some(tr!("The painting rips from the wall and tears apart!")));
         if is_monster {
-            let msg = format!("The {} is torn apart along with the canvas.", painted_name(&painting));
+            let msg = tr_fmt!("The {} is torn apart along with the canvas.", painted_name(&painting));
             print_message(Some(&msg));
         }
 
@@ -1083,13 +1093,13 @@ pub fn player_bash_painting(coord: Coord) {
     }
 
     if random_number(150) > py().stats.used[A_DEX] as i32 {
-        print_message(Some("You are off-balance."));
+        print_message(Some(tr!("You are off-balance.")));
         py().flags.paralysis = (1 + random_number(2)) as i16;
         return;
     }
 
     if game().command_count == 0 {
-        print_message(Some("The painting holds firm on its hook."));
+        print_message(Some(tr!("The painting holds firm on its hook.")));
     }
 }
 
@@ -1102,7 +1112,7 @@ pub fn player_bash_painting(coord: Coord) {
 // and could equally be wired up for a direct "fight the wall" command later.
 pub fn player_attack_painting(coord: Coord) {
     if py().flags.afraid > 0 {
-        print_message(Some("You are too afraid to attack it!"));
+        print_message(Some(tr!("You are too afraid to attack it!")));
         return;
     }
 
@@ -1139,13 +1149,13 @@ pub fn player_attack_painting(coord: Coord) {
         let armor_class = painting_armor_class(index);
 
         if !player_test_being_hit(base_to_hit, py().misc.level as i32, total_to_hit, armor_class, CLASS_BTH) {
-            let msg = format!("You miss the {}.", name);
+            let msg = tr_fmt!("You miss the {}.", name);
             print_message(Some(&msg));
             i -= 1;
             continue;
         }
 
-        let msg = format!("You hit the {}.", name);
+        let msg = tr_fmt!("You hit the {}.", name);
         print_message(Some(&msg));
 
         let item = py().inventory[PlayerEquipment::Wield as usize];
@@ -1203,7 +1213,7 @@ pub fn detect_painting_traps() -> bool {
     }
 
     if detected {
-        print_message(Some("You sense hostile magic within a painting here!"));
+        print_message(Some(tr!("You sense hostile magic within a painting here!")));
     }
 
     detected
@@ -1229,7 +1239,7 @@ pub fn update_paintings() {
         // The wall beneath may have been tunneled out or turned to mud.
         if dg().tile(pos).feature_id < MIN_CAVE_WALL {
             if cave_tile_visible(pos) {
-                print_message(Some("A painting crumbles away with the wall."));
+                print_message(Some(tr!("A painting crumbles away with the wall.")));
             }
             paintings().swap_remove(i);
             continue;
@@ -1255,12 +1265,12 @@ pub fn update_paintings() {
                     let creature = &CREATURES_LIST[painting.creature_id as usize];
                     let name = painted_name(&painting);
 
-                    let msg = format!("A bolt of force leaps from the {}'s canvas!", name);
+                    let msg = tr_fmt!("A bolt of force leaps from the {}'s canvas!", name);
                     print_message(Some(&msg));
                     player_disturb(1, 0);
 
                     let damage = dice_roll(Dice::new(2 + creature.level / 10, 6));
-                    player_takes_hit(damage, &format!("a {}", name));
+                    player_takes_hit(damage, &tr_fmt!("a {}", name));
                 }
             }
             PaintingKind::Swarm => {
@@ -1275,7 +1285,7 @@ pub fn update_paintings() {
                     if place_monster_adjacent_to(creature_id, &mut coord, false) {
                         paintings()[i].items -= 1;
 
-                        let msg = format!("A {} scrambles out of the canvas!", painted_name(&paintings()[i]));
+                        let msg = tr_fmt!("A {} scrambles out of the canvas!", painted_name(&paintings()[i]));
                         print_message(Some(&msg));
                         player_disturb(1, 0);
 

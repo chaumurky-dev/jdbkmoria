@@ -50,7 +50,7 @@ pub fn player_bash() {
     }
 
     if py().flags.confused > 0 {
-        print_message(Some("You are confused."));
+        print_message(Some(crate::tr!("You are confused.")));
         dir = get_random_direction();
     }
 
@@ -80,18 +80,18 @@ pub fn player_bash() {
         } else {
             // Can't give free turn, or else player could try
             // directions until they find the invisible creature
-            print_message(Some("You bash it, but nothing interesting happens."));
+            print_message(Some(crate::tr!("You bash it, but nothing interesting happens.")));
         }
         return;
     }
 
     if tile.feature_id < MIN_CAVE_WALL {
-        print_message(Some("You bash at empty space."));
+        print_message(Some(crate::tr!("You bash at empty space.")));
         return;
     }
 
     // same message for wall as for secret door
-    print_message(Some("You bash it, but nothing interesting happens."));
+    print_message(Some(crate::tr!("You bash it, but nothing interesting happens.")));
 }
 
 // Make a bash attack on someone. -CJS-
@@ -106,9 +106,9 @@ fn player_bash_attack(coord: Coord) {
 
     // Does the player know what they're fighting?
     let name = if !monster_lit {
-        "it".to_string()
+        crate::tr!("it").to_string()
     } else {
-        format!("the {}", CREATURES_LIST[creature_id].name)
+        crate::tr_fmt!("the {}", crate::tr!(CREATURES_LIST[creature_id].name))
     };
 
     let mut base_to_hit = py().stats.used[A_STR] as i32;
@@ -122,7 +122,7 @@ fn player_bash_attack(coord: Coord) {
     }
 
     if player_test_being_hit(base_to_hit, py().misc.level as i32, py().stats.used[A_DEX] as i32, CREATURES_LIST[creature_id].ac as i32, CLASS_BTH) {
-        let msg = format!("You hit {}.", name);
+        let msg = crate::tr_fmt!("You hit {}.", name);
         print_message(Some(&msg));
 
         let arm_item = py().inventory[PlayerEquipment::Arm as usize];
@@ -137,7 +137,7 @@ fn player_bash_attack(coord: Coord) {
 
         // See if we done it in.
         if monster_take_hit(monster_id as i32, damage) >= 0 {
-            let msg = format!("You have slain {}.", name);
+            let msg = crate::tr_fmt!("You have slain {}.", name);
             print_message(Some(&msg));
             display_character_experience();
         } else {
@@ -163,19 +163,19 @@ fn player_bash_attack(coord: Coord) {
                     monsters()[monster_id].stunned_amount = 24;
                 }
 
-                msg = format!("{} appears stunned!", name);
+                msg = crate::tr_fmt!("{} appears stunned!", name);
             } else {
-                msg = format!("{} ignores your bash!", name);
+                msg = crate::tr_fmt!("{} ignores your bash!", name);
             }
             print_message(Some(&msg));
         }
     } else {
-        let msg = format!("You miss {}.", name);
+        let msg = crate::tr_fmt!("You miss {}.", name);
         print_message(Some(&msg));
     }
 
     if random_number(150) > py().stats.used[A_DEX] as i32 {
-        print_message(Some("You are off balance."));
+        print_message(Some(crate::tr!("You are off balance.")));
         py().flags.paralysis = (1 + random_number(2)) as i16;
     }
 }
@@ -183,7 +183,7 @@ fn player_bash_attack(coord: Coord) {
 fn player_bash_position(coord: Coord) {
     // Is a Coward?
     if py().flags.afraid > 0 {
-        print_message(Some("You are afraid!"));
+        print_message(Some(crate::tr!("You are afraid!")));
         return;
     }
 
@@ -191,7 +191,7 @@ fn player_bash_position(coord: Coord) {
 }
 
 fn player_bash_closed_door(coord: Coord, dir: i32) {
-    print_message_no_command_interrupt("You smash into the door!");
+    print_message_no_command_interrupt(crate::tr!("You smash into the door!"));
 
     let treasure_id = dg().tile(coord).treasure_id as usize;
 
@@ -200,7 +200,7 @@ fn player_bash_closed_door(coord: Coord, dir: i32) {
     // Use (roughly) similar method as for monsters.
     let abs_misc_use = game().treasure.list[treasure_id].misc_use.abs() as i32;
     if random_number(chance * (20 + abs_misc_use)) < 10 * (chance - abs_misc_use) {
-        print_message(Some("The door crashes open!"));
+        print_message(Some(crate::tr!("The door crashes open!")));
 
         inventory_item_copy_to(config::dungeon::objects::OBJ_OPEN_DOOR as usize, &mut game().treasure.list[treasure_id]);
 
@@ -219,20 +219,20 @@ fn player_bash_closed_door(coord: Coord, dir: i32) {
     }
 
     if random_number(150) > py().stats.used[A_DEX] as i32 {
-        print_message(Some("You are off-balance."));
+        print_message(Some(crate::tr!("You are off-balance.")));
         py().flags.paralysis = (1 + random_number(2)) as i16;
         return;
     }
 
     if game().command_count == 0 {
-        print_message(Some("The door holds firm."));
+        print_message(Some(crate::tr!("The door holds firm.")));
     }
 }
 
 fn player_bash_closed_chest(treasure_id: usize) {
     if random_number(10) == 1 {
-        print_message(Some("You have destroyed the chest."));
-        print_message(Some("and its contents!"));
+        print_message(Some(crate::tr!("You have destroyed the chest.")));
+        print_message(Some(crate::tr!("and its contents!")));
 
         game().treasure.list[treasure_id].id = config::dungeon::objects::OBJ_RUINED_CHEST;
         game().treasure.list[treasure_id].flags = 0;
@@ -241,12 +241,12 @@ fn player_bash_closed_chest(treasure_id: usize) {
     }
 
     if (game().treasure.list[treasure_id].flags & config::treasure::chests::CH_LOCKED) != 0 && random_number(10) == 1 {
-        print_message(Some("The lock breaks open!"));
+        print_message(Some(crate::tr!("The lock breaks open!")));
 
         game().treasure.list[treasure_id].flags &= !config::treasure::chests::CH_LOCKED;
 
         return;
     }
 
-    print_message_no_command_interrupt("The chest holds firm.");
+    print_message_no_command_interrupt(crate::tr!("The chest holds firm."));
 }

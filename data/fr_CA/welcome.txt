@@ -1,0 +1,10 @@
+                       Bienvenue dans Moria !
+
+Votre première tâche est de créer un personnage. Vous devez préciser un
+sexe, une race et une classe. À tout moment avant d'avoir fait ces choix,
+vous pouvez interrompre avec control-C. Vous pouvez aussi choisir la race
+aussi souvent que vous le souhaitez en entrant '%' à la demande de classe.
+Cela régénérera aussi vos attributs.
+
+Si c'est la première fois que vous jouez, vous voudrez peut-être lire le
+manuel d'abord.

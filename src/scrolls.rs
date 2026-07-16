@@ -35,33 +35,35 @@ use crate::spells::{
     spell_surround_player_with_traps, spell_warding_glyph,
 };
 use crate::treasure::{TV_DIGGING, TV_HAFTED, TV_NOTHING, TV_SCROLL1, TV_SCROLL2};
+use crate::tr;
+use crate::tr_fmt;
 use crate::ui::display_character_experience;
 use crate::ui_inventory::inventory_get_input_for_item_id;
 use crate::ui_io::print_message;
 
 fn player_can_read_scroll(item_pos_start: &mut i32, item_pos_end: &mut i32) -> bool {
     if py().flags.blind > 0 {
-        print_message(Some("You can't see to read the scroll."));
+        print_message(Some(tr!("You can't see to read the scroll.")));
         return false;
     }
 
     if player_no_light() {
-        print_message(Some("You have no light to read by."));
+        print_message(Some(tr!("You have no light to read by.")));
         return false;
     }
 
     if py().flags.confused > 0 {
-        print_message(Some("You are too confused to read a scroll."));
+        print_message(Some(tr!("You are too confused to read a scroll.")));
         return false;
     }
 
     if py().pack.unique_items == 0 {
-        print_message(Some("You are not carrying anything!"));
+        print_message(Some(tr!("You are not carrying anything!")));
         return false;
     }
 
     if !inventory_find_range(TV_SCROLL1 as i32, TV_SCROLL2 as i32, item_pos_start, item_pos_end) {
-        print_message(Some("You are not carrying any scrolls!"));
+        print_message(Some(tr!("You are not carrying any scrolls!")));
         return false;
     }
 
@@ -129,14 +131,14 @@ fn scroll_enchant_weapon_to_hit() -> bool {
     }
 
     let desc = item_description(&item, false);
-    let msg = format!("Your {} glows faintly!", desc);
+    let msg = tr_fmt!("Your {} glows faintly!", desc);
     print_message(Some(&msg));
 
     if spell_enchant_item(&mut py().inventory[PlayerEquipment::Wield as usize].to_hit, 10) {
         inventory_item_remove_curse(&mut py().inventory[PlayerEquipment::Wield as usize]);
         player_recalculate_bonuses();
     } else {
-        print_message(Some("The enchantment fails."));
+        print_message(Some(tr!("The enchantment fails.")));
     }
 
     true
@@ -150,7 +152,7 @@ fn scroll_enchant_weapon_to_damage() -> bool {
     }
 
     let desc = item_description(&item, false);
-    let msg = format!("Your {} glows faintly!", desc);
+    let msg = tr_fmt!("Your {} glows faintly!", desc);
     print_message(Some(&msg));
 
     let scroll_type: i16 = if item.category_id >= TV_HAFTED && item.category_id <= TV_DIGGING {
@@ -165,7 +167,7 @@ fn scroll_enchant_weapon_to_damage() -> bool {
         inventory_item_remove_curse(&mut py().inventory[PlayerEquipment::Wield as usize]);
         player_recalculate_bonuses();
     } else {
-        print_message(Some("The enchantment fails."));
+        print_message(Some(tr!("The enchantment fails.")));
     }
 
     true
@@ -181,21 +183,21 @@ fn scroll_enchant_item_to_ac() -> bool {
     let item = py().inventory[item_id];
 
     let desc = item_description(&item, false);
-    let msg = format!("Your {} glows faintly!", desc);
+    let msg = tr_fmt!("Your {} glows faintly!", desc);
     print_message(Some(&msg));
 
     if spell_enchant_item(&mut py().inventory[item_id].to_ac, 10) {
         inventory_item_remove_curse(&mut py().inventory[item_id]);
         player_recalculate_bonuses();
     } else {
-        print_message(Some("The enchantment fails."));
+        print_message(Some(tr!("The enchantment fails.")));
     }
 
     true
 }
 
 fn scroll_identify_item(item_id: usize, is_used_up: &mut bool) -> usize {
-    print_message(Some("This is an identify scroll."));
+    print_message(Some(tr!("This is an identify scroll.")));
 
     *is_used_up = spell_identify_item();
 
@@ -215,7 +217,7 @@ fn scroll_identify_item(item_id: usize, is_used_up: &mut bool) -> usize {
 
 fn scroll_remove_curse() -> bool {
     if spell_remove_curse_from_all_worn_items() {
-        print_message(Some("You feel as if someone is watching over you."));
+        print_message(Some(tr!("You feel as if someone is watching over you.")));
         return true;
     }
     false
@@ -242,7 +244,7 @@ fn scroll_teleport_level() {
 
 fn scroll_confuse_monster() -> bool {
     if !py().flags.confuse_monster {
-        print_message(Some("Your hands begin to glow."));
+        print_message(Some(tr!("Your hands begin to glow.")));
         py().flags.confuse_monster = true;
         return true;
     }
@@ -257,7 +259,7 @@ fn scroll_enchant_weapon() -> bool {
     }
 
     let desc = item_description(&item, false);
-    let msg = format!("Your {} glows brightly!", desc);
+    let msg = tr_fmt!("Your {} glows brightly!", desc);
     print_message(Some(&msg));
 
     let mut enchanted = false;
@@ -286,7 +288,7 @@ fn scroll_enchant_weapon() -> bool {
         inventory_item_remove_curse(&mut py().inventory[PlayerEquipment::Wield as usize]);
         player_recalculate_bonuses();
     } else {
-        print_message(Some("The enchantment fails."));
+        print_message(Some(tr!("The enchantment fails.")));
     }
 
     true
@@ -300,7 +302,7 @@ fn scroll_curse_weapon() -> bool {
     }
 
     let desc = item_description(&item, false);
-    let msg = format!("Your {} glows black, fades.", desc);
+    let msg = tr_fmt!("Your {} glows black, fades.", desc);
     print_message(Some(&msg));
 
     item_remove_magic_naming(&mut py().inventory[PlayerEquipment::Wield as usize]);
@@ -330,7 +332,7 @@ fn scroll_enchant_armor() -> bool {
     let item = py().inventory[item_id];
 
     let desc = item_description(&item, false);
-    let msg = format!("Your {} glows brightly!", desc);
+    let msg = tr_fmt!("Your {} glows brightly!", desc);
     print_message(Some(&msg));
 
     let mut enchanted = false;
@@ -345,7 +347,7 @@ fn scroll_enchant_armor() -> bool {
         inventory_item_remove_curse(&mut py().inventory[item_id]);
         player_recalculate_bonuses();
     } else {
-        print_message(Some("The enchantment fails."));
+        print_message(Some(tr!("The enchantment fails.")));
     }
 
     true
@@ -389,7 +391,7 @@ fn scroll_curse_armor() -> bool {
     let item = py().inventory[item_id];
 
     let desc = item_description(&item, false);
-    let msg = format!("Your {} glows black, fades.", desc);
+    let msg = tr_fmt!("Your {} glows black, fades.", desc);
     print_message(Some(&msg));
 
     item_remove_magic_naming(&mut py().inventory[item_id]);
@@ -419,7 +421,7 @@ fn scroll_word_of_recall() {
     if py().flags.word_of_recall == 0 {
         py().flags.word_of_recall = 25 + random_number(30) as i16;
     }
-    print_message(Some("The air about you becomes charged."));
+    print_message(Some(tr!("The air about you becomes charged.")));
 }
 
 // Scrolls for the reading -RAK-
@@ -433,7 +435,7 @@ pub fn scroll_read() {
     }
 
     let mut item_id: i32 = 0;
-    if !inventory_get_input_for_item_id(&mut item_id, "Read which scroll?", item_pos_start, item_pos_end, None, None) {
+    if !inventory_get_input_for_item_id(&mut item_id, tr!("Read which scroll?"), item_pos_start, item_pos_end, None, None) {
         return;
     }
     let mut item_id = item_id as usize;
@@ -495,13 +497,13 @@ pub fn scroll_read() {
             17 => identified = spell_detect_traps_within_vicinity(),
             18 => identified = spell_detect_secret_doors_within_vicinity(),
             19 => {
-                print_message(Some("This is a mass genocide scroll."));
+                print_message(Some(tr!("This is a mass genocide scroll.")));
                 let _ = spell_mass_genocide();
                 identified = true;
             }
             20 => identified = spell_detect_invisible_creatures_within_vicinity(),
             21 => {
-                print_message(Some("There is a high pitched humming noise."));
+                print_message(Some(tr!("There is a high pitched humming noise.")));
                 let _ = spell_aggravate_monsters(20);
                 identified = true;
             }
@@ -509,12 +511,12 @@ pub fn scroll_read() {
             23 => identified = spell_destroy_adjacent_doors_traps(),
             24 => identified = spell_surround_player_with_doors(),
             25 => {
-                print_message(Some("This is a Recharge-Item scroll."));
+                print_message(Some(tr!("This is a Recharge-Item scroll.")));
                 used_up = spell_recharge_item(60);
                 identified = true;
             }
             26 => {
-                print_message(Some("This is a genocide scroll."));
+                print_message(Some(tr!("This is a genocide scroll.")));
                 let _ = spell_genocide();
                 identified = true;
             }

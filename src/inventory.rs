@@ -207,7 +207,7 @@ pub fn inventory_drop_item(item_id: usize, drop_all: bool) {
         }
 
         let prt1 = item_description(&game().treasure.list[treasure_id], true);
-        let prt2 = format!("Dropped {}", prt1);
+        let prt2 = crate::tr_fmt!("Dropped {}", prt1);
         print_message(Some(&prt2));
     }
 
@@ -242,7 +242,7 @@ pub fn inventory_diminish_light_attack(noticed: bool) -> bool {
         }
 
         if py().flags.blind < 1 {
-            print_message(Some("Your light dims."));
+            print_message(Some(crate::tr!("Your light dims.")));
         } else {
             noticed = false;
         }
@@ -266,7 +266,7 @@ pub fn inventory_diminish_charges_attack(creature_level: u8, monster_hp: &mut i1
         if !spell_item_identified(&item) {
             item_append_to_inscription(&mut py().inventory[item_id], config::identification::ID_EMPTY);
         }
-        print_message(Some("Energy drains from your pack!"));
+        print_message(Some(crate::tr!("Energy drains from your pack!")));
     } else {
         noticed = false;
     }
@@ -521,13 +521,13 @@ fn damage_minus_ac(typ_dam: u32) -> bool {
         minus = true;
 
         let description = item_description(&py().inventory[item_id], false);
-        let msg = format!("Your {} resists damage!", description);
+        let msg = crate::tr_fmt!("Your {} resists damage!", description);
         print_message(Some(&msg));
     } else if py().inventory[item_id].ac + py().inventory[item_id].to_ac > 0 {
         minus = true;
 
         let description = item_description(&py().inventory[item_id], false);
-        let msg = format!("Your {} is damaged!", description);
+        let msg = crate::tr_fmt!("Your {} is damaged!", description);
         print_message(Some(&msg));
 
         py().inventory[item_id].to_ac -= 1;
@@ -602,7 +602,7 @@ pub fn damage_corroding_gas(creature_name: &str) {
     }
 
     if inventory_damage_item(set_corrodable_items, 5) > 0 {
-        print_message(Some("There is an acrid smell coming from your pack."));
+        print_message(Some(crate::tr!("There is an acrid smell coming from your pack.")));
     }
 }
 
@@ -628,7 +628,7 @@ pub fn damage_fire(damage: i32, creature_name: &str) {
     crate::player::player_takes_hit(damage, creature_name);
 
     if inventory_damage_item(set_flammable_items, 3) > 0 {
-        print_message(Some("There is smoke coming from your pack!"));
+        print_message(Some(crate::tr!("There is smoke coming from your pack!")));
     }
 }
 
@@ -647,7 +647,7 @@ pub fn damage_cold(damage: i32, creature_name: &str) {
     crate::player::player_takes_hit(damage, creature_name);
 
     if inventory_damage_item(set_frost_destroyable_items, 5) > 0 {
-        print_message(Some("Something shatters inside your pack!"));
+        print_message(Some(crate::tr!("Something shatters inside your pack!")));
     }
 }
 
@@ -662,7 +662,7 @@ pub fn damage_lightning_bolt(damage: i32, creature_name: &str) {
     crate::player::player_takes_hit(damage, creature_name);
 
     if inventory_damage_item(set_lightning_destroyable_items, 3) > 0 {
-        print_message(Some("There are sparks coming from your pack!"));
+        print_message(Some(crate::tr!("There are sparks coming from your pack!")));
     }
 }
 
@@ -681,6 +681,6 @@ pub fn damage_acid(damage: i32, creature_name: &str) {
     crate::player::player_takes_hit(damage / (flag + 1), creature_name);
 
     if inventory_damage_item(set_acid_affected_items, 3) > 0 {
-        print_message(Some("There is an acrid smell coming from your pack!"));
+        print_message(Some(crate::tr!("There is an acrid smell coming from your pack!")));
     }
 }

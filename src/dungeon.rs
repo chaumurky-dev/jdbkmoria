@@ -6,6 +6,7 @@
 use crate::dice::Dice;
 use crate::dungeon_tile::Tile;
 use crate::globals::RacyCell;
+use crate::tr;
 use crate::ui::Panel;
 
 // Dungeon size parameters
@@ -138,7 +139,7 @@ pub fn dungeon_display_map() {
     }
     add_char('+', Coord::new(panel_height + 1, 0));
     add_char('+', Coord::new(panel_height + 1, panel_width as i32 + 1));
-    put_string("Hit any key to continue", Coord::new(23, 23));
+    put_string(tr!("Hit any key to continue"), Coord::new(23, 23));
 
     let mut player_y = 0;
     let mut player_x = 0;
@@ -276,7 +277,13 @@ pub fn cave_get_tile_symbol(coord: Coord) -> char {
     }
 
     if tile.treasure_id != 0 && game().treasure.list[tile.treasure_id as usize].category_id != TV_INVIS_TRAP {
-        return game().treasure.list[tile.treasure_id as usize].sprite as char;
+        let item = &game().treasure.list[tile.treasure_id as usize];
+        // jdbkmoria extension: store entrance numerals use the locale's
+        // digit glyphs (e.g. Arabic-Indic digits for a future ar locale)
+        if item.category_id == crate::treasure::TV_STORE_DOOR {
+            return crate::locale::map_digit_glyph(item.sprite);
+        }
+        return item.sprite as char;
     }
 
     if tile.feature_id <= MAX_CAVE_FLOOR {
@@ -360,7 +367,7 @@ pub fn dungeon_place_gold(coord: Coord) {
     game().treasure.list[free_treasure_id].cost += 8 * random_number(cost) + random_number(8);
 
     if dg().tile(coord).creature_id == 1 {
-        print_message(Some("You feel something roll beneath your feet."));
+        print_message(Some(tr!("You feel something roll beneath your feet.")));
     }
 }
 
@@ -376,7 +383,7 @@ pub fn dungeon_place_random_object_at(coord: Coord, must_be_small: bool) {
     crate::treasure_magic::magic_treasure_magical_ability(free_treasure_id as i32, dg().current_level as i32);
 
     if dg().tile(coord).creature_id == 1 {
-        print_message(Some("You feel something roll beneath your feet.")); // -CJS-
+        print_message(Some(tr!("You feel something roll beneath your feet."))); // -CJS-
     }
 }
 

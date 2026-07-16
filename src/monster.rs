@@ -6,6 +6,7 @@
 use crate::dice::Dice;
 use crate::globals::RacyCell;
 use crate::types::Coord;
+use crate::{tr, tr_fmt};
 
 // Monster is created for any living monster found on the current dungeon level
 #[derive(Debug, Clone, Copy, Default)]
@@ -370,42 +371,42 @@ fn monster_get_move_direction(monster_id: i32, directions: &mut [i32; 9]) {
 
 fn monster_print_attack_description(msg: &str, attack_id: i32) {
     match attack_id {
-        1 => print_message(Some(&format!("{}hits you.", msg))),
-        2 => print_message(Some(&format!("{}bites you.", msg))),
-        3 => print_message(Some(&format!("{}claws you.", msg))),
-        4 => print_message(Some(&format!("{}stings you.", msg))),
-        5 => print_message(Some(&format!("{}touches you.", msg))),
-        7 => print_message(Some(&format!("{}gazes at you.", msg))),
-        8 => print_message(Some(&format!("{}breathes on you.", msg))),
-        9 => print_message(Some(&format!("{}spits on you.", msg))),
-        10 => print_message(Some(&format!("{}makes a horrible wail.", msg))),
-        12 => print_message(Some(&format!("{}crawls on you.", msg))),
-        13 => print_message(Some(&format!("{}releases a cloud of spores.", msg))),
-        14 => print_message(Some(&format!("{}begs you for money.", msg))),
-        15 => print_message(Some("You've been slimed!")),
-        16 => print_message(Some(&format!("{}crushes you.", msg))),
-        17 => print_message(Some(&format!("{}tramples you.", msg))),
-        18 => print_message(Some(&format!("{}drools on you.", msg))),
+        1 => print_message(Some(&format!("{}{}", msg, tr!("hits you.")))),
+        2 => print_message(Some(&format!("{}{}", msg, tr!("bites you.")))),
+        3 => print_message(Some(&format!("{}{}", msg, tr!("claws you.")))),
+        4 => print_message(Some(&format!("{}{}", msg, tr!("stings you.")))),
+        5 => print_message(Some(&format!("{}{}", msg, tr!("touches you.")))),
+        7 => print_message(Some(&format!("{}{}", msg, tr!("gazes at you.")))),
+        8 => print_message(Some(&format!("{}{}", msg, tr!("breathes on you.")))),
+        9 => print_message(Some(&format!("{}{}", msg, tr!("spits on you.")))),
+        10 => print_message(Some(&format!("{}{}", msg, tr!("makes a horrible wail.")))),
+        12 => print_message(Some(&format!("{}{}", msg, tr!("crawls on you.")))),
+        13 => print_message(Some(&format!("{}{}", msg, tr!("releases a cloud of spores.")))),
+        14 => print_message(Some(&format!("{}{}", msg, tr!("begs you for money.")))),
+        15 => print_message(Some(tr!("You've been slimed!"))),
+        16 => print_message(Some(&format!("{}{}", msg, tr!("crushes you.")))),
+        17 => print_message(Some(&format!("{}{}", msg, tr!("tramples you.")))),
+        18 => print_message(Some(&format!("{}{}", msg, tr!("drools on you.")))),
         19 => match random_number(9) {
-            1 => print_message(Some(&format!("{}insults you!", msg))),
-            2 => print_message(Some(&format!("{}insults your mother!", msg))),
-            3 => print_message(Some(&format!("{}gives you the finger!", msg))),
-            4 => print_message(Some(&format!("{}humiliates you!", msg))),
-            5 => print_message(Some(&format!("{}wets on your leg!", msg))),
-            6 => print_message(Some(&format!("{}defiles you!", msg))),
-            7 => print_message(Some(&format!("{}dances around you!", msg))),
-            8 => print_message(Some(&format!("{}makes obscene gestures!", msg))),
-            9 => print_message(Some(&format!("{}moons you!!!", msg))),
+            1 => print_message(Some(&format!("{}{}", msg, tr!("insults you!")))),
+            2 => print_message(Some(&format!("{}{}", msg, tr!("insults your mother!")))),
+            3 => print_message(Some(&format!("{}{}", msg, tr!("gives you the finger!")))),
+            4 => print_message(Some(&format!("{}{}", msg, tr!("humiliates you!")))),
+            5 => print_message(Some(&format!("{}{}", msg, tr!("wets on your leg!")))),
+            6 => print_message(Some(&format!("{}{}", msg, tr!("defiles you!")))),
+            7 => print_message(Some(&format!("{}{}", msg, tr!("dances around you!")))),
+            8 => print_message(Some(&format!("{}{}", msg, tr!("makes obscene gestures!")))),
+            9 => print_message(Some(&format!("{}{}", msg, tr!("moons you!!!")))),
             _ => {}
         },
-        99 => print_message(Some(&format!("{}is repelled.", msg))),
+        99 => print_message(Some(&format!("{}{}", msg, tr!("is repelled.")))),
         _ => {}
     }
 }
 
 fn monster_confuse_on_attack(monster_id: i32, attack_type: i32, monster_name: &str, visible: bool) {
     if py().flags.confuse_monster && attack_type != 99 {
-        print_message(Some("Your hands stop glowing."));
+        print_message(Some(tr!("Your hands stop glowing.")));
         py().flags.confuse_monster = false;
 
         let creature_id = monsters()[monster_id as usize].creature_id as usize;
@@ -414,9 +415,9 @@ fn monster_confuse_on_attack(monster_id: i32, attack_type: i32, monster_name: &s
 
         let msg;
         if random_number(MON_MAX_LEVELS as i32) < creature_level as i32 || (creature_defenses & config::monsters::defense::CD_NO_SLEEP) != 0 {
-            msg = format!("{}is unaffected.", monster_name);
+            msg = format!("{}{}", monster_name, tr!("is unaffected."));
         } else {
-            msg = format!("{}appears confused.", monster_name);
+            msg = format!("{}{}", monster_name, tr!("appears confused."));
             if monsters()[monster_id as usize].confused_amount != 0 {
                 monsters()[monster_id as usize].confused_amount += 3;
             } else {
@@ -442,9 +443,9 @@ fn monster_attack_player(monster_id: i32) {
     let creature_id = monsters()[monster_id as usize].creature_id as usize;
 
     let name = if !monsters()[monster_id as usize].lit {
-        "It ".to_string()
+        format!("{} ", tr!("It"))
     } else {
-        format!("The {} ", CREATURES_LIST[creature_id].name)
+        format!("{} ", tr_fmt!("The {}", tr!(CREATURES_LIST[creature_id].name)))
     };
 
     let death_description = crate::player::player_died_from_string(CREATURES_LIST[creature_id].name, CREATURES_LIST[creature_id].movement);
@@ -514,7 +515,7 @@ fn monster_attack_player(monster_id: i32) {
         } else if (attack_desc >= 1 && attack_desc <= 3) || attack_desc == 6 {
             player_disturb(1, 0);
 
-            print_message(Some(&format!("{}misses you.", name)));
+            print_message(Some(&format!("{}{}", name, tr!("misses you."))));
         }
 
         if attack_counter < MON_MAX_ATTACKS - 1 {
@@ -549,7 +550,7 @@ fn monster_open_door(monster_hp: i16, move_bits: u32, do_turn: &mut bool, do_mov
             } else {
                 // Stuck doors
                 if random_number((monster_hp as i32 + 1) * (50 - misc_use as i32)) < 40 * (monster_hp as i32 - 10 + misc_use as i32) {
-                    print_message(Some("You hear a door burst open!"));
+                    print_message(Some(tr!("You hear a door burst open!")));
                     player_disturb(1, 0);
                     door_is_stuck = true;
                     *do_move = true;
@@ -584,7 +585,7 @@ fn monster_open_door(monster_hp: i16, move_bits: u32, do_turn: &mut bool, do_mov
             game().treasure.list[treasure_id].misc_use = (1 - random_number(2)) as i16;
             dg().tile_mut(coord).feature_id = TILE_CORR_FLOOR;
             dungeon_lite_spot(coord);
-            print_message(Some("You hear a door burst open!"));
+            print_message(Some(tr!("You hear a door burst open!")));
             player_disturb(1, 0);
         }
     }
@@ -593,7 +594,7 @@ fn monster_open_door(monster_hp: i16, move_bits: u32, do_turn: &mut bool, do_mov
 fn glyph_of_warding_protection(creature_id: u16, move_bits: u32, do_move: &mut bool, do_turn: &mut bool, coord: Coord) {
     if random_number(config::treasure::OBJECTS_RUNE_PROTECTION as i32) < CREATURES_LIST[creature_id as usize].level as i32 {
         if coord.y == py().pos.y && coord.x == py().pos.x {
-            print_message(Some("The rune of protection is broken!"));
+            print_message(Some(tr!("The rune of protection is broken!")));
         }
         dungeon_delete_object(coord);
         return;
@@ -767,7 +768,7 @@ pub fn monster_execute_casting_of_spell(monster_id: i32, spell_id: i32, level: u
         8 => {
             // Light Wound
             if crate::player::player_saving_throw() {
-                print_message(Some("You resist the effects of the spell."));
+                print_message(Some(tr!("You resist the effects of the spell.")));
             } else {
                 crate::player::player_takes_hit(dice_roll(Dice::new(3, 8)), death_description);
             }
@@ -775,7 +776,7 @@ pub fn monster_execute_casting_of_spell(monster_id: i32, spell_id: i32, level: u
         9 => {
             // Serious Wound
             if crate::player::player_saving_throw() {
-                print_message(Some("You resist the effects of the spell."));
+                print_message(Some(tr!("You resist the effects of the spell.")));
             } else {
                 crate::player::player_takes_hit(dice_roll(Dice::new(8, 8)), death_description);
             }
@@ -783,9 +784,9 @@ pub fn monster_execute_casting_of_spell(monster_id: i32, spell_id: i32, level: u
         10 => {
             // Hold Person
             if py().flags.free_action {
-                print_message(Some("You are unaffected."));
+                print_message(Some(tr!("You are unaffected.")));
             } else if crate::player::player_saving_throw() {
-                print_message(Some("You resist the effects of the spell."));
+                print_message(Some(tr!("You resist the effects of the spell.")));
             } else if py().flags.paralysis > 0 {
                 py().flags.paralysis += 2;
             } else {
@@ -795,7 +796,7 @@ pub fn monster_execute_casting_of_spell(monster_id: i32, spell_id: i32, level: u
         11 => {
             // Cause Blindness
             if crate::player::player_saving_throw() {
-                print_message(Some("You resist the effects of the spell."));
+                print_message(Some(tr!("You resist the effects of the spell.")));
             } else if py().flags.blind > 0 {
                 py().flags.blind += 6;
             } else {
@@ -805,7 +806,7 @@ pub fn monster_execute_casting_of_spell(monster_id: i32, spell_id: i32, level: u
         12 => {
             // Cause Confuse
             if crate::player::player_saving_throw() {
-                print_message(Some("You resist the effects of the spell."));
+                print_message(Some(tr!("You resist the effects of the spell.")));
             } else if py().flags.confused > 0 {
                 py().flags.confused += 2;
             } else {
@@ -815,7 +816,7 @@ pub fn monster_execute_casting_of_spell(monster_id: i32, spell_id: i32, level: u
         13 => {
             // Cause Fear
             if crate::player::player_saving_throw() {
-                print_message(Some("You resist the effects of the spell."));
+                print_message(Some(tr!("You resist the effects of the spell.")));
             } else if py().flags.afraid > 0 {
                 py().flags.afraid += 2;
             } else {
@@ -824,7 +825,7 @@ pub fn monster_execute_casting_of_spell(monster_id: i32, spell_id: i32, level: u
         }
         14 => {
             // Summon Monster
-            print_message(Some(&format!("{}magically summons a monster!", monster_name)));
+            print_message(Some(&format!("{}{}", monster_name, tr!("magically summons a monster!"))));
             let mut coord = py().pos;
 
             // in case compact_monster() is called,it needs monster_id
@@ -835,7 +836,7 @@ pub fn monster_execute_casting_of_spell(monster_id: i32, spell_id: i32, level: u
         }
         15 => {
             // Summon Undead
-            print_message(Some(&format!("{}magically summons an undead!", monster_name)));
+            print_message(Some(&format!("{}{}", monster_name, tr!("magically summons an undead!"))));
             let mut coord = py().pos;
 
             // in case compact_monster() is called,it needs monster_id
@@ -847,9 +848,9 @@ pub fn monster_execute_casting_of_spell(monster_id: i32, spell_id: i32, level: u
         16 => {
             // Slow Person
             if py().flags.free_action {
-                print_message(Some("You are unaffected."));
+                print_message(Some(tr!("You are unaffected.")));
             } else if crate::player::player_saving_throw() {
-                print_message(Some("You resist the effects of the spell."));
+                print_message(Some(tr!("You resist the effects of the spell.")));
             } else if py().flags.slow > 0 {
                 py().flags.slow += 2;
             } else {
@@ -861,10 +862,10 @@ pub fn monster_execute_casting_of_spell(monster_id: i32, spell_id: i32, level: u
             if py().misc.current_mana > 0 {
                 player_disturb(1, 0);
 
-                print_message(Some(&format!("{}draws psychic energy from you!", monster_name)));
+                print_message(Some(&format!("{}{}", monster_name, tr!("draws psychic energy from you!"))));
 
                 if monsters()[monster_id as usize].lit {
-                    print_message(Some(&format!("{}appears healthier.", monster_name)));
+                    print_message(Some(&format!("{}{}", monster_name, tr!("appears healthier."))));
                 }
 
                 let mut num = (random_number(level as i32) >> 1) + 1;
@@ -881,36 +882,36 @@ pub fn monster_execute_casting_of_spell(monster_id: i32, spell_id: i32, level: u
         }
         20 => {
             // Breath Light
-            print_message(Some(&format!("{}breathes lightning.", monster_name)));
+            print_message(Some(&format!("{}{}", monster_name, tr!("breathes lightning."))));
             let hp = monsters()[monster_id as usize].hp;
             crate::spells::spell_breath(py().pos, monster_id, hp as i32 / 4, MagicSpellFlags::Lightning as i32, death_description);
         }
         21 => {
             // Breath Gas
-            print_message(Some(&format!("{}breathes gas.", monster_name)));
+            print_message(Some(&format!("{}{}", monster_name, tr!("breathes gas."))));
             let hp = monsters()[monster_id as usize].hp;
             crate::spells::spell_breath(py().pos, monster_id, hp as i32 / 3, MagicSpellFlags::PoisonGas as i32, death_description);
         }
         22 => {
             // Breath Acid
-            print_message(Some(&format!("{}breathes acid.", monster_name)));
+            print_message(Some(&format!("{}{}", monster_name, tr!("breathes acid."))));
             let hp = monsters()[monster_id as usize].hp;
             crate::spells::spell_breath(py().pos, monster_id, hp as i32 / 3, MagicSpellFlags::Acid as i32, death_description);
         }
         23 => {
             // Breath Frost
-            print_message(Some(&format!("{}breathes frost.", monster_name)));
+            print_message(Some(&format!("{}{}", monster_name, tr!("breathes frost."))));
             let hp = monsters()[monster_id as usize].hp;
             crate::spells::spell_breath(py().pos, monster_id, hp as i32 / 3, MagicSpellFlags::Frost as i32, death_description);
         }
         24 => {
             // Breath Fire
-            print_message(Some(&format!("{}breathes fire.", monster_name)));
+            print_message(Some(&format!("{}{}", monster_name, tr!("breathes fire."))));
             let hp = monsters()[monster_id as usize].hp;
             crate::spells::spell_breath(py().pos, monster_id, hp as i32 / 3, MagicSpellFlags::Fire as i32, death_description);
         }
         _ => {
-            print_message(Some(&format!("{}cast unknown spell.", monster_name)));
+            print_message(Some(&format!("{}{}", monster_name, tr!("cast unknown spell."))));
         }
     }
 }
@@ -939,9 +940,9 @@ fn monster_cast_spell(monster_id: i32) -> bool {
 
     // Describe the attack
     let mut name = if monsters()[monster_id as usize].lit {
-        format!("The {} ", CREATURES_LIST[creature_id].name)
+        format!("{} ", tr_fmt!("The {}", tr!(CREATURES_LIST[creature_id].name)))
     } else {
-        "It ".to_string()
+        format!("{} ", tr!("It"))
     };
 
     let death_description = crate::player::player_died_from_string(CREATURES_LIST[creature_id].name, CREATURES_LIST[creature_id].movement);
@@ -967,10 +968,11 @@ fn monster_cast_spell(monster_id: i32) -> bool {
 
     // save some code/data space here, with a small time penalty
     if (thrown_spell < 14 && thrown_spell > 6) || thrown_spell == 16 {
-        name.push_str("casts a spell.");
+        let phrase = tr!("casts a spell.");
+        name.push_str(phrase);
         print_message(Some(&name));
         // strip the appended text again for the actual spell message
-        name.truncate(name.len() - "casts a spell.".len());
+        name.truncate(name.len() - phrase.len());
     }
 
     monster_execute_casting_of_spell(monster_id, thrown_spell, creature_level, &name, &death_description);
@@ -1131,10 +1133,10 @@ fn monster_move_out_of_wall(monster_id: i32, rcmove: &mut u32) {
         *hack_monptr() = -1;
 
         if i >= 0 {
-            print_message(Some("You hear a scream muffled by rock!"));
+            print_message(Some(tr!("You hear a scream muffled by rock!")));
             display_character_experience();
         } else {
-            print_message(Some("A creature digs itself out from the rock!"));
+            print_message(Some(tr!("A creature digs itself out from the rock!")));
             crate::player::player_tunnel_wall(pos, 1, 0);
         }
     }
@@ -1378,7 +1380,7 @@ fn monster_attacking_update(monster_id: i32, moves: i32) {
 
                 if monsters()[monster_id as usize].stunned_amount == 0 {
                     if monsters()[monster_id as usize].lit {
-                        let msg = format!("The {} recovers and glares at you.", CREATURES_LIST[creature_id].name);
+                        let msg = tr_fmt!("The {} recovers and glares at you.", tr!(CREATURES_LIST[creature_id].name));
                         print_message(Some(&msg));
                     }
                 }
@@ -1550,8 +1552,8 @@ pub fn monster_death(coord: Coord, flags: u32) -> u32 {
 
         print_character_winner();
 
-        print_message(Some("*** CONGRATULATIONS *** You have won the game."));
-        print_message(Some("You cannot save this game, but you may retire when ready."));
+        print_message(Some(tr!("*** CONGRATULATIONS *** You have won the game.")));
+        print_message(Some(tr!("You cannot save this game, but you may retire when ready.")));
     }
 
     if dropped_item_id == 0 {
@@ -1584,9 +1586,9 @@ pub fn print_monster_action_text(name: &str, action: &str) {
 
 pub fn monster_name_description(real_name: &str, is_lit: bool) -> String {
     if is_lit {
-        return format!("The {}", real_name);
+        return tr_fmt!("The {}", tr!(real_name));
     }
-    "It".to_string()
+    tr!("It").to_string()
 }
 
 // Sleep creatures adjacent to player -RAK-
@@ -1615,12 +1617,12 @@ pub fn monster_sleep(coord: Coord) -> bool {
                     creature_recall()[creature_id].defenses |= config::monsters::defense::CD_NO_SLEEP;
                 }
 
-                print_monster_action_text(&name, "is unaffected.");
+                print_monster_action_text(&name, tr!("is unaffected."));
             } else {
                 monsters()[monster_id].sleep_count = 500;
                 asleep = true;
 
-                print_monster_action_text(&name, "falls asleep.");
+                print_monster_action_text(&name, tr!("falls asleep."));
             }
 
             x += 1;
@@ -1646,9 +1648,9 @@ fn execute_attack_on_player(creature_level: u8, monster_hp: &mut i16, monster_id
             // Lose Strength
             crate::player::player_takes_hit(damage, death_description);
             if py().flags.sustain_str {
-                print_message(Some("You feel weaker for a moment, but it passes."));
+                print_message(Some(tr!("You feel weaker for a moment, but it passes.")));
             } else if random_number(2) == 1 {
-                print_message(Some("You feel weaker."));
+                print_message(Some(tr!("You feel weaker.")));
                 crate::player::player_stat_random_decrease(A_STR);
             } else {
                 noticed = false;
@@ -1659,7 +1661,7 @@ fn execute_attack_on_player(creature_level: u8, monster_hp: &mut i16, monster_id
             crate::player::player_takes_hit(damage, death_description);
             if random_number(2) == 1 {
                 if py().flags.confused < 1 {
-                    print_message(Some("You feel confused."));
+                    print_message(Some(tr!("You feel confused.")));
                     py().flags.confused += random_number(creature_level as i32) as i16;
                 } else {
                     noticed = false;
@@ -1673,9 +1675,9 @@ fn execute_attack_on_player(creature_level: u8, monster_hp: &mut i16, monster_id
             // Fear attack
             crate::player::player_takes_hit(damage, death_description);
             if crate::player::player_saving_throw() {
-                print_message(Some("You resist the effects!"));
+                print_message(Some(tr!("You resist the effects!")));
             } else if py().flags.afraid < 1 {
-                print_message(Some("You are suddenly afraid!"));
+                print_message(Some(tr!("You are suddenly afraid!")));
                 py().flags.afraid += 3 + random_number(creature_level as i32) as i16;
             } else {
                 py().flags.afraid += 3;
@@ -1684,27 +1686,27 @@ fn execute_attack_on_player(creature_level: u8, monster_hp: &mut i16, monster_id
         }
         5 => {
             // Fire attack
-            print_message(Some("You are enveloped in flames!"));
+            print_message(Some(tr!("You are enveloped in flames!")));
             crate::inventory::damage_fire(damage, death_description);
         }
         6 => {
             // Acid attack
-            print_message(Some("You are covered in acid!"));
+            print_message(Some(tr!("You are covered in acid!")));
             crate::inventory::damage_acid(damage, death_description);
         }
         7 => {
             // Cold attack
-            print_message(Some("You are covered with frost!"));
+            print_message(Some(tr!("You are covered with frost!")));
             crate::inventory::damage_cold(damage, death_description);
         }
         8 => {
             // Lightning attack
-            print_message(Some("Lightning strikes you!"));
+            print_message(Some(tr!("Lightning strikes you!")));
             crate::inventory::damage_lightning_bolt(damage, death_description);
         }
         9 => {
             // Corrosion attack
-            print_message(Some("A stinging red gas swirls about you."));
+            print_message(Some(tr!("A stinging red gas swirls about you.")));
             crate::inventory::damage_corroding_gas(death_description);
             crate::player::player_takes_hit(damage, death_description);
         }
@@ -1713,7 +1715,7 @@ fn execute_attack_on_player(creature_level: u8, monster_hp: &mut i16, monster_id
             crate::player::player_takes_hit(damage, death_description);
             if py().flags.blind < 1 {
                 py().flags.blind += 10 + random_number(creature_level as i32) as i16;
-                print_message(Some("Your eyes begin to sting."));
+                print_message(Some(tr!("Your eyes begin to sting.")));
             } else {
                 py().flags.blind += 5;
                 noticed = false;
@@ -1723,13 +1725,13 @@ fn execute_attack_on_player(creature_level: u8, monster_hp: &mut i16, monster_id
             // Paralysis attack
             crate::player::player_takes_hit(damage, death_description);
             if crate::player::player_saving_throw() {
-                print_message(Some("You resist the effects!"));
+                print_message(Some(tr!("You resist the effects!")));
             } else if py().flags.paralysis < 1 {
                 if py().flags.free_action {
-                    print_message(Some("You are unaffected."));
+                    print_message(Some(tr!("You are unaffected.")));
                 } else {
                     py().flags.paralysis = (random_number(creature_level as i32) + 3) as i16;
-                    print_message(Some("You are paralyzed."));
+                    print_message(Some(tr!("You are paralyzed.")));
                 }
             } else {
                 noticed = false;
@@ -1738,7 +1740,7 @@ fn execute_attack_on_player(creature_level: u8, monster_hp: &mut i16, monster_id
         12 => {
             // Steal Money
             if py().flags.paralysis < 1 && random_number(124) < py().stats.used[A_DEX] as i32 {
-                print_message(Some("You quickly protect your money pouch!"));
+                print_message(Some(tr!("You quickly protect your money pouch!")));
             } else {
                 let gold = (py().misc.au / 10) + random_number(25);
                 if gold > py().misc.au {
@@ -1746,41 +1748,41 @@ fn execute_attack_on_player(creature_level: u8, monster_hp: &mut i16, monster_id
                 } else {
                     py().misc.au -= gold;
                 }
-                print_message(Some("Your purse feels lighter."));
+                print_message(Some(tr!("Your purse feels lighter.")));
                 print_character_gold_value();
             }
             if random_number(2) == 1 {
-                print_message(Some("There is a puff of smoke!"));
+                print_message(Some(tr!("There is a puff of smoke!")));
                 crate::spells::spell_teleport_away_monster(monster_id, config::monsters::MON_MAX_SIGHT as i32);
             }
         }
         13 => {
             // Steal Object
             if py().flags.paralysis < 1 && random_number(124) < py().stats.used[A_DEX] as i32 {
-                print_message(Some("You grab hold of your backpack!"));
+                print_message(Some(tr!("You grab hold of your backpack!")));
             } else {
                 let item_id = (random_number(py().pack.unique_items as i32) - 1) as usize;
                 crate::inventory::inventory_destroy_item(item_id);
-                print_message(Some("Your backpack feels lighter."));
+                print_message(Some(tr!("Your backpack feels lighter.")));
             }
             if random_number(2) == 1 {
-                print_message(Some("There is a puff of smoke!"));
+                print_message(Some(tr!("There is a puff of smoke!")));
                 crate::spells::spell_teleport_away_monster(monster_id, config::monsters::MON_MAX_SIGHT as i32);
             }
         }
         14 => {
             // Poison
             crate::player::player_takes_hit(damage, death_description);
-            print_message(Some("You feel very sick."));
+            print_message(Some(tr!("You feel very sick.")));
             py().flags.poisoned += (random_number(creature_level as i32) + 5) as i16;
         }
         15 => {
             // Lose dexterity
             crate::player::player_takes_hit(damage, death_description);
             if py().flags.sustain_dex {
-                print_message(Some("You feel clumsy for a moment, but it passes."));
+                print_message(Some(tr!("You feel clumsy for a moment, but it passes.")));
             } else {
-                print_message(Some("You feel more clumsy."));
+                print_message(Some(tr!("You feel more clumsy.")));
                 crate::player::player_stat_random_decrease(A_DEX);
             }
         }
@@ -1788,18 +1790,18 @@ fn execute_attack_on_player(creature_level: u8, monster_hp: &mut i16, monster_id
             // Lose constitution
             crate::player::player_takes_hit(damage, death_description);
             if py().flags.sustain_con {
-                print_message(Some("Your body resists the effects of the disease."));
+                print_message(Some(tr!("Your body resists the effects of the disease.")));
             } else {
-                print_message(Some("Your health is damaged!"));
+                print_message(Some(tr!("Your health is damaged!")));
                 crate::player::player_stat_random_decrease(A_CON);
             }
         }
         17 => {
             // Lose intelligence
             crate::player::player_takes_hit(damage, death_description);
-            print_message(Some("You have trouble thinking clearly."));
+            print_message(Some(tr!("You have trouble thinking clearly.")));
             if py().flags.sustain_int {
-                print_message(Some("But your mind quickly clears."));
+                print_message(Some(tr!("But your mind quickly clears.")));
             } else {
                 crate::player::player_stat_random_decrease(A_INT);
             }
@@ -1808,15 +1810,15 @@ fn execute_attack_on_player(creature_level: u8, monster_hp: &mut i16, monster_id
             // Lose wisdom
             crate::player::player_takes_hit(damage, death_description);
             if py().flags.sustain_wis {
-                print_message(Some("Your wisdom is sustained."));
+                print_message(Some(tr!("Your wisdom is sustained.")));
             } else {
-                print_message(Some("Your wisdom is drained."));
+                print_message(Some(tr!("Your wisdom is drained.")));
                 crate::player::player_stat_random_decrease(A_WIS);
             }
         }
         19 => {
             // Lose experience
-            print_message(Some("You feel your life draining away!"));
+            print_message(Some(tr!("You feel your life draining away!")));
             crate::spells::spell_lose_exp(damage + (py().misc.exp / 100) * config::monsters::MON_PLAYER_EXP_DRAINED_PER_HIT as i32);
         }
         20 => {
@@ -1826,7 +1828,7 @@ fn execute_attack_on_player(creature_level: u8, monster_hp: &mut i16, monster_id
         21 => {
             // Disenchant
             if crate::inventory::execute_disenchant_attack() {
-                print_message(Some("There is a static feeling in the air."));
+                print_message(Some(tr!("There is a static feeling in the air.")));
                 crate::player::player_recalculate_bonuses();
             } else {
                 noticed = false;
@@ -1838,7 +1840,7 @@ fn execute_attack_on_player(creature_level: u8, monster_hp: &mut i16, monster_id
             let mut item_pos_end = 0;
             if crate::inventory::inventory_find_range(TV_FOOD as i32, TV_NEVER as i32, &mut item_pos_start, &mut item_pos_end) {
                 crate::inventory::inventory_destroy_item(item_pos_start as usize);
-                print_message(Some("It got at your rations!"));
+                print_message(Some(tr!("It got at your rations!")));
             } else {
                 noticed = false;
             }

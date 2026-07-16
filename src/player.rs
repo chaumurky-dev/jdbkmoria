@@ -286,9 +286,9 @@ pub fn player_set_gender(is_male: bool) {
 
 pub fn player_get_gender_label() -> &'static str {
     if player_is_male() {
-        "Male"
+        crate::tr!("Male")
     } else {
-        "Female"
+        crate::tr!("Female")
     }
 }
 
@@ -416,7 +416,7 @@ pub fn player_rest_on() {
     } else {
         rest_num = 0;
 
-        put_string_clear_to_eol("Rest for how long? ", Coord::new(0, 0));
+        put_string_clear_to_eol(crate::tr!("Rest for how long? "), Coord::new(0, 0));
 
         let mut rest_str = String::new();
         if get_string_input(&mut rest_str, Coord::new(0, 19), 5) {
@@ -440,7 +440,7 @@ pub fn player_rest_on() {
         print_character_movement_state();
         py().flags.food_digested -= 1;
 
-        put_string_clear_to_eol("Press any key to stop resting...", Coord::new(0, 0));
+        put_string_clear_to_eol(crate::tr!("Press any key to stop resting..."), Coord::new(0, 0));
         put_qio();
 
         return;
@@ -448,7 +448,7 @@ pub fn player_rest_on() {
 
     // Something went wrong
     if rest_num != 0 {
-        print_message(Some("Invalid rest count."));
+        print_message(Some(crate::tr!("Invalid rest count.")));
     }
     message_line_clear();
 
@@ -470,11 +470,11 @@ pub fn player_rest_off() {
 // For "DIED_FROM" string
 pub fn player_died_from_string(monster_name: &str, move_flags: u32) -> String {
     if (move_flags & config::monsters::move_flags::CM_WIN) != 0 {
-        format!("The {}", monster_name)
+        crate::tr_fmt!("The {}", monster_name)
     } else if is_vowel(monster_name.chars().next().unwrap_or(' ')) {
-        format!("an {}", monster_name)
+        crate::tr_fmt!("an {}", monster_name)
     } else {
-        format!("a {}", monster_name)
+        crate::tr_fmt!("a {}", monster_name)
     }
 }
 
@@ -728,11 +728,11 @@ pub fn player_take_off(item_id: i32, pack_position_id: i32) {
     py().equipment_count -= 1;
 
     let p = if item_id == WIELD || item_id == AUXILIARY {
-        "Was wielding "
+        crate::tr!("Was wielding ")
     } else if item_id == LIGHT {
-        "Light source was "
+        crate::tr!("Light source was ")
     } else {
-        "Was wearing "
+        crate::tr!("Was wearing ")
     };
 
     let description = item_description(&item, true);
@@ -829,7 +829,7 @@ pub fn player_search(coord: Coord, chance: i32) {
                 // Trap on floor?
 
                 let description = item_description(&game().treasure.list[treasure_id], true);
-                let msg = format!("You have found {}", description);
+                let msg = crate::tr_fmt!("You have found {}", description);
                 print_message(Some(&msg));
 
                 crate::dungeon::trap_change_visibility(spot);
@@ -837,7 +837,7 @@ pub fn player_search(coord: Coord, chance: i32) {
             } else if category_id == TV_SECRET_DOOR {
                 // Secret door?
 
-                print_message(Some("You have found a secret door."));
+                print_message(Some(crate::tr!("You have found a secret door.")));
 
                 crate::dungeon::trap_change_visibility(spot);
                 crate::player_run::player_end_running();
@@ -848,9 +848,9 @@ pub fn player_search(coord: Coord, chance: i32) {
                 if (game().treasure.list[treasure_id].flags & config::treasure::chests::CH_TRAPPED) > 1 {
                     if !spell_item_identified(&game().treasure.list[treasure_id]) {
                         spell_item_identify_and_remove_random_inscription(&mut game().treasure.list[treasure_id]);
-                        print_message(Some("You have discovered a trap on the chest!"));
+                        print_message(Some(crate::tr!("You have discovered a trap on the chest!")));
                     } else {
-                        print_message(Some("The chest is trapped!"));
+                        print_message(Some(crate::tr!("The chest is trapped!")));
                     }
                 }
             }
@@ -875,14 +875,14 @@ pub fn player_strength() {
 
     if item.category_id != TV_NOTHING && (py().stats.used[A_STR] as i32) * 15 < item.weight as i32 {
         if !py().weapon_is_heavy {
-            print_message(Some("You have trouble wielding such a heavy weapon."));
+            print_message(Some(crate::tr!("You have trouble wielding such a heavy weapon.")));
             py().weapon_is_heavy = true;
             player_recalculate_bonuses();
         }
     } else if py().weapon_is_heavy {
         py().weapon_is_heavy = false;
         if item.category_id != TV_NOTHING {
-            print_message(Some("You are strong enough to wield your weapon."));
+            print_message(Some(crate::tr!("You are strong enough to wield your weapon.")));
         }
         player_recalculate_bonuses();
     }
@@ -897,9 +897,9 @@ pub fn player_strength() {
 
     if py().pack.heaviness as i32 != limit {
         if (py().pack.heaviness as i32) < limit {
-            print_message(Some("Your pack is so heavy that it slows you down."));
+            print_message(Some(crate::tr!("Your pack is so heavy that it slows you down.")));
         } else {
-            print_message(Some("You move more easily under the weight of your pack."));
+            print_message(Some(crate::tr!("You move more easily under the weight of your pack.")));
         }
         player_change_speed(limit - py().pack.heaviness as i32);
         py().pack.heaviness = limit as i16;
@@ -930,12 +930,12 @@ pub fn player_worn_item_remove_curse(id: PlayerEquipment) {
 
 fn player_can_read() -> bool {
     if py().flags.blind > 0 {
-        print_message(Some("You can't see to read your spell book!"));
+        print_message(Some(crate::tr!("You can't see to read your spell book!")));
         return false;
     }
 
     if player_no_light() {
-        print_message(Some("You have no light to read by."));
+        print_message(Some(crate::tr!("You have no light to read by.")));
         return false;
     }
 
@@ -968,7 +968,7 @@ fn player_determine_learnable_spells() -> u32 {
 // gain spells when player wants to -JW-
 pub fn player_gain_spells() {
     if py().flags.confused > 0 {
-        print_message(Some("You are too confused."));
+        print_message(Some(crate::tr!("You are too confused.")));
         return;
     }
 
@@ -997,8 +997,12 @@ pub fn player_gain_spells() {
     let mut last_known = last_known_spell();
 
     if new_spells == 0 {
-        let tmp_str = format!("You can't learn any new {}s!", if stat == A_INT { "spell" } else { "prayer" });
-        print_message(Some(&tmp_str));
+        let tmp_str = if stat == A_INT {
+            crate::tr!("You can't learn any new spells!")
+        } else {
+            crate::tr!("You can't learn any new prayers!")
+        };
+        print_message(Some(tmp_str));
 
         game().player_free_turn = true;
         return;
@@ -1033,7 +1037,7 @@ pub fn player_gain_spells() {
     }
 
     if new_spells > spell_id as i32 {
-        print_message(Some("You seem to be missing a book."));
+        print_message(Some(crate::tr!("You seem to be missing a book.")));
 
         diff_spells = new_spells - spell_id as i32;
         new_spells = spell_id as i32;
@@ -1047,7 +1051,7 @@ pub fn player_gain_spells() {
         display_spells_list(&spell_bank, spell_id as i32, false, -1);
 
         let mut query = '\0';
-        while new_spells != 0 && get_menu_item_id("Learn which spell?", &mut query) {
+        while new_spells != 0 && get_menu_item_id(crate::tr!("Learn which spell?"), &mut query) {
             let c = query as i32 - 'a' as i32;
 
             // test j < 23 in case i is greater than 22, only 22 spells
@@ -1082,7 +1086,7 @@ pub fn player_gain_spells() {
             py().flags.spells_learned_order[last_known] = spell_bank[id] as u8;
             last_known += 1;
 
-            let tmp_str = format!("You have learned the prayer of {}.", SPELL_NAMES[(spell_bank[id] + offset) as usize]);
+            let tmp_str = crate::tr_fmt!("You have learned the prayer of {}.", crate::tr!(SPELL_NAMES[(spell_bank[id] + offset) as usize]));
             print_message(Some(&tmp_str));
 
             for j in id..(spell_id - 1) {
@@ -1168,16 +1172,16 @@ pub fn player_weapon_critical_blow(weapon_weight: i32, plus_to_hit: i32, damage:
 
         if weapon_weight < 400 {
             critical = 2 * damage + 5;
-            print_message(Some("It was a good hit! (x2 damage)"));
+            print_message(Some(crate::tr!("It was a good hit! (x2 damage)")));
         } else if weapon_weight < 700 {
             critical = 3 * damage + 10;
-            print_message(Some("It was an excellent hit! (x3 damage)"));
+            print_message(Some(crate::tr!("It was an excellent hit! (x3 damage)")));
         } else if weapon_weight < 900 {
             critical = 4 * damage + 15;
-            print_message(Some("It was a superb hit! (x4 damage)"));
+            print_message(Some(crate::tr!("It was a superb hit! (x4 damage)")));
         } else {
             critical = 5 * damage + 20;
-            print_message(Some("It was a *GREAT* hit! (x5 damage)"));
+            print_message(Some(crate::tr!("It was a *GREAT* hit! (x5 damage)")));
         }
     }
 
@@ -1260,9 +1264,9 @@ fn player_attack_monster(coord: Coord) {
 
     // Does the player know what they're fighting?
     let name = if !monster_lit {
-        "it".to_string()
+        crate::tr!("it").to_string()
     } else {
-        format!("the {}", CREATURES_LIST[monster_creature_id].name)
+        crate::tr_fmt!("the {}", crate::tr!(CREATURES_LIST[monster_creature_id].name))
     };
 
     let item = py().inventory[WIELD];
@@ -1280,13 +1284,13 @@ fn player_attack_monster(coord: Coord) {
         let creature_ac = CREATURES_LIST[monster_creature_id].ac;
 
         if !player_test_being_hit(base_to_hit, py().misc.level as i32, total_to_hit, creature_ac as i32, CLASS_BTH) {
-            let msg = format!("You miss {}.", name);
+            let msg = crate::tr_fmt!("You miss {}.", name);
             print_message(Some(&msg));
             i -= 1;
             continue;
         }
 
-        let msg = format!("You hit {}.", name);
+        let msg = crate::tr_fmt!("You hit {}.", name);
         print_message(Some(&msg));
 
         let item = py().inventory[WIELD];
@@ -1309,16 +1313,16 @@ fn player_attack_monster(coord: Coord) {
         if py().flags.confuse_monster {
             py().flags.confuse_monster = false;
 
-            print_message(Some("Your hands stop glowing."));
+            print_message(Some(crate::tr!("Your hands stop glowing.")));
 
             let creature_defenses = CREATURES_LIST[monster_creature_id].defenses;
             let creature_level = CREATURES_LIST[monster_creature_id].level;
 
             let msg;
             if (creature_defenses & config::monsters::defense::CD_NO_SLEEP) != 0 || random_number(MON_MAX_LEVELS as i32) < creature_level as i32 {
-                msg = format!("{} is unaffected.", name);
+                msg = crate::tr_fmt!("{} is unaffected.", name);
             } else {
-                msg = format!("{} appears confused.", name);
+                msg = crate::tr_fmt!("{} appears confused.", name);
                 if monsters()[creature_id].confused_amount != 0 {
                     monsters()[creature_id].confused_amount += 3;
                 } else {
@@ -1334,7 +1338,7 @@ fn player_attack_monster(coord: Coord) {
 
         // See if we done it in.
         if monster_take_hit(creature_id as i32, damage) >= 0 {
-            let msg = format!("You have slain {}.", name);
+            let msg = crate::tr_fmt!("You have slain {}.", name);
             print_message(Some(&msg));
             display_character_experience();
 
@@ -1379,19 +1383,19 @@ fn open_closed_door(coord: Coord) {
         // It's locked.
 
         if py().flags.confused > 0 {
-            print_message(Some("You are too confused to pick the lock."));
+            print_message(Some(crate::tr!("You are too confused to pick the lock.")));
         } else if player_lock_picking_skill() - misc_use as i32 > random_number(100) {
-            print_message(Some("You have picked the lock."));
+            print_message(Some(crate::tr!("You have picked the lock.")));
             py().misc.exp += 1;
             display_character_experience();
             game().treasure.list[treasure_id].misc_use = 0;
         } else {
-            print_message_no_command_interrupt("You failed to pick the lock.");
+            print_message_no_command_interrupt(crate::tr!("You failed to pick the lock."));
         }
     } else if misc_use < 0 {
         // It's stuck
 
-        print_message(Some("It appears to be stuck."));
+        print_message(Some(crate::tr!("It appears to be stuck.")));
     }
 
     if game().treasure.list[treasure_id].misc_use == 0 {
@@ -1409,16 +1413,16 @@ fn open_closed_chest(coord: Coord) {
 
     if (game().treasure.list[treasure_id].flags & config::treasure::chests::CH_LOCKED) != 0 {
         if py().flags.confused > 0 {
-            print_message(Some("You are too confused to pick the lock."));
+            print_message(Some(crate::tr!("You are too confused to pick the lock.")));
         } else if player_lock_picking_skill() - game().treasure.list[treasure_id].depth_first_found as i32 > random_number(100) {
-            print_message(Some("You have picked the lock."));
+            print_message(Some(crate::tr!("You have picked the lock.")));
 
             py().misc.exp += game().treasure.list[treasure_id].depth_first_found as i32;
             display_character_experience();
 
             success = true;
         } else {
-            print_message_no_command_interrupt("You failed to pick the lock.");
+            print_message_no_command_interrupt(crate::tr!("You failed to pick the lock."));
         }
     } else {
         success = true;
@@ -1484,7 +1488,7 @@ pub fn player_open_closed_object() {
 
     if no_object {
         game().player_free_turn = true;
-        print_message(Some("I do not see anything you can open there."));
+        print_message(Some(crate::tr!("I do not see anything you can open there.")));
     }
 }
 
@@ -1512,7 +1516,7 @@ pub fn player_close_door() {
                     dg().tile_mut(coord).feature_id = TILE_BLOCKED_FLOOR;
                     dungeon_lite_spot(coord);
                 } else {
-                    print_message(Some("The door appears to be broken."));
+                    print_message(Some(crate::tr!("The door appears to be broken.")));
                 }
             } else {
                 object_blocked_by_monster(tile.creature_id as usize);
@@ -1526,7 +1530,7 @@ pub fn player_close_door() {
 
     if no_object {
         game().player_free_turn = true;
-        print_message(Some("I do not see anything you can close there."));
+        print_message(Some(crate::tr!("I do not see anything you can close there.")));
     }
 }
 
@@ -1574,11 +1578,11 @@ pub fn player_tunnel_wall(coord: Coord, digging_ability: i32, digging_chance: i3
 
     // jdbkmoria extension: a painting cannot outlive its wall
     if crate::paintings::remove_painting_at(coord) {
-        print_message(Some("A painting falls and is destroyed!"));
+        print_message(Some(crate::tr!("A painting falls and is destroyed!")));
     }
 
     if coord_inside_panel(coord) && (dg().tile(coord).temporary_light || dg().tile(coord).permanent_light) && dg().tile(coord).treasure_id != 0 {
-        print_message(Some("You have found something!"));
+        print_message(Some(crate::tr!("You have found something!")));
     }
 
     dungeon_lite_spot(coord);
@@ -1590,7 +1594,7 @@ pub fn player_tunnel_wall(coord: Coord, digging_ability: i32, digging_chance: i3
 pub fn player_attack_position(coord: Coord) {
     // Is a Coward?
     if py().flags.afraid > 0 {
-        print_message(Some("You are too afraid!"));
+        print_message(Some(crate::tr!("You are too afraid!")));
         return;
     }
 
@@ -1608,7 +1612,7 @@ fn eliminate_known_spells_greater_than_level(class_id: usize, p: &str, offset: i
                 py().flags.spells_learnt &= !mask;
                 py().flags.spells_forgotten |= mask;
 
-                let msg = format!("You have forgotten the {} of {}.", p, SPELL_NAMES[(i + offset) as usize]);
+                let msg = crate::tr_fmt!("You have forgotten the {} of {}.", p, crate::tr!(SPELL_NAMES[(i + offset) as usize]));
                 print_message(Some(&msg));
             } else {
                 break;
@@ -1669,7 +1673,7 @@ fn remember_forgotten_spells(class_id: usize, allowed_spells: i32, new_spells: i
                 py().flags.spells_forgotten &= !mask;
                 py().flags.spells_learnt |= mask;
 
-                let msg = format!("You have remembered the {} of {}.", p, SPELL_NAMES[(order_id as i32 + offset) as usize]);
+                let msg = crate::tr_fmt!("You have remembered the {} of {}.", p, crate::tr!(SPELL_NAMES[(order_id as i32 + offset) as usize]));
                 print_message(Some(&msg));
             } else {
                 allowed_spells += 1;
@@ -1728,7 +1732,7 @@ fn forget_spells(new_spells: i32, p: &str, offset: i32) {
             py().flags.spells_forgotten |= mask;
             new_spells += 1;
 
-            let msg = format!("You have forgotten the {} of {}.", p, SPELL_NAMES[(order_id as i32 + offset) as usize]);
+            let msg = crate::tr_fmt!("You have forgotten the {} of {}.", p, crate::tr!(SPELL_NAMES[(order_id as i32 + offset) as usize]));
             print_message(Some(&msg));
         }
         i -= 1;
@@ -1744,10 +1748,10 @@ pub fn player_calculate_allowed_spells_count(stat: usize) {
     let offset;
 
     if stat == A_INT {
-        magic_type_str = "spell";
+        magic_type_str = crate::tr!("spell");
         offset = config::spells::NAME_OFFSET_SPELLS as i32;
     } else {
-        magic_type_str = "prayer";
+        magic_type_str = crate::tr!("prayer");
         offset = config::spells::NAME_OFFSET_PRAYERS as i32;
     }
 
@@ -1773,8 +1777,12 @@ pub fn player_calculate_allowed_spells_count(stat: usize) {
 
     if new_spells != py().flags.new_spells_to_learn as i32 {
         if new_spells > 0 && py().flags.new_spells_to_learn == 0 {
-            let msg = format!("You can learn some new {}s now.", magic_type_str);
-            print_message(Some(&msg));
+            let msg = if stat == A_INT {
+                crate::tr!("You can learn some new spells now.")
+            } else {
+                crate::tr!("You can learn some new prayers now.")
+            };
+            print_message(Some(msg));
         }
 
         py().flags.new_spells_to_learn = new_spells as u8;
@@ -1784,13 +1792,13 @@ pub fn player_calculate_allowed_spells_count(stat: usize) {
 
 pub fn player_rank_title() -> String {
     let p: &str = if py().misc.level < 1 {
-        "Babe in arms"
+        crate::tr!("Babe in arms")
     } else if py().misc.level as usize <= PLAYER_MAX_LEVEL {
-        CLASS_RANK_TITLES[py().misc.class_id as usize][py().misc.level as usize - 1]
+        crate::tr!(CLASS_RANK_TITLES[py().misc.class_id as usize][py().misc.level as usize - 1])
     } else if player_is_male() {
-        "**KING**"
+        crate::tr!("**KING**")
     } else {
-        "**QUEEN**"
+        crate::tr!("**QUEEN**")
     };
 
     p.to_string()

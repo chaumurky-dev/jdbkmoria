@@ -64,6 +64,8 @@ use crate::treasure::{
     TV_CLOSED_DOOR, TV_DOWN_STAIR, TV_FLASK, TV_MAGIC_BOOK, TV_MAX_ENCHANT, TV_MIN_ENCHANT,
     TV_NEVER, TV_NOTHING, TV_OPEN_DOOR, TV_PRAYER_BOOK, TV_SPIKE, TV_SWORD, TV_UP_STAIR,
 };
+use crate::tr;
+use crate::tr_fmt;
 use crate::types::Coord;
 use crate::ui::{
     change_character_name, coord_outside_panel, ctrl_key, display_character_stats,
@@ -217,7 +219,7 @@ pub fn start_moria(seed: u32, start_new_game: bool, roguelike_keys: bool) {
     // Begin the game
     //
     clear_screen();
-    put_string("Press ? for help", Coord::new(0, 63));
+    put_string(tr!("Press ? for help"), Coord::new(0, 63));
     print_character_stats_block();
 
     if generate {
@@ -231,6 +233,13 @@ pub fn start_moria(seed: u32, start_new_game: bool, roguelike_keys: bool) {
 
         // check for eof here, see getKeyInput() in io.c
         // eof can occur if the process gets a HANGUP signal
+        //
+        // jdbkmoria extension note: these character_died_from sentinel
+        // strings are left untranslated. "(saved)" is compared literally
+        // in scores.rs (is_new_high_score's uid==0 dedup check), and all
+        // of these flow into the save file / score board outside this
+        // module's ownership -- see the "(alive and well)" note in
+        // game_save.rs for the same family.
         if *eof_flag() != 0 {
             game().character_died_from = "(end of input: saved)".to_string();
             if !save_game() {
@@ -370,14 +379,14 @@ fn player_update_light_status() {
 
             if py().inventory[LIGHT].misc_use == 0 {
                 py().carrying_light = false;
-                print_message(Some("Your light has gone out!"));
+                print_message(Some(tr!("Your light has gone out!")));
                 player_disturb(0, 1);
 
                 // unlight creatures
                 update_monsters(false);
             } else if py().inventory[LIGHT].misc_use < 40 && random_number(5) == 1 && py().flags.blind < 1 {
                 player_disturb(0, 0);
-                print_message(Some("Your light is growing faint."));
+                print_message(Some(tr!("Your light is growing faint.")));
             }
         } else {
             py().carrying_light = false;
@@ -405,7 +414,7 @@ fn player_activate_heroism() {
     py().misc.bth += 12;
     py().misc.bth_with_bows += 12;
 
-    print_message(Some("You feel like a HERO!"));
+    print_message(Some(tr!("You feel like a HERO!")));
     print_character_max_hit_points();
     print_character_current_hit_points();
 }
@@ -423,7 +432,7 @@ fn player_disable_heroism() {
     py().misc.bth -= 12;
     py().misc.bth_with_bows -= 12;
 
-    print_message(Some("The heroism wears off."));
+    print_message(Some(tr!("The heroism wears off.")));
     print_character_max_hit_points();
 }
 
@@ -436,7 +445,7 @@ fn player_activate_super_heroism() {
     py().misc.bth += 24;
     py().misc.bth_with_bows += 24;
 
-    print_message(Some("You feel like a SUPER HERO!"));
+    print_message(Some(tr!("You feel like a SUPER HERO!")));
     print_character_max_hit_points();
     print_character_current_hit_points();
 }
@@ -454,7 +463,7 @@ fn player_disable_super_heroism() {
     py().misc.bth -= 24;
     py().misc.bth_with_bows -= 24;
 
-    print_message(Some("The super heroism wears off."));
+    print_message(Some(tr!("The super heroism wears off.")));
     print_character_max_hit_points();
 }
 
@@ -502,19 +511,19 @@ fn player_food_consumption() -> i32 {
 
             if (py().flags.status & status::PY_WEAK) == 0 {
                 py().flags.status |= status::PY_WEAK;
-                print_message(Some("You are getting weak from hunger."));
+                print_message(Some(tr!("You are getting weak from hunger.")));
                 player_disturb(0, 0);
                 print_character_hunger_status();
             }
 
             if (py().flags.food as i32) < config::player::PLAYER_FOOD_FAINT as i32 && random_number(8) == 1 {
                 py().flags.paralysis += random_number(5) as i16;
-                print_message(Some("You faint from the lack of food."));
+                print_message(Some(tr!("You faint from the lack of food.")));
                 player_disturb(1, 0);
             }
         } else if (py().flags.status & status::PY_HUNGRY) == 0 {
             py().flags.status |= status::PY_HUNGRY;
-            print_message(Some("You are getting hungry."));
+            print_message(Some(tr!("You are getting hungry.")));
             player_disturb(0, 0);
             print_character_hunger_status();
         }
@@ -529,7 +538,7 @@ fn player_food_consumption() -> i32 {
     py().flags.food -= py().flags.food_digested;
 
     if py().flags.food < 0 {
-        player_takes_hit(-(py().flags.food as i32) / 16, "starvation"); // -CJS-
+        player_takes_hit(-(py().flags.food as i32) / 16, tr!("starvation")); // -CJS-
         player_disturb(1, 0);
     }
 
@@ -582,7 +591,7 @@ fn player_update_blindness() {
         // light creatures
         update_monsters(false);
 
-        print_message(Some("The veil of darkness lifts."));
+        print_message(Some(tr!("The veil of darkness lifts.")));
     }
 }
 
@@ -602,7 +611,7 @@ fn player_update_confusion() {
         py().flags.status &= !status::PY_CONFUSED;
 
         print_character_confused_state();
-        print_message(Some("You feel less confused now."));
+        print_message(Some(tr!("You feel less confused now.")));
 
         if py().flags.rest != 0 {
             player_rest_off();
@@ -632,7 +641,7 @@ fn player_update_fear_state() {
         py().flags.status &= !status::PY_FEAR;
 
         print_character_fear_state();
-        print_message(Some("You feel bolder now."));
+        print_message(Some(tr!("You feel bolder now.")));
         player_disturb(0, 0);
     }
 }
@@ -653,7 +662,7 @@ fn player_update_poisoned_state() {
         py().flags.status &= !status::PY_POISONED;
 
         print_character_poisoned_state();
-        print_message(Some("You feel better."));
+        print_message(Some(tr!("You feel better.")));
         player_disturb(0, 0);
 
         return;
@@ -688,7 +697,7 @@ fn player_update_poisoned_state() {
         _ => 0,
     };
 
-    player_takes_hit(damage, "poison");
+    player_takes_hit(damage, tr!("poison"));
     player_disturb(1, 0);
 }
 
@@ -701,7 +710,7 @@ fn player_update_fastness() {
         py().flags.status |= status::PY_FAST;
         player_change_speed(-1);
 
-        print_message(Some("You feel yourself moving faster."));
+        print_message(Some(tr!("You feel yourself moving faster.")));
         player_disturb(0, 0);
     }
 
@@ -711,7 +720,7 @@ fn player_update_fastness() {
         py().flags.status &= !status::PY_FAST;
         player_change_speed(1);
 
-        print_message(Some("You feel yourself slow down."));
+        print_message(Some(tr!("You feel yourself slow down.")));
         player_disturb(0, 0);
     }
 }
@@ -725,7 +734,7 @@ fn player_update_slowness() {
         py().flags.status |= status::PY_SLOW;
         player_change_speed(1);
 
-        print_message(Some("You feel yourself moving slower."));
+        print_message(Some(tr!("You feel yourself moving slower.")));
         player_disturb(0, 0);
     }
 
@@ -735,7 +744,7 @@ fn player_update_slowness() {
         py().flags.status &= !status::PY_SLOW;
         player_change_speed(-1);
 
-        print_message(Some("You feel yourself speed up."));
+        print_message(Some(tr!("You feel yourself speed up.")));
         player_disturb(0, 0);
     }
 }
@@ -800,7 +809,7 @@ fn player_update_evil_protection() {
     py().flags.protect_evil -= 1;
 
     if py().flags.protect_evil == 0 {
-        print_message(Some("You no longer feel safe from evil."));
+        print_message(Some(tr!("You no longer feel safe from evil.")));
     }
 }
 
@@ -817,7 +826,7 @@ fn player_update_invulnerability() {
         py().misc.display_ac += 100;
 
         print_character_current_armor_class();
-        print_message(Some("Your skin turns into steel!"));
+        print_message(Some(tr!("Your skin turns into steel!")));
     }
 
     py().flags.invulnerability -= 1;
@@ -830,7 +839,7 @@ fn player_update_invulnerability() {
         py().misc.display_ac -= 100;
 
         print_character_current_armor_class();
-        print_message(Some("Your skin returns to normal."));
+        print_message(Some(tr!("Your skin returns to normal.")));
     }
 }
 
@@ -848,7 +857,7 @@ fn player_update_blessedness() {
         py().misc.ac += 2;
         py().misc.display_ac += 2;
 
-        print_message(Some("You feel righteous!"));
+        print_message(Some(tr!("You feel righteous!")));
         print_character_current_armor_class();
     }
 
@@ -863,7 +872,7 @@ fn player_update_blessedness() {
         py().misc.ac -= 2;
         py().misc.display_ac -= 2;
 
-        print_message(Some("The prayer has expired."));
+        print_message(Some(tr!("The prayer has expired.")));
         print_character_current_armor_class();
     }
 }
@@ -877,7 +886,7 @@ fn player_update_heat_resistance() {
     py().flags.heat_resistance -= 1;
 
     if py().flags.heat_resistance == 0 {
-        print_message(Some("You no longer feel safe from flame."));
+        print_message(Some(tr!("You no longer feel safe from flame.")));
     }
 }
 
@@ -889,7 +898,7 @@ fn player_update_cold_resistance() {
     py().flags.cold_resistance -= 1;
 
     if py().flags.cold_resistance == 0 {
-        print_message(Some("You no longer feel safe from cold."));
+        print_message(Some(tr!("You no longer feel safe from cold.")));
     }
 }
 
@@ -958,10 +967,10 @@ fn player_update_word_of_recall() {
 
         if dg().current_level > 0 {
             dg().current_level = 0;
-            print_message(Some("You feel yourself yanked upwards!"));
+            print_message(Some(tr!("You feel yourself yanked upwards!")));
         } else if py().misc.max_dungeon_depth != 0 {
             dg().current_level = py().misc.max_dungeon_depth as i16;
-            print_message(Some("You feel yourself yanked downwards!"));
+            print_message(Some(tr!("You feel yourself yanked downwards!")));
         }
     } else {
         py().flags.word_of_recall -= 1;
@@ -1025,7 +1034,7 @@ fn player_detect_enchantment() {
 
         if py().inventory[i].category_id != TV_NOTHING && item_enchanted(&py().inventory[i]) && random_number(chance) == 1 {
             let description = player_item_wearing_description(i);
-            let tmp_str = format!("There's something about what you are {}...", description);
+            let tmp_str = tr_fmt!("There's something about what you are {}...", description);
             player_disturb(0, 0);
             print_message(Some(&tmp_str));
             item_append_to_inscription(&mut py().inventory[i], config::identification::ID_MAGIK);
@@ -1036,7 +1045,7 @@ fn player_detect_enchantment() {
 }
 
 fn get_command_repeat_count(last_input_command: &mut char) -> i32 {
-    put_string_clear_to_eol("Repeat count:", Coord::new(0, 0));
+    put_string_clear_to_eol(tr!("Repeat count:"), Coord::new(0, 0));
 
     if *last_input_command == '#' {
         *last_input_command = '0';
@@ -1071,7 +1080,7 @@ fn get_command_repeat_count(last_input_command: &mut char) -> i32 {
 
     // a special hack to allow numbers as commands
     if *last_input_command == ' ' {
-        put_string_clear_to_eol("Command:", Coord::new(0, 20));
+        put_string_clear_to_eol(tr!("Command:"), Coord::new(0, 20));
         *last_input_command = get_key_input();
     }
 
@@ -1083,14 +1092,14 @@ fn parse_alternate_ctrl_input(mut last_input_command: char) -> char {
         print_character_movement_state();
     }
 
-    if get_command("Control-", &mut last_input_command) {
+    if get_command(tr!("Control-"), &mut last_input_command) {
         if last_input_command >= 'A' && last_input_command <= 'Z' {
             last_input_command = ((last_input_command as u8) - (b'A' - 1)) as char;
         } else if last_input_command >= 'a' && last_input_command <= 'z' {
             last_input_command = ((last_input_command as u8) - (b'a' - 1)) as char;
         } else {
             last_input_command = ' ';
-            print_message(Some("Type ^ <letter> for a control char"));
+            print_message(Some(tr!("Type ^ <letter> for a control char")));
         }
     } else {
         last_input_command = ' ';
@@ -1163,7 +1172,7 @@ fn execute_input_commands(command: &mut char, find_count: &mut i32) {
                     if !valid_count_command(last_input_command) {
                         game().player_free_turn = true;
                         last_input_command = ' ';
-                        print_message(Some("Invalid command with a count."));
+                        print_message(Some(tr!("Invalid command with a count.")));
                     } else {
                         game().command_count = repeat_count as u32;
                         print_character_movement_state();
@@ -1355,10 +1364,12 @@ fn move_without_pickup(command: &mut char) -> bool {
 fn command_quit() {
     flush_input_buffer();
 
-    if get_input_confirmation("Do you really want to quit?") {
+    if get_input_confirmation(tr!("Do you really want to quit?")) {
         game().character_is_dead = true;
         dg().generate_new_level = true;
 
+        // jdbkmoria extension note: left untranslated, see the sentinel
+        // note in play_dungeon() above.
         game().character_died_from = "Quitting".to_string();
     }
 }
@@ -1413,9 +1424,9 @@ fn command_previous_message() {
 fn command_flip_wizard_mode() {
     if game().wizard_mode {
         game().wizard_mode = false;
-        print_message(Some("Wizard mode off."));
+        print_message(Some(tr!("Wizard mode off.")));
     } else if enter_wizard_mode() {
-        print_message(Some("Wizard mode on."));
+        print_message(Some(tr!("Wizard mode on.")));
     }
 
     print_character_winner();
@@ -1423,16 +1434,19 @@ fn command_flip_wizard_mode() {
 
 fn command_save_and_exit() {
     if game().total_winner {
-        print_message(Some("You are a Total Winner,  your character must be retired."));
+        print_message(Some(tr!("You are a Total Winner,  your character must be retired.")));
 
         if config::options::options().use_roguelike_keys {
-            print_message(Some("Use 'Q' to when you are ready to quit."));
+            print_message(Some(tr!("Use 'Q' to when you are ready to quit.")));
         } else {
-            print_message(Some("Use <Control>-K when you are ready to quit."));
+            print_message(Some(tr!("Use <Control>-K when you are ready to quit.")));
         }
     } else {
+        // jdbkmoria extension note: "(saved)" is a sentinel compared literally
+        // against saved score entries (see scores.rs is_new_high_score's uid==0
+        // dedup check) -- left untranslated so that comparison keeps working.
         game().character_died_from = "(saved)".to_string();
-        print_message(Some("Saving game..."));
+        print_message(Some(tr!("Saving game...")));
 
         if save_game() {
             end_game();
@@ -1444,7 +1458,7 @@ fn command_save_and_exit() {
 
 fn command_locate_on_map() {
     if py().flags.blind > 0 || player_no_light() {
-        print_message(Some("You can't see your map."));
+        print_message(Some(tr!("You can't see your map.")));
         return;
     }
 
@@ -1462,23 +1476,23 @@ fn command_locate_on_map() {
             String::new()
         } else {
             let north_south = if panel.y < old_panel.y {
-                " North"
+                tr!(" North")
             } else if panel.y > old_panel.y {
-                " South"
+                tr!(" South")
             } else {
                 ""
             };
             let west_east = if panel.x < old_panel.x {
-                " West"
+                tr!(" West")
             } else if panel.x > old_panel.x {
-                " East"
+                tr!(" East")
             } else {
                 ""
             };
-            format!("{}{} of", north_south, west_east)
+            tr_fmt!("{}{} of", north_south, west_east)
         };
 
-        let out_val = format!(
+        let out_val = tr_fmt!(
             "Map sector [{},{}], which is{} your sector. Look which direction?",
             panel.y, panel.x, tmp_str
         );
@@ -1497,7 +1511,7 @@ fn command_locate_on_map() {
             player_coord.y -= ((dir_val - 1) / 3 - 1) * SCREEN_HEIGHT / 2;
 
             if player_coord.x < 0 || player_coord.y < 0 || player_coord.x >= dg().width as i32 || player_coord.y >= dg().width as i32 {
-                print_message(Some("You've gone past the end of your map."));
+                print_message(Some(tr!("You've gone past the end of your map.")));
 
                 player_coord.x -= ((dir_val - 1) % 3 - 1) * SCREEN_WIDTH / 2;
                 player_coord.y += ((dir_val - 1) / 3 - 1) * SCREEN_HEIGHT / 2;
@@ -1556,9 +1570,9 @@ fn do_wizard_commands(command: char) {
         '\\' => {
             // Display wizard help
             if config::options::options().use_roguelike_keys {
-                display_text_help_file(config::files::HELP_ROGUELIKE_WIZARD);
+                display_text_help_file(&config::files::localized(config::files::HELP_ROGUELIKE_WIZARD));
             } else {
-                display_text_help_file(config::files::HELP_WIZARD);
+                display_text_help_file(&config::files::localized(config::files::HELP_WIZARD));
             }
         }
         CTRL_I => {
@@ -1597,9 +1611,9 @@ fn do_wizard_commands(command: char) {
         }
         _ => {
             if config::options::options().use_roguelike_keys {
-                put_string_clear_to_eol("Type '?' or '\\' for help.", Coord::new(0, 0));
+                put_string_clear_to_eol(tr!("Type '?' or '\\' for help."), Coord::new(0, 0));
             } else {
-                put_string_clear_to_eol("Type '?' or ^H for help.", Coord::new(0, 0));
+                put_string_clear_to_eol(tr!("Type '?' or ^H for help."), Coord::new(0, 0));
             }
         }
     }
@@ -1622,7 +1636,7 @@ fn do_command(command: char) {
         }
         CTRL_V => {
             // (^V)iew license
-            display_text_help_file(config::files::LICENSE);
+            display_text_help_file(&config::files::localized(config::files::LICENSE));
             game().player_free_turn = true;
         }
         CTRL_W => {
@@ -1687,9 +1701,9 @@ fn do_command(command: char) {
         '?' => {
             // (?) help with commands
             if config::options::options().use_roguelike_keys {
-                display_text_help_file(config::files::HELP_ROGUELIKE);
+                display_text_help_file(&config::files::localized(config::files::HELP_ROGUELIKE));
             } else {
-                display_text_help_file(config::files::HELP);
+                display_text_help_file(&config::files::localized(config::files::HELP));
             }
             game().player_free_turn = true;
         }
@@ -1762,7 +1776,7 @@ fn do_command(command: char) {
         'Z' => staff_use(),                 // (Z)ap a staff  (u)se a staff
         'v' => {
             // (v)ersion of game
-            display_text_help_file(config::files::VERSIONS_HISTORY);
+            display_text_help_file(&config::files::localized(config::files::VERSIONS_HISTORY));
             game().player_free_turn = true;
         }
         'w' => inventory_execute_command('w'), // (w)ear or wield
@@ -1776,7 +1790,7 @@ fn do_command(command: char) {
             if game().wizard_mode {
                 do_wizard_commands(command);
             } else {
-                put_string_clear_to_eol("Type '?' for help.", Coord::new(0, 0));
+                put_string_clear_to_eol(tr!("Type '?' for help."), Coord::new(0, 0));
             }
         }
     }
@@ -1896,27 +1910,27 @@ fn examine_book() {
     let mut item_pos_start = 0i32;
     let mut item_pos_end = 0i32;
     if !inventory_find_range(TV_MAGIC_BOOK as i32, TV_PRAYER_BOOK as i32, &mut item_pos_start, &mut item_pos_end) {
-        print_message(Some("You are not carrying any books."));
+        print_message(Some(tr!("You are not carrying any books.")));
         return;
     }
 
     if py().flags.blind > 0 {
-        print_message(Some("You can't see to read your spell book!"));
+        print_message(Some(tr!("You can't see to read your spell book!")));
         return;
     }
 
     if player_no_light() {
-        print_message(Some("You have no light to read by."));
+        print_message(Some(tr!("You have no light to read by.")));
         return;
     }
 
     if py().flags.confused > 0 {
-        print_message(Some("You are too confused."));
+        print_message(Some(tr!("You are too confused.")));
         return;
     }
 
     let mut item_id = 0i32;
-    if inventory_get_input_for_item_id(&mut item_id, "Which Book?", item_pos_start, item_pos_end, None, None) {
+    if inventory_get_input_for_item_id(&mut item_id, tr!("Which Book?"), item_pos_start, item_pos_end, None, None) {
         let mut spell_index = [0i32; 31];
         let mut can_read = true;
 
@@ -1936,7 +1950,7 @@ fn examine_book() {
         }
 
         if !can_read {
-            print_message(Some("You do not understand the language."));
+            print_message(Some(tr!("You do not understand the language.")));
             return;
         }
 
@@ -1966,12 +1980,12 @@ fn dungeon_go_up_level() {
     if tile_id != 0 && game().treasure.list[tile_id as usize].category_id == TV_UP_STAIR {
         dg().current_level -= 1;
 
-        print_message(Some("You enter a maze of up staircases."));
-        print_message(Some("You pass through a one-way door."));
+        print_message(Some(tr!("You enter a maze of up staircases.")));
+        print_message(Some(tr!("You pass through a one-way door.")));
 
         dg().generate_new_level = true;
     } else {
-        print_message(Some("I see no up staircase here."));
+        print_message(Some(tr!("I see no up staircase here.")));
         game().player_free_turn = true;
     }
 }
@@ -1983,12 +1997,12 @@ fn dungeon_go_down_level() {
     if tile_id != 0 && game().treasure.list[tile_id as usize].category_id == TV_DOWN_STAIR {
         dg().current_level += 1;
 
-        print_message(Some("You enter a maze of down staircases."));
-        print_message(Some("You pass through a one-way door."));
+        print_message(Some(tr!("You enter a maze of down staircases.")));
+        print_message(Some(tr!("You pass through a one-way door.")));
 
         dg().generate_new_level = true;
     } else {
-        print_message(Some("I see no down staircase here."));
+        print_message(Some(tr!("I see no down staircase here.")));
         game().player_free_turn = true;
     }
 }
@@ -2008,7 +2022,7 @@ fn dungeon_jam_door() {
     let tile = *dg().tile(coord);
 
     if tile.treasure_id == 0 {
-        print_message(Some("That isn't a door!"));
+        print_message(Some(tr!("That isn't a door!")));
         return;
     }
 
@@ -2016,12 +2030,12 @@ fn dungeon_jam_door() {
     let item_id = game().treasure.list[treasure_id].category_id;
 
     if item_id != TV_CLOSED_DOOR && item_id != TV_OPEN_DOOR {
-        print_message(Some("That isn't a door!"));
+        print_message(Some(tr!("That isn't a door!")));
         return;
     }
 
     if item_id == TV_OPEN_DOOR {
-        print_message(Some("The door must be closed first."));
+        print_message(Some(tr!("The door must be closed first.")));
         return;
     }
 
@@ -2033,7 +2047,7 @@ fn dungeon_jam_door() {
         if inventory_find_range(TV_SPIKE as i32, TV_NEVER as i32, &mut item_pos_start, &mut item_pos_end) {
             game().player_free_turn = false;
 
-            print_message_no_command_interrupt("You jam the door with a spike.");
+            print_message_no_command_interrupt(tr!("You jam the door with a spike."));
 
             let mut misc_use = game().treasure.list[treasure_id].misc_use;
             if misc_use > 0 {
@@ -2054,13 +2068,13 @@ fn dungeon_jam_door() {
                 inventory_destroy_item(item_pos_start);
             }
         } else {
-            print_message(Some("But you have no spikes."));
+            print_message(Some(tr!("But you have no spikes.")));
         }
     } else {
         game().player_free_turn = false;
 
         let name = CREATURES_LIST[monsters()[tile.creature_id as usize].creature_id as usize].name;
-        let msg = format!("The {} is in your way!", name);
+        let msg = tr_fmt!("The {} is in your way!", name);
         print_message(Some(&msg));
     }
 }
@@ -2070,14 +2084,14 @@ fn inventory_refill_lamp() {
     game().player_free_turn = true;
 
     if py().inventory[LIGHT].sub_category_id != 0 {
-        print_message(Some("But you are not using a lamp."));
+        print_message(Some(tr!("But you are not using a lamp.")));
         return;
     }
 
     let mut item_pos_start = 0i32;
     let mut item_pos_end = 0i32;
     if !inventory_find_range(TV_FLASK as i32, TV_NEVER as i32, &mut item_pos_start, &mut item_pos_end) {
-        print_message(Some("You have no oil."));
+        print_message(Some(tr!("You have no oil.")));
         return;
     }
 
@@ -2090,14 +2104,14 @@ fn inventory_refill_lamp() {
 
     if py().inventory[LIGHT].misc_use > capacity {
         py().inventory[LIGHT].misc_use = capacity;
-        print_message(Some("Your lamp overflows, spilling oil on the ground."));
-        print_message(Some("Your lamp is full."));
+        print_message(Some(tr!("Your lamp overflows, spilling oil on the ground.")));
+        print_message(Some(tr!("Your lamp is full.")));
     } else if py().inventory[LIGHT].misc_use > capacity / 2 {
-        print_message(Some("Your lamp is more than half full."));
+        print_message(Some(tr!("Your lamp is more than half full.")));
     } else if py().inventory[LIGHT].misc_use == capacity / 2 {
-        print_message(Some("Your lamp is half full."));
+        print_message(Some(tr!("Your lamp is half full.")));
     } else {
-        print_message(Some("Your lamp is less than half full."));
+        print_message(Some(tr!("Your lamp is less than half full.")));
     }
 
     item_type_remaining_count_description(item_pos_start as usize);

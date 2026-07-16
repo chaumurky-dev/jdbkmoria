@@ -12,6 +12,7 @@ use crate::game::game;
 use crate::globals::RacyCell;
 use crate::types::{Coord, MORIA_MESSAGE_SIZE};
 use crate::ui::{ctrl_key, DELETE, ESCAPE, MESSAGE_HISTORY_SIZE, MSG_LINE};
+use crate::tr;
 
 static CURSES_ON: RacyCell<bool> = RacyCell::new(false);
 
@@ -75,12 +76,28 @@ pub fn terminal_initialize() -> bool {
     // let's do something about that! (must be set before initscr)
     std::env::set_var("ESCDELAY", "50");
 
+    // jdbkmoria extension: adopt the system locale so ncursesw renders
+    // multi-byte UTF-8 (accented French text, locale digit glyphs)
+    // correctly. Must happen before initscr. If the environment supplies
+    // no UTF-8 locale (e.g. LANG=C), fall back to C.UTF-8 so translated
+    // text still displays.
+    unsafe {
+        let empty = std::ffi::CString::new("").unwrap();
+        libc::setlocale(libc::LC_ALL, empty.as_ptr());
+        let codeset = libc::nl_langinfo(libc::CODESET);
+        let is_utf8 = !codeset.is_null() && std::ffi::CStr::from_ptr(codeset).to_string_lossy().eq_ignore_ascii_case("UTF-8");
+        if !is_utf8 {
+            let c_utf8 = std::ffi::CString::new("C.UTF-8").unwrap();
+            libc::setlocale(libc::LC_ALL, c_utf8.as_ptr());
+        }
+    }
+
     let window = pancurses::initscr();
 
     // Check we have enough screen. -CJS-
     if window.get_max_y() < 24 || window.get_max_x() < 80 {
         pancurses::endwin();
-        println!("Screen too small for moria.");
+        println!("{}", tr!("Screen too small for moria."));
         return false;
     }
 
@@ -294,7 +311,7 @@ pub fn print_message(msg: Option<&str>) {
                 old_len = 73;
             }
 
-            put_string(" -more-", Coord::new(MSG_LINE, old_len));
+            put_string(&format!(" {}", tr!("-more-")), Coord::new(MSG_LINE, old_len));
 
             loop {
                 let key = get_key_input();
@@ -642,7 +659,7 @@ pub fn get_input_confirmation_with_abort(column: i32, prompt: &str) -> i32 {
         stdscr().mv(0, 73);
     }
 
-    stdscr().addstr(" [y/n]");
+    stdscr().addstr(format!(" {}", tr!("[y/n]")));
 
     let mut key = ' ';
     while key == ' ' {
@@ -651,16 +668,22 @@ pub fn get_input_confirmation_with_abort(column: i32, prompt: &str) -> i32 {
 
     message_line_clear();
 
-    match key {
-        'N' | 'n' => 0,
-        'Y' | 'y' => 1,
-        _ => -1,
+    // jdbkmoria extension: match the yes/no letters shown by the locale's
+    // "[y/n]" translation (e.g. fr_CA displays "[o/n]" for "oui"/"non").
+    let def = crate::locale::locale();
+    let key = key.to_ascii_uppercase();
+    if key == def.no_key {
+        0
+    } else if key == def.yes_key {
+        1
+    } else {
+        -1
     }
 }
 
 // Pauses for user response before returning -RAK-
 pub fn wait_for_continue_key(line_number: i32) {
-    put_string_clear_to_eol("[ press any key to continue ]", Coord::new(line_number, 23));
+    put_string_clear_to_eol(tr!("[ press any key to continue ]"), Coord::new(line_number, 23));
     get_key_input();
     erase_line(Coord::new(line_number, 0));
 }

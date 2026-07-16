@@ -1,0 +1,56 @@
+Résumé des commandes (@ = nombre, ~ = direction, ^R redessine, ESC annule)
+  a        Viser et tirer (baguette)   | @ B ~      Frapper objet ou monstre
+  b        Feuilleter un livre         |   C        Description du personnage
+  c ~      Fermer une porte            | @ D ~      Désamorcer piège/coffre
+  d        Déposer un objet            |   E        Manger de la nourriture
+  e        Liste d'équipement          |   F        Remplir la lampe d'huile
+  f        Tirer/Lancer un objet       |   G        Apprendre nouveaux sorts
+  i        Liste d'inventaire          |   L        Localiser sur la carte
+@ j ~      Coincer une porte (pic)     |   M        Carte (taille réduite)
+  l ~      Regarder une direction      | @ R        Repos (nombre ou *=complet)
+  m        Lancer un sort              |   S        Mode recherche
+@ o ~      Ouvrir porte/coffre         | @ T ~      Creuser dans une direction
+  p        Prier                       |   V        Voir le tableau des scores
+  q        Boire une potion            |   =        Régler les options
+  r        Lire un parchemin           |   ?        Voir cette page
+@ s        Chercher pièges/portes      |   {        Inscrire un objet
+  t        Retirer un objet            | @ -        Se déplacer sans ramasser
+  u        Utiliser un bâton           |   . ~      Courir dans une direction
+  v        Version et crédits          |   /        Identifier un caractère
+  w        Porter/Manier un objet      |   CTRL-K   Quitter le jeu
+  x        Échanger arme               | @ CTRL-P   Répéter le dernier message
+  <        Monter l'escalier           |   CTRL-X   Sauvegarder et quitter
+  >        Descendre l'escalier        | @ ~        Pour se déplacer
+  g ~      Tâter un tableau            |
+Directions :    7  8  9
+                4  5  6  [5 pour repos]
+                1  2  3
+
+Pour donner un nombre à une commande, tapez '#', suivi des chiffres. Un
+nombre de 0 correspond par défaut à 99. Les nombres ne fonctionnent
+qu'avec certaines commandes, et seront interrompus par ce qui met fin à un
+repos ou une course. En particulier, taper un caractère pendant l'exécution
+d'une commande comptée l'interrompra. Pour un déplacement compté, appuyez
+sur espace après le nombre, puis entrez la commande, qui peut être un chiffre.
+Les recherches ou creusages comptés s'arrêtent en cas de succès, ou si vous
+êtes attaqué. Un nombre avec control-P précise le nombre de messages
+précédents à afficher.
+
+Control-R redessine l'écran à tout moment où il est saisi, pas seulement
+au niveau des commandes. Les commandes de contrôle peuvent être saisies
+d'une seule touche, ou de deux touches en tapant ^ puis une lettre.
+
+Tapez ESCAPE pour interrompre la commande de regard à tout moment.
+
+Certaines commandes demandent un sort ou un objet de l'inventaire. La
+sélection se fait par une lettre - entrer une majuscule affiche une
+description, et la sélection peut être annulée.
+
+Taper `R*' vous fera vous reposer jusqu'à ce que votre mana et vos points
+de vie atteignent leur maximum.
+
+Umoria est un logiciel libre, et vous êtes invité à le redistribuer
+sous certaines conditions ; pour les détails, tapez control-V.
+
+Umoria est fourni sans AUCUNE GARANTIE ; pour les détails,
+tapez control-V et consultez les sections 15 à 17 de la licence.

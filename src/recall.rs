@@ -18,6 +18,7 @@ use crate::data_recall::{
     RECALL_DESCRIPTION_MOVE, RECALL_DESCRIPTION_SPELL, RECALL_DESCRIPTION_WEAKNESS,
 };
 use crate::game::game;
+use crate::locale::format_number;
 use crate::monster::{Creature, MON_MAX_ATTACKS, MON_MAX_CREATURES};
 use crate::player::py;
 use crate::recall_data::{creature_recall, Recall};
@@ -26,6 +27,7 @@ use crate::ui::ESCAPE;
 use crate::ui_io::{
     erase_line, get_input_confirmation_with_abort, get_key_input, put_string_clear_to_eol, terminal_restore_screen, terminal_save_screen,
 };
+use crate::{tr, tr_fmt};
 
 fn plural(c: u16, ss: &'static str, sp: &'static str) -> &'static str {
     if c == 1 {
@@ -44,8 +46,14 @@ fn knowdamage(l: i32, a: i32, d: i32) -> bool {
 
 // Buffers up printed text and word-wraps it across screen lines,
 // mirroring the C `memoryPrint()`/`roff_buffer` behavior. -CJS-
+//
+// jdbkmoria extension: the buffer holds chars rather than raw bytes so
+// multi-byte UTF-8 (accented French recall text) can't be split across a
+// character boundary, and the MORIA_MESSAGE_SIZE wrap width counts display
+// chars instead of bytes so translated lines don't wrap early. For
+// pure-ASCII text this is identical to the previous byte-based behavior.
 struct Roff {
-    buffer: Vec<u8>,
+    buffer: Vec<char>,
     print_line: i32,
 }
 
@@ -56,26 +64,44 @@ impl Roff {
 
     // Print out strings, filling up lines as we go.
     fn print(&mut self, text: &str) {
-        for &byte in text.as_bytes() {
-            self.buffer.push(byte);
+        for ch in text.chars() {
+            self.buffer.push(ch);
 
-            if byte == b'\n' || self.buffer.len() >= MORIA_MESSAGE_SIZE {
-                let mut q = self.buffer.len() - 1;
-
-                if byte != b'\n' {
-                    while self.buffer[q] != b' ' {
-                        q -= 1;
-                    }
-                }
-
-                let line = String::from_utf8_lossy(&self.buffer[0..q]).into_owned();
+            if ch == '\n' || self.buffer.len() >= MORIA_MESSAGE_SIZE {
+                let (line, remainder) = roff_split_buffer(&self.buffer, ch);
                 put_string_clear_to_eol(&line, Coord::new(self.print_line, 0));
                 self.print_line += 1;
 
-                self.buffer = self.buffer[q + 1..].to_vec();
+                self.buffer = remainder;
             }
         }
     }
+}
+
+// Splits a just-triggered Roff buffer into the line to print and the
+// leftover chars to keep buffering. `just_pushed` is the char that
+// triggered the flush: a literal newline splits right before it, otherwise
+// the buffer merely hit the wrap width and the split backs up to the
+// nearest preceding space (dropping it) so words aren't broken.
+//
+// jdbkmoria extension: operates on chars (not bytes), so a multi-byte
+// UTF-8 char (accented French recall text) can never be split across a
+// character boundary, and the MORIA_MESSAGE_SIZE trigger in `Roff::print`
+// counts chars rather than bytes. Factored out so it can be unit tested
+// without a curses screen.
+pub fn roff_split_buffer(buffer: &[char], just_pushed: char) -> (String, Vec<char>) {
+    let mut q = buffer.len() - 1;
+
+    if just_pushed != '\n' {
+        while buffer[q] != ' ' {
+            q -= 1;
+        }
+    }
+
+    let line: String = buffer[0..q].iter().collect();
+    let remainder = buffer[q + 1..].to_vec();
+
+    (line, remainder)
 }
 
 // Do we know anything about this monster?
@@ -133,26 +159,26 @@ fn memory_wizard_mode_init(memory: &mut Recall, creature: &Creature) {
 // Conflict history.
 fn memory_conflict_history(roff: &mut Roff, deaths: u16, kills: u16) {
     if deaths != 0 {
-        roff.print(&format!(
+        roff.print(&tr_fmt!(
             "{} of the contributors to your monster memory {}",
             deaths,
-            plural(deaths, "has", "have")
+            plural(deaths, tr!("has"), tr!("have"))
         ));
-        roff.print(" been killed by this creature, and ");
+        roff.print(tr!(" been killed by this creature, and "));
         if kills == 0 {
-            roff.print("it is not ever known to have been defeated.");
+            roff.print(tr!("it is not ever known to have been defeated."));
         } else {
-            roff.print(&format!(
+            roff.print(&tr_fmt!(
                 "at least {} of the beasts {} been exterminated.",
                 kills,
-                plural(kills, "has", "have")
+                plural(kills, tr!("has"), tr!("have"))
             ));
         }
     } else if kills != 0 {
-        roff.print(&format!("At least {} of these creatures {}", kills, plural(kills, "has", "have")));
-        roff.print(" been killed by contributors to your monster memory.");
+        roff.print(&tr_fmt!("At least {} of these creatures {}", kills, plural(kills, tr!("has"), tr!("have"))));
+        roff.print(tr!(" been killed by contributors to your monster memory."));
     } else {
-        roff.print("No known battles to the death are recalled.");
+        roff.print(tr!("No known battles to the death are recalled."));
     }
 }
 
@@ -162,7 +188,7 @@ fn memory_depth_found_at(roff: &mut Roff, mut level: u8, kills: u16) -> bool {
 
     if level == 0 {
         known = true;
-        roff.print(" It lives in the town");
+        roff.print(tr!(" It lives in the town"));
     } else if kills != 0 {
         known = true;
 
@@ -171,7 +197,7 @@ fn memory_depth_found_at(roff: &mut Roff, mut level: u8, kills: u16) -> bool {
             level = MON_ENDGAME_LEVEL;
         }
 
-        roff.print(&format!(" It is normally found at depths of {} feet", level as i32 * 50));
+        roff.print(&tr_fmt!(" It is normally found at depths of {} feet", level as i32 * 50));
     }
 
     known
@@ -184,64 +210,64 @@ fn memory_movement(roff: &mut Roff, rc_move: u32, monster_speed_raw: i32, is_kno
 
     if (rc_move & CM_ALL_MV_FLAGS) != 0 {
         if is_known {
-            roff.print(", and");
+            roff.print(tr!(", and"));
         } else {
-            roff.print(" It");
+            roff.print(tr!(" It"));
             is_known = true;
         }
 
-        roff.print(" moves");
+        roff.print(tr!(" moves"));
 
         if (rc_move & CM_RANDOM_MOVE) != 0 {
-            roff.print(RECALL_DESCRIPTION_HOW_MUCH[((rc_move & CM_RANDOM_MOVE) >> 3) as usize]);
-            roff.print(" erratically");
+            roff.print(tr!(RECALL_DESCRIPTION_HOW_MUCH[((rc_move & CM_RANDOM_MOVE) >> 3) as usize]));
+            roff.print(tr!(" erratically"));
         }
 
         if monster_speed == 1 {
-            roff.print(" at normal speed");
+            roff.print(tr!(" at normal speed"));
         } else {
             if (rc_move & CM_RANDOM_MOVE) != 0 {
-                roff.print(", and");
+                roff.print(tr!(", and"));
             }
 
             if monster_speed <= 0 {
                 if monster_speed == -1 {
-                    roff.print(" very");
+                    roff.print(tr!(" very"));
                 } else if monster_speed < -1 {
-                    roff.print(" incredibly");
+                    roff.print(tr!(" incredibly"));
                 }
-                roff.print(" slowly");
+                roff.print(tr!(" slowly"));
             } else {
                 if monster_speed == 3 {
-                    roff.print(" very");
+                    roff.print(tr!(" very"));
                 } else if monster_speed > 3 {
-                    roff.print(" unbelievably");
+                    roff.print(tr!(" unbelievably"));
                 }
-                roff.print(" quickly");
+                roff.print(tr!(" quickly"));
             }
         }
     }
 
     if (rc_move & CM_ATTACK_ONLY) != 0 {
         if is_known {
-            roff.print(", but");
+            roff.print(tr!(", but"));
         } else {
-            roff.print(" It");
+            roff.print(tr!(" It"));
             is_known = true;
         }
 
-        roff.print(" does not deign to chase intruders");
+        roff.print(tr!(" does not deign to chase intruders"));
     }
 
     if (rc_move & CM_ONLY_MAGIC) != 0 {
         if is_known {
-            roff.print(", but");
+            roff.print(tr!(", but"));
         } else {
-            roff.print(" It");
+            roff.print(tr!(" It"));
             is_known = true;
         }
 
-        roff.print(" always moves and attacks by using magic");
+        roff.print(tr!(" always moves and attacks by using magic"));
     }
 
     is_known
@@ -250,16 +276,16 @@ fn memory_movement(roff: &mut Roff, rc_move: u32, monster_speed_raw: i32, is_kno
 // Kill it once to know experience, and quality (evil, undead, monstrous).
 // The quality of being a dragon is obvious.
 fn memory_kill_points(roff: &mut Roff, creature_defense: u16, monster_exp: u16, level: u8) {
-    roff.print(" A kill of this");
+    roff.print(tr!(" A kill of this"));
 
     if (creature_defense & CD_ANIMAL) != 0 {
-        roff.print(" natural");
+        roff.print(tr!(" natural"));
     }
     if (creature_defense & CD_EVIL) != 0 {
-        roff.print(" evil");
+        roff.print(tr!(" evil"));
     }
     if (creature_defense & CD_UNDEAD) != 0 {
-        roff.print(" undead");
+        roff.print(tr!(" undead"));
     }
 
     let player_level = py().misc.level as i32;
@@ -272,24 +298,34 @@ fn memory_kill_points(roff: &mut Roff, creature_defense: u16, monster_exp: u16, 
     // must use long arithmetic to avoid overflow
     let remainder = ((((monster_exp as i32 * level as i32) % player_level) * 1000 / player_level + 5) / 10) as u32;
 
-    let plural_char = if quotient == 1 && remainder == 0 { '\0' } else { 's' };
+    let number = format!("{}.{:02}", format_number(quotient as i64), remainder);
 
-    roff.print(&format!(" creature is worth {}.{:02} point{}", quotient, remainder, plural_char));
+    if quotient == 1 && remainder == 0 {
+        roff.print(&tr_fmt!(" creature is worth {} point", number));
+        // Preserve the original C-derived formatting quirk: the singular
+        // case appended a NUL sentinel byte (plural_char = '\0') instead of
+        // an "s", rather than nothing at all.
+        roff.print("\0");
+    } else {
+        roff.print(&tr_fmt!(" creature is worth {} points", number));
+    }
 
-    let p: &str = if player_level / 10 == 1 {
-        "th"
+    let suffix: &str = if player_level / 10 == 1 {
+        tr!("th")
     } else {
         match player_level % 10 {
-            1 => "st",
-            2 => "nd",
-            3 => "rd",
-            _ => "th",
+            1 => tr!("st"),
+            2 => tr!("nd"),
+            3 => tr!("rd"),
+            _ => tr!("th"),
         }
     };
 
-    let q: &str = if player_level == 8 || player_level == 11 || player_level == 18 { "n" } else { "" };
-
-    roff.print(&format!(" for a{} {}{} level character.", q, player_level, p));
+    if player_level == 8 || player_level == 11 || player_level == 18 {
+        roff.print(&tr_fmt!(" for an {}{} level character.", player_level, suffix));
+    } else {
+        roff.print(&tr_fmt!(" for a {}{} level character.", player_level, suffix));
+    }
 }
 
 // Spells known, if have been used against us.
@@ -306,17 +342,17 @@ fn memory_magic_skills(roff: &mut Roff, memory_spell_flags: u32, monster_spell_f
 
             if known {
                 if (monster_spell_flags & CS_FREQ) != 0 {
-                    roff.print(" It can breathe ");
+                    roff.print(tr!(" It can breathe "));
                 } else {
-                    roff.print(" It is resistant to ");
+                    roff.print(tr!(" It is resistant to "));
                 }
                 known = false;
             } else if (spell_flags & CS_BREATHE) != 0 {
                 roff.print(", ");
             } else {
-                roff.print(" and ");
+                roff.print(tr!(" and "));
             }
-            roff.print(RECALL_DESCRIPTION_BREATH[i as usize]);
+            roff.print(tr!(RECALL_DESCRIPTION_BREATH[i as usize]));
         }
         i += 1;
     }
@@ -330,18 +366,18 @@ fn memory_magic_skills(roff: &mut Roff, memory_spell_flags: u32, monster_spell_f
 
             if known {
                 if (memory_spell_flags & CS_BREATHE) != 0 {
-                    roff.print(", and is also");
+                    roff.print(tr!(", and is also"));
                 } else {
-                    roff.print(" It is");
+                    roff.print(tr!(" It is"));
                 }
-                roff.print(" magical, casting spells which ");
+                roff.print(tr!(" magical, casting spells which "));
                 known = false;
             } else if (spell_flags & CS_SPELLS) != 0 {
                 roff.print(", ");
             } else {
-                roff.print(" or ");
+                roff.print(tr!(" or "));
             }
-            roff.print(RECALL_DESCRIPTION_SPELL[j as usize]);
+            roff.print(tr!(RECALL_DESCRIPTION_SPELL[j as usize]));
         }
         j += 1;
     }
@@ -349,7 +385,7 @@ fn memory_magic_skills(roff: &mut Roff, memory_spell_flags: u32, monster_spell_f
     if (memory_spell_flags & (CS_BREATHE | CS_SPELLS)) != 0 {
         // Could offset by level
         if (monster_spell_flags & CS_FREQ) > 5 {
-            roff.print(&format!("; 1 time in {}", creature_spell_flags & CS_FREQ));
+            roff.print(&tr_fmt!("; 1 time in {}", creature_spell_flags & CS_FREQ));
         }
         roff.print(".");
     }
@@ -362,14 +398,13 @@ fn memory_kill_difficulty(roff: &mut Roff, creature: &Creature, monster_kills: u
         return;
     }
 
-    roff.print(&format!(" It has an armor rating of {}", creature.ac));
+    roff.print(&tr_fmt!(" It has an armor rating of {}", creature.ac));
 
-    roff.print(&format!(
-        " and a{} life rating of {}d{}.",
-        if (creature.defenses & CD_MAX_HP) != 0 { " maximized" } else { "" },
-        creature.hit_die.dice,
-        creature.hit_die.sides
-    ));
+    if (creature.defenses & CD_MAX_HP) != 0 {
+        roff.print(&tr_fmt!(" and a maximized life rating of {}d{}.", creature.hit_die.dice, creature.hit_die.sides));
+    } else {
+        roff.print(&tr_fmt!(" and a life rating of {}d{}.", creature.hit_die.dice, creature.hit_die.sides));
+    }
 }
 
 // Do we know how clever they are? Special abilities.
@@ -383,14 +418,14 @@ fn memory_special_abilities(roff: &mut Roff, move_in: u32) {
             move_val &= !(CM_INVISIBLE << i);
 
             if known {
-                roff.print(" It can ");
+                roff.print(tr!(" It can "));
                 known = false;
             } else if (move_val & CM_SPECIAL) != 0 {
                 roff.print(", ");
             } else {
-                roff.print(" and ");
+                roff.print(tr!(" and "));
             }
-            roff.print(RECALL_DESCRIPTION_MOVE[i as usize]);
+            roff.print(tr!(RECALL_DESCRIPTION_MOVE[i as usize]));
         }
         i += 1;
     }
@@ -410,14 +445,14 @@ fn memory_weaknesses(roff: &mut Roff, defense_in: u16) {
         if (defense & (CD_FROST << i)) != 0 {
             defense &= !(CD_FROST << i);
             if known {
-                roff.print(" It is susceptible to ");
+                roff.print(tr!(" It is susceptible to "));
                 known = false;
             } else if (defense & CD_WEAKNESS) != 0 {
                 roff.print(", ");
             } else {
-                roff.print(" and ");
+                roff.print(tr!(" and "));
             }
-            roff.print(RECALL_DESCRIPTION_WEAKNESS[i as usize]);
+            roff.print(tr!(RECALL_DESCRIPTION_WEAKNESS[i as usize]));
         }
         i += 1;
     }
@@ -432,33 +467,33 @@ fn memory_awareness(roff: &mut Roff, creature: &Creature, memory: &Recall) {
     let wake = memory.wake as i32;
 
     if wake * wake > creature.sleep_counter as i32 || memory.ignore == u8::MAX || (creature.sleep_counter == 0 && memory.kills >= 10) {
-        roff.print(" It ");
+        roff.print(tr!(" It "));
 
         if creature.sleep_counter > 200 {
-            roff.print("prefers to ignore");
+            roff.print(tr!("prefers to ignore"));
         } else if creature.sleep_counter > 95 {
-            roff.print("pays very little attention to");
+            roff.print(tr!("pays very little attention to"));
         } else if creature.sleep_counter > 75 {
-            roff.print("pays little attention to");
+            roff.print(tr!("pays little attention to"));
         } else if creature.sleep_counter > 45 {
-            roff.print("tends to overlook");
+            roff.print(tr!("tends to overlook"));
         } else if creature.sleep_counter > 25 {
-            roff.print("takes quite a while to see");
+            roff.print(tr!("takes quite a while to see"));
         } else if creature.sleep_counter > 10 {
-            roff.print("takes a while to see");
+            roff.print(tr!("takes a while to see"));
         } else if creature.sleep_counter > 5 {
-            roff.print("is fairly observant of");
+            roff.print(tr!("is fairly observant of"));
         } else if creature.sleep_counter > 3 {
-            roff.print("is observant of");
+            roff.print(tr!("is observant of"));
         } else if creature.sleep_counter > 1 {
-            roff.print("is very observant of");
+            roff.print(tr!("is very observant of"));
         } else if creature.sleep_counter != 0 {
-            roff.print("is vigilant for");
+            roff.print(tr!("is vigilant for"));
         } else {
-            roff.print("is ever vigilant for");
+            roff.print(tr!("is ever vigilant for"));
         }
 
-        roff.print(&format!(
+        roff.print(&tr_fmt!(
             " intruders, which it may notice from {} feet.",
             10 * creature.area_affect_radius as i32
         ));
@@ -471,45 +506,46 @@ fn memory_loot_carried(roff: &mut Roff, creature_move: u32, memory_move: u32) {
         return;
     }
 
-    roff.print(" It may");
+    roff.print(tr!(" It may"));
 
     let carrying_chance = (memory_move & CM_TREASURE) >> CM_TR_SHIFT;
 
     if carrying_chance == 1 {
         if (creature_move & CM_TREASURE) == CM_60_RANDOM {
-            roff.print(" sometimes");
+            roff.print(tr!(" sometimes"));
         } else {
-            roff.print(" often");
+            roff.print(tr!(" often"));
         }
     } else if carrying_chance == 2 && (creature_move & CM_TREASURE) == (CM_60_RANDOM | CM_90_RANDOM) {
-        roff.print(" often");
+        roff.print(tr!(" often"));
     }
 
-    roff.print(" carry");
+    roff.print(tr!(" carry"));
 
-    let mut p: &str = if (memory_move & CM_SMALL_OBJ) != 0 { " small objects" } else { " objects" };
+    let mut p: &str = if (memory_move & CM_SMALL_OBJ) != 0 { tr!(" small objects") } else { tr!(" objects") };
 
     if carrying_chance == 1 {
-        p = if (memory_move & CM_SMALL_OBJ) != 0 { " a small object" } else { " an object" };
+        p = if (memory_move & CM_SMALL_OBJ) != 0 { tr!(" a small object") } else { tr!(" an object") };
     } else if carrying_chance == 2 {
-        roff.print(" one or two");
+        roff.print(tr!(" one or two"));
     } else {
-        roff.print(&format!(" up to {}", carrying_chance));
+        roff.print(&tr_fmt!(" up to {}", carrying_chance));
     }
 
     if (memory_move & CM_CARRY_OBJ) != 0 {
         roff.print(p);
         if (memory_move & CM_CARRY_GOLD) != 0 {
-            roff.print(" or treasure");
             if carrying_chance > 1 {
-                roff.print("s");
+                roff.print(tr!(" or treasures"));
+            } else {
+                roff.print(tr!(" or treasure"));
             }
         }
         roff.print(".");
     } else if carrying_chance != 1 {
-        roff.print(" treasures.");
+        roff.print(tr!(" treasures."));
     } else {
-        roff.print(" treasure.");
+        roff.print(tr!(" treasure."));
     }
 }
 
@@ -539,9 +575,9 @@ fn memory_attack_number_and_damage(roff: &mut Roff, memory: &Recall, creature: &
         attack_count += 1;
 
         if attack_count == 1 {
-            roff.print(" It can ");
+            roff.print(tr!(" It can "));
         } else if attack_count == known_attacks {
-            roff.print(", and ");
+            roff.print(tr!(", and "));
         } else {
             roff.print(", ");
         }
@@ -550,24 +586,24 @@ fn memory_attack_number_and_damage(roff: &mut Roff, memory: &Recall, creature: &
             attack_description_id = 0;
         }
 
-        roff.print(RECALL_DESCRIPTION_ATTACK_METHOD[attack_description_id as usize]);
+        roff.print(tr!(RECALL_DESCRIPTION_ATTACK_METHOD[attack_description_id as usize]));
 
         if attack_type != 1 || (dice.dice > 0 && dice.sides > 0) {
-            roff.print(" to ");
+            roff.print(tr!(" to "));
 
             if attack_type > 24 {
                 attack_type = 0;
             }
 
-            roff.print(RECALL_DESCRIPTION_ATTACK_TYPE[attack_type as usize]);
+            roff.print(tr!(RECALL_DESCRIPTION_ATTACK_TYPE[attack_type as usize]));
 
             if dice.dice != 0 && dice.sides != 0 {
                 if knowdamage(creature.level as i32, memory.attacks[i] as i32, dice.dice as i32 * dice.sides as i32) {
                     // Loss of experience
                     if attack_type == 19 {
-                        roff.print(" by");
+                        roff.print(tr!(" by"));
                     } else {
-                        roff.print(" with damage");
+                        roff.print(tr!(" with damage"));
                     }
 
                     roff.print(&format!(" {}d{}", dice.dice, dice.sides));
@@ -579,9 +615,9 @@ fn memory_attack_number_and_damage(roff: &mut Roff, memory: &Recall, creature: &
     if attack_count != 0 {
         roff.print(".");
     } else if known_attacks > 0 && memory.attacks[0] >= 10 {
-        roff.print(" It has no physical attacks.");
+        roff.print(tr!(" It has no physical attacks."));
     } else {
-        roff.print(" Nothing is known about its attack.");
+        roff.print(tr!(" Nothing is known about its attack."));
     }
 }
 
@@ -609,7 +645,7 @@ pub fn memory_recall(monster_id: i32) -> char {
     let defense = memory.defenses & creature.defenses;
 
     // Start the paragraph for the core monster description
-    roff.print(&format!("The {}:\n", creature.name));
+    roff.print(&tr_fmt!("The {}:\n", tr!(creature.name)));
 
     memory_conflict_history(&mut roff, memory.deaths, memory.kills);
     let known = memory_depth_found_at(&mut roff, creature.level, memory.kills);
@@ -633,16 +669,16 @@ pub fn memory_recall(monster_id: i32) -> char {
     memory_weaknesses(&mut roff, defense);
 
     if (defense & CD_INFRA) != 0 {
-        roff.print(" It is warm blooded");
+        roff.print(tr!(" It is warm blooded"));
     }
 
     if (defense & CD_NO_SLEEP) != 0 {
         if (defense & CD_INFRA) != 0 {
-            roff.print(", and");
+            roff.print(tr!(", and"));
         } else {
-            roff.print(" It");
+            roff.print(tr!(" It"));
         }
-        roff.print(" cannot be charmed or slept");
+        roff.print(tr!(" cannot be charmed or slept"));
     }
 
     if (defense & (CD_NO_SLEEP | CD_INFRA)) != 0 {
@@ -657,11 +693,11 @@ pub fn memory_recall(monster_id: i32) -> char {
 
     // Always know the win creature.
     if (creature.movement & CM_WIN) != 0 {
-        roff.print(" Killing one of these wins the game!");
+        roff.print(tr!(" Killing one of these wins the game!"));
     }
 
     roff.print("\n");
-    put_string_clear_to_eol("--pause--", Coord::new(roff.print_line, 0));
+    put_string_clear_to_eol(tr!("--pause--"), Coord::new(roff.print_line, 0));
 
     if let Some(saved) = saved_memory {
         creature_recall()[idx] = saved;
@@ -677,7 +713,7 @@ pub fn recall_monster_attributes(command: char) {
     for i in (0..MON_MAX_CREATURES).rev() {
         if CREATURES_LIST[i].sprite as char == command && memory_monster_known(&creature_recall()[i]) {
             if n == 0 {
-                let confirmed = get_input_confirmation_with_abort(40, "You recall those details?");
+                let confirmed = get_input_confirmation_with_abort(40, tr!("You recall those details?"));
                 if confirmed != 1 {
                     break;
                 }

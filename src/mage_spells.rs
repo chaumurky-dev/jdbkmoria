@@ -26,6 +26,7 @@ use crate::spells::{
 };
 use crate::spells_data::MagicSpellFlags;
 use crate::treasure::{TV_MAGIC_BOOK, TV_NEVER};
+use crate::tr;
 use crate::ui::{display_character_experience, print_character_current_mana};
 use crate::ui_inventory::inventory_get_input_for_item_id;
 use crate::ui_io::print_message;
@@ -39,22 +40,22 @@ use crate::ui_io::print_message;
 
 fn can_read_spells() -> bool {
     if py().flags.blind > 0 {
-        print_message(Some("You can't see to read your spell book!"));
+        print_message(Some(tr!("You can't see to read your spell book!")));
         return false;
     }
 
     if player_no_light() {
-        print_message(Some("You have no light to read by."));
+        print_message(Some(tr!("You have no light to read by.")));
         return false;
     }
 
     if py().flags.confused > 0 {
-        print_message(Some("You are too confused."));
+        print_message(Some(tr!("You are too confused.")));
         return false;
     }
 
     if CLASSES[py().misc.class_id as usize].class_to_use_mage_spells != config::spells::SPELL_TYPE_MAGE {
-        print_message(Some("You can't cast spells!"));
+        print_message(Some(tr!("You can't cast spells!")));
         return false;
     }
 
@@ -68,7 +69,7 @@ fn cast_spell(spell_id: i32) {
         1 => {
             // Magic Missile
             if get_direction_with_memory(None, &mut dir) {
-                spell_fire_bolt(py().pos, dir, dice_roll(Dice::new(2, 6)), MagicSpellFlags::MagicMissile as i32, SPELL_NAMES[0]);
+                spell_fire_bolt(py().pos, dir, dice_roll(Dice::new(2, 6)), MagicSpellFlags::MagicMissile as i32, tr!(SPELL_NAMES[0]));
             }
         }
         2 => {
@@ -95,7 +96,7 @@ fn cast_spell(spell_id: i32) {
         7 => {
             // Stinking Cloud
             if get_direction_with_memory(None, &mut dir) {
-                spell_fire_ball(py().pos, dir, 12, MagicSpellFlags::PoisonGas as i32, SPELL_NAMES[6]);
+                spell_fire_ball(py().pos, dir, 12, MagicSpellFlags::PoisonGas as i32, tr!(SPELL_NAMES[6]));
             }
         }
         8 => {
@@ -107,7 +108,7 @@ fn cast_spell(spell_id: i32) {
         9 => {
             // Lightning Bolt
             if get_direction_with_memory(None, &mut dir) {
-                spell_fire_bolt(py().pos, dir, dice_roll(Dice::new(4, 8)), MagicSpellFlags::Lightning as i32, SPELL_NAMES[8]);
+                spell_fire_bolt(py().pos, dir, dice_roll(Dice::new(4, 8)), MagicSpellFlags::Lightning as i32, tr!(SPELL_NAMES[8]));
             }
         }
         10 => {
@@ -137,7 +138,7 @@ fn cast_spell(spell_id: i32) {
         15 => {
             // Frost Bolt
             if get_direction_with_memory(None, &mut dir) {
-                spell_fire_bolt(py().pos, dir, dice_roll(Dice::new(6, 8)), MagicSpellFlags::Frost as i32, SPELL_NAMES[14]);
+                spell_fire_bolt(py().pos, dir, dice_roll(Dice::new(6, 8)), MagicSpellFlags::Frost as i32, tr!(SPELL_NAMES[14]));
             }
         }
         16 => {
@@ -175,7 +176,7 @@ fn cast_spell(spell_id: i32) {
         23 => {
             // Fire Bolt
             if get_direction_with_memory(None, &mut dir) {
-                spell_fire_bolt(py().pos, dir, dice_roll(Dice::new(9, 8)), MagicSpellFlags::Fire as i32, SPELL_NAMES[22]);
+                spell_fire_bolt(py().pos, dir, dice_roll(Dice::new(9, 8)), MagicSpellFlags::Fire as i32, tr!(SPELL_NAMES[22]));
             }
         }
         24 => {
@@ -187,7 +188,7 @@ fn cast_spell(spell_id: i32) {
         25 => {
             // Frost Ball
             if get_direction_with_memory(None, &mut dir) {
-                spell_fire_ball(py().pos, dir, 48, MagicSpellFlags::Frost as i32, SPELL_NAMES[24]);
+                spell_fire_ball(py().pos, dir, 48, MagicSpellFlags::Frost as i32, tr!(SPELL_NAMES[24]));
             }
         }
         26 => {
@@ -207,7 +208,7 @@ fn cast_spell(spell_id: i32) {
         29 => {
             // Fire Ball
             if get_direction_with_memory(None, &mut dir) {
-                spell_fire_ball(py().pos, dir, 72, MagicSpellFlags::Fire as i32, SPELL_NAMES[28]);
+                spell_fire_ball(py().pos, dir, 72, MagicSpellFlags::Fire as i32, tr!(SPELL_NAMES[28]));
             }
         }
         30 => {
@@ -235,20 +236,20 @@ pub fn get_and_cast_magic_spell() {
     let mut i = 0;
     let mut j = 0;
     if !inventory_find_range(TV_MAGIC_BOOK as i32, TV_NEVER as i32, &mut i, &mut j) {
-        print_message(Some("But you are not carrying any spell-books!"));
+        print_message(Some(tr!("But you are not carrying any spell-books!")));
         return;
     }
 
     let mut item_val: i32 = 0;
-    if !inventory_get_input_for_item_id(&mut item_val, "Use which spell-book?", i, j, None, None) {
+    if !inventory_get_input_for_item_id(&mut item_val, tr!("Use which spell-book?"), i, j, None, None) {
         return;
     }
 
     let mut choice = 0;
     let mut chance = 0;
-    let result = cast_spell_get_id("Cast which spell?", item_val, &mut choice, &mut chance);
+    let result = cast_spell_get_id(tr!("Cast which spell?"), item_val, &mut choice, &mut chance);
     if result < 0 {
-        print_message(Some("You don't know any spells in that book."));
+        print_message(Some(tr!("You don't know any spells in that book.")));
         return;
     }
     if result == 0 {
@@ -260,7 +261,7 @@ pub fn get_and_cast_magic_spell() {
     let magic_spell = MAGIC_SPELLS[py().misc.class_id as usize - 1][choice as usize];
 
     if random_number(100) < chance {
-        print_message(Some("You failed to get the spell off!"));
+        print_message(Some(tr!("You failed to get the spell off!")));
     } else {
         cast_spell(choice + 1);
 
@@ -277,14 +278,14 @@ pub fn get_and_cast_magic_spell() {
     }
 
     if magic_spell.mana_required as i16 > py().misc.current_mana {
-        print_message(Some("You faint from the effort!"));
+        print_message(Some(tr!("You faint from the effort!")));
 
         py().flags.paralysis = random_number(5 * (magic_spell.mana_required as i32 - py().misc.current_mana as i32)) as i16;
         py().misc.current_mana = 0;
         py().misc.current_mana_fraction = 0;
 
         if random_number(3) == 1 {
-            print_message(Some("You have damaged your health!"));
+            print_message(Some(tr!("You have damaged your health!")));
             let _ = player_stat_random_decrease(A_CON);
         }
     } else {

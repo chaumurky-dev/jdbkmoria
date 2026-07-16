@@ -30,9 +30,9 @@ fn player_can_tunnel(treasure_id: u8, tile_id: u8) -> bool {
         game().player_free_turn = true;
 
         if treasure_id == 0 {
-            print_message(Some("Tunnel through what?  Empty air?!?"));
+            print_message(Some(crate::tr!("Tunnel through what?  Empty air?!?")));
         } else {
-            print_message(Some("You can't tunnel through that."));
+            print_message(Some(crate::tr!("You can't tunnel through that.")));
         }
 
         return false;
@@ -71,9 +71,9 @@ fn dungeon_dig_granite_wall(coord: Coord, digging_ability: i32) {
     let i = random_number(1200) + 80;
 
     if player_tunnel_wall(coord, digging_ability, i) {
-        print_message(Some("You have finished the tunnel."));
+        print_message(Some(crate::tr!("You have finished the tunnel.")));
     } else {
-        print_message_no_command_interrupt("You tunnel into the granite wall.");
+        print_message_no_command_interrupt(crate::tr!("You tunnel into the granite wall."));
     }
 }
 
@@ -81,9 +81,9 @@ fn dungeon_dig_magma_wall(coord: Coord, digging_ability: i32) {
     let i = random_number(600) + 10;
 
     if player_tunnel_wall(coord, digging_ability, i) {
-        print_message(Some("You have finished the tunnel."));
+        print_message(Some(crate::tr!("You have finished the tunnel.")));
     } else {
-        print_message_no_command_interrupt("You tunnel into the magma intrusion.");
+        print_message_no_command_interrupt(crate::tr!("You tunnel into the magma intrusion."));
     }
 }
 
@@ -91,28 +91,28 @@ fn dungeon_dig_quartz_wall(coord: Coord, digging_ability: i32) {
     let i = random_number(400) + 10;
 
     if player_tunnel_wall(coord, digging_ability, i) {
-        print_message(Some("You have finished the tunnel."));
+        print_message(Some(crate::tr!("You have finished the tunnel.")));
     } else {
-        print_message_no_command_interrupt("You tunnel into the quartz vein.");
+        print_message_no_command_interrupt(crate::tr!("You tunnel into the quartz vein."));
     }
 }
 
 fn dungeon_dig_rubble(coord: Coord, digging_ability: i32) {
     if digging_ability > random_number(180) {
         dungeon_delete_object(coord);
-        print_message(Some("You have removed the rubble."));
+        print_message(Some(crate::tr!("You have removed the rubble.")));
 
         if random_number(10) == 1 {
             dungeon_place_random_object_at(coord, false);
 
             if cave_tile_visible(coord) {
-                print_message(Some("You have found something!"));
+                print_message(Some(crate::tr!("You have found something!")));
             }
         }
 
         dungeon_lite_spot(coord);
     } else {
-        print_message_no_command_interrupt("You dig in the rubble.");
+        print_message_no_command_interrupt(crate::tr!("You dig in the rubble."));
     }
 }
 
@@ -124,7 +124,7 @@ fn dungeon_dig_at_location(coord: Coord, wall_type: u8, digging_ability: i32) ->
         TILE_GRANITE_WALL => dungeon_dig_granite_wall(coord, digging_ability),
         TILE_MAGMA_WALL => dungeon_dig_magma_wall(coord, digging_ability),
         TILE_QUARTZ_WALL => dungeon_dig_quartz_wall(coord, digging_ability),
-        TILE_BOUNDARY_WALL => print_message(Some("This seems to be permanent rock.")),
+        TILE_BOUNDARY_WALL => print_message(Some(crate::tr!("This seems to be permanent rock."))),
         _ => return false,
     }
     true
@@ -166,7 +166,7 @@ pub fn player_tunnel(direction: i32) {
                     dungeon_dig_rubble(coord, digging_ability);
                 } else if game().treasure.list[tile.treasure_id as usize].category_id == TV_SECRET_DOOR {
                     // Found secret door!
-                    print_message_no_command_interrupt("You tunnel into the granite wall.");
+                    print_message_no_command_interrupt(crate::tr!("You tunnel into the granite wall."));
                     let chance = py().misc.chance_in_search as i32;
                     player_search(py().pos, chance);
                 } else {
@@ -180,5 +180,5 @@ pub fn player_tunnel(direction: i32) {
         return;
     }
 
-    print_message(Some("You dig with your hands, making no progress."));
+    print_message(Some(crate::tr!("You dig with your hands, making no progress.")));
 }

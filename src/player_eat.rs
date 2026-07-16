@@ -33,19 +33,19 @@ pub fn player_eat() {
     game().player_free_turn = true;
 
     if py().pack.unique_items == 0 {
-        print_message(Some("But you are not carrying anything."));
+        print_message(Some(crate::tr!("But you are not carrying anything.")));
         return;
     }
 
     let mut item_pos_start = 0;
     let mut item_pos_end = 0;
     if !inventory_find_range(TV_FOOD as i32, TV_NEVER as i32, &mut item_pos_start, &mut item_pos_end) {
-        print_message(Some("You are not carrying any food."));
+        print_message(Some(crate::tr!("You are not carrying any food.")));
         return;
     }
 
     let mut item_id: i32 = 0;
-    if !inventory_get_input_for_item_id(&mut item_id, "Eat what?", item_pos_start, item_pos_end, None, None) {
+    if !inventory_get_input_for_item_id(&mut item_id, crate::tr!("Eat what?"), item_pos_start, item_pos_end, None, None) {
         return;
     }
     let item_id = item_id as usize;
@@ -68,25 +68,25 @@ pub fn player_eat() {
                 // Blindness
                 py().flags.blind += (random_number(250) + 10 * item.depth_first_found as i32 + 100) as i16;
                 draw_cave_panel();
-                print_message(Some("A veil of darkness surrounds you."));
+                print_message(Some(crate::tr!("A veil of darkness surrounds you.")));
                 identified = true;
             }
             3 => {
                 // Paranoia
                 py().flags.afraid += (random_number(10) + item.depth_first_found as i32) as i16;
-                print_message(Some("You feel terrified!"));
+                print_message(Some(crate::tr!("You feel terrified!")));
                 identified = true;
             }
             4 => {
                 // Confusion
                 py().flags.confused += (random_number(10) + item.depth_first_found as i32) as i16;
-                print_message(Some("You feel drugged."));
+                print_message(Some(crate::tr!("You feel drugged.")));
                 identified = true;
             }
             5 => {
                 // Hallucination
                 py().flags.image += (random_number(200) + 25 * item.depth_first_found as i32 + 200) as i16;
-                print_message(Some("You feel drugged."));
+                print_message(Some(crate::tr!("You feel drugged.")));
                 identified = true;
             }
             6 => {
@@ -122,42 +122,42 @@ pub fn player_eat() {
             16 => {
                 // Restore STR
                 if player_stat_restore(A_STR) {
-                    print_message(Some("You feel your strength returning."));
+                    print_message(Some(crate::tr!("You feel your strength returning.")));
                     identified = true;
                 }
             }
             17 => {
                 // Restore CON
                 if player_stat_restore(A_CON) {
-                    print_message(Some("You feel your health returning."));
+                    print_message(Some(crate::tr!("You feel your health returning.")));
                     identified = true;
                 }
             }
             18 => {
                 // Restore INT
                 if player_stat_restore(A_INT) {
-                    print_message(Some("Your head spins a moment."));
+                    print_message(Some(crate::tr!("Your head spins a moment.")));
                     identified = true;
                 }
             }
             19 => {
                 // Restore WIS
                 if player_stat_restore(A_WIS) {
-                    print_message(Some("You feel your wisdom returning."));
+                    print_message(Some(crate::tr!("You feel your wisdom returning.")));
                     identified = true;
                 }
             }
             20 => {
                 // Restore DEX
                 if player_stat_restore(A_DEX) {
-                    print_message(Some("You feel more dexterous."));
+                    print_message(Some(crate::tr!("You feel more dexterous.")));
                     identified = true;
                 }
             }
             21 => {
                 // Restore CHR
                 if player_stat_restore(A_CHR) {
-                    print_message(Some("Your skin stops itching."));
+                    print_message(Some(crate::tr!("Your skin stops itching.")));
                     identified = true;
                 }
             }
@@ -180,7 +180,7 @@ pub fn player_eat() {
             }
             27 => {
                 // Poisonous Food
-                player_takes_hit(random_number(18), "poisonous food.");
+                player_takes_hit(random_number(18), crate::tr!("poisonous food."));
                 identified = true;
             }
             _ => {
@@ -225,7 +225,7 @@ pub fn player_ingest_food(amount: i32) {
     py().flags.food += amount as i16;
 
     if py().flags.food > config::player::PLAYER_FOOD_MAX as i16 {
-        print_message(Some("You are bloated from overeating."));
+        print_message(Some(crate::tr!("You are bloated from overeating.")));
 
         // Calculate how much of amount is responsible for the bloating. Give the
         // player food credit for 1/50, and also slow them for that many turns.
@@ -243,6 +243,6 @@ pub fn player_ingest_food(amount: i32) {
             py().flags.food = (config::player::PLAYER_FOOD_MAX as i32 + penalty) as i16;
         }
     } else if py().flags.food > config::player::PLAYER_FOOD_FULL as i16 {
-        print_message(Some("You are full."));
+        print_message(Some(crate::tr!("You are full.")));
     }
 }
